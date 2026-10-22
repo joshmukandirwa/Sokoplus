@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="fr">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>SokoPlus – Tous vos achats, un seul endroit</title>
+  <meta name="theme-color" content="#03060d">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,700;0,800;0,900;1,900&family=Figtree:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/boot.js"></script>
+</head>
+
+<body data-page="home">
+  <main class="wrap">
+
+    <section class="hero" data-reveal>
+      <h1><span data-i18n="home.h1a">Tous vos achats,</span> <em data-i18n="home.h1b">un seul endroit.</em></h1>
+      <a class="search" href="recherche.html" aria-label="Rechercher"><svg viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="7" />
+          <path d="m20 20-3.5-3.5" />
+        </svg><span data-i18n="search.ph">Rechercher un produit ou une boutique</span></a>
+    </section>
+
+    <div class="promos" id="promos">
+      <a class="promo p1" href="vendeur.html#publier" data-sell>
+        <div>
+          <h2>Ouvrez votre boutique</h2>
+          <p>30 jours d'essai gratuit. Publiez vos articles en 2 minutes.</p>
+        </div><span class="btn">Vendre sur SokoPlus</span><img src="icons/logo-mark.png" alt="" draggable="false">
+      </a>
+      <a class="promo p2" href="recherche.html">
+        <div>
+          <h2><span id="todayCount">0</span> articles en ligne</h2>
+          <p>Les nouveautés apparaissent en direct, sans recharger la page.</p>
+        </div><span class="btn">Voir les nouveautés</span>
+      </a>
+      <a class="promo p3" href="categories.html">
+        <div>
+          <h2>Le vendeur vous répond sur WhatsApp</h2>
+          <p>Vous vous mettez d'accord, puis vous payez en Mobile Money.</p>
+        </div><span class="btn">Découvrir</span>
+      </a>
+    </div>
+    <div class="dots" id="dots"><i class="on"></i><i></i><i></i></div>
+
+    <section id="categories" data-reveal>
+      <div class="sech">
+        <h2 data-i18n="home.cats">Catégories</h2><a class="more" href="categories.html" data-i18n="home.all">Voir
+          tout</a>
+      </div>
+      <div class="chiprow" id="cats"></div>
+    </section>
+
+    <section data-reveal id="shopsec" hidden>
+      <div class="sech">
+        <h2 data-i18n="home.shops">Boutiques</h2>
+      </div>
+      <div class="shoprow" id="shops"></div>
+    </section>
+
+    <section id="sugsec" data-reveal hidden>
+      <div class="sech">
+        <h2>Suggestions pour toi</h2>
+      </div>
+      <div class="grid" id="sugGrid"></div>
+    </section>
+
+    <section id="latest" data-reveal>
+      <div class="sech">
+        <h2 data-i18n="home.latest">Nouveautés</h2><span class="live"><i></i><span data-i18n="home.live">En
+            direct</span></span>
+      </div>
+      <div class="filters"><select id="sort" aria-label="Trier">
+          <option value="recent">Plus récents</option>
+          <option value="low">Prix croissant</option>
+          <option value="high">Prix décroissant</option>
+        </select></div>
+      <div class="grid" id="grid">
+        <div class="skeleton"></div>
+        <div class="skeleton"></div>
+        <div class="skeleton"></div>
+        <div class="skeleton"></div>
+      </div>
+      <p class="empty" id="empty" hidden>Aucun article pour le moment.</p>
+      <div class="center"><a class="btn ghost" id="moreBtn" href="recherche.html" hidden data-i18n="home.all">Voir
+          tout</a></div>
+    </section>
+
+    <section class="sellband" data-reveal>
+      <h2>Vous vendez en RDC ? <em>Soyez visible.</em></h2>
+      <p>Créez votre boutique, publiez vos articles avec photos et prix. Les clients vous écrivent directement sur
+        WhatsApp.</p>
+      <a class="btn" href="vendeur.html#publier" data-sell>Ouvrir ma boutique</a>
+      <img src="icons/logo-mark.png" alt="" draggable="false">
+    </section>
+
+
+  </main>
+  <footer class="foot">
+    <img src="icons/logo-full.png" alt="SokoPlus, tous vos achats, un seul endroit" draggable="false">
+    <div class="row"><a href="vendeur.html">Espace vendeur</a><a href="parametres.html">Paramètres</a><a
+        href="confidentialite.html">Confidentialité</a><span>République démocratique du Congo</span></div>
+    <p>Le paiement se fait en Mobile Money, directement au vendeur, après accord sur WhatsApp.</p>
+  </footer>
+
+  <script type="module" src="js/ui.js"></script>
+  <script type="module" src="js/home.js"></script>
+</body>
+
+</html>

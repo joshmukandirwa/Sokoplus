@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="fr">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex">
+  <title>Administration – SokoPlus</title>
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,700;0,800;0,900;1,900&family=Figtree:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+
+<body>
+  <header class="top">
+    <div class="wrap bar">
+      <a class="logo" href="./" aria-label="SokoPlus, accueil"><img class="mark" src="icons/logo-mark.png" alt=""><span
+          class="wm">SOKO<b>PLUS</b></span><span class="pill">Admin</span></a>
+      <nav class="nav"><button class="btn ghost" id="logout" hidden>Déconnexion</button></nav>
+    </div>
+  </header>
+
+  <main class="wrap" style="padding-top:24px">
+    <section id="login" style="max-width:420px">
+      <form class="panel" id="fLogin">
+        <h1 style="font-size:1.6rem">Connexion administrateur</h1>
+        <label class="field">Email<input id="aMail" type="email" required autocomplete="username"></label>
+        <label class="field">Mot de passe<input id="aPw" type="password" required
+            autocomplete="current-password"></label>
+        <button class="btn" type="submit">Entrer</button>
+        <div class="or"><span>ou</span></div>
+        <button class="btn ghost gbtn" type="button" id="aGoogle"><svg viewBox="0 0 48 48" aria-hidden="true">
+            <path fill="#EA4335"
+              d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.5 17.7 9.5 24 9.5z" />
+            <path fill="#4285F4"
+              d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z" />
+            <path fill="#FBBC05" d="M10.5 28.7a14.5 14.5 0 0 1 0-9.4l-7.9-6.1a24 24 0 0 0 0 21.6l7.9-6.1z" />
+            <path fill="#34A853"
+              d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.9 2.3-8.4 2.3-6.3 0-11.6-4-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z" />
+          </svg>Continuer avec Google</button>
+        <p class="msg" id="aMsg" hidden></p>
+      </form>
+    </section>
+
+    <section id="panel" hidden>
+      <div class="a-hero">
+        <div><small id="aDate"></small>
+          <h1>Tableau de bord</h1>
+          <p id="aWho"></p>
+        </div>
+        <span class="a-live"><i></i>En direct</span>
+      </div>
+      <div class="a-kpis">
+        <div class="a-k" id="kPendBox">
+          <div class="ic-wrap" data-ic="clock"></div><b id="kPend">0</b><span>À valider</span><small
+            id="kPendSub">articles en attente</small>
+        </div>
+        <div class="a-k">
+          <div class="ic-wrap" data-ic="shop"></div><b id="kShops">0</b><span>Boutiques</span><small
+            id="kShopsSub"></small>
+        </div>
+        <div class="a-k">
+          <div class="ic-wrap" data-ic="tag"></div><b id="kItems">0</b><span>Articles en ligne</span><small
+            id="kItemsSub"></small>
+        </div>
+        <div class="a-k">
+          <div class="ic-wrap" data-ic="bell"></div><b id="kReports">0</b><span>Signalements</span><small>à
+            traiter</small>
+        </div>
+      </div>
+      <div class="a-tabs" role="tablist">
+        <button role="tab" data-t="pending" aria-selected="true"><span data-ic="clock"></span>À valider <em
+            id="pCount">0</em></button>
+        <button role="tab" data-t="users" aria-selected="false"><span data-ic="shop"></span>Boutiques <em
+            id="uCount">0</em></button>
+        <button role="tab" data-t="items" aria-selected="false"><span data-ic="tag"></span>Articles <em
+            id="iCount">0</em></button>
+        <button role="tab" data-t="reports" aria-selected="false"><span data-ic="bell"></span>Signalements <em
+            id="rCount">0</em></button>
+      </div>
+      <div class="a-tools" id="aTools">
+        <label class="a-search"><span data-ic="search"></span><input id="aSearch" type="search" placeholder="Rechercher"
+            autocomplete="off" aria-label="Rechercher"></label>
+        <div class="a-chips" id="aChips"></div>
+      </div>
+      <div class="list a-list" id="list"></div>
+    </section>
+  </main>
+  <script type="module" src="js/admin.js"></script>
+</body>
+
+</html>

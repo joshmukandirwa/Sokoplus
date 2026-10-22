@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ma boutique – SokoPlus</title>
+<meta name="theme-color" content="#03060d">
+<link rel="manifest" href="manifest.json">
+<script src="js/boot.js"></script>
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,700;0,800;0,900;1,900&family=Figtree:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="vendeur">
+
+<main class="wrap" style="max-width:720px;padding-top:24px">
+
+  <!-- Connexion / inscription -->
+  <section id="auth" hidden>
+    <div class="msg warn" id="gateMsg" hidden>Pour publier un article, connecte-toi ou crée ta boutique. C'est gratuit pendant 30 jours.</div>
+    <h1 style="font-size:clamp(1.7rem,4vw,2.3rem);margin-bottom:6px">Vendez partout en RDC.</h1>
+    <p class="note" style="margin:0 0 16px">Crée ta boutique en 2 minutes. 30 jours d'essai gratuit, ensuite <span id="subTxt"></span>.</p>
+    <div class="panel">
+      <button class="btn ghost gbtn" type="button" id="gBtn"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.5 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z"/><path fill="#FBBC05" d="M10.5 28.7a14.5 14.5 0 0 1 0-9.4l-7.9-6.1a24 24 0 0 0 0 21.6l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.9 2.3-8.4 2.3-6.3 0-11.6-4-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>Continuer avec Google</button>
+      <div class="or"><span>ou</span></div>
+      <div class="tabs" role="tablist">
+        <button role="tab" id="tLogin" aria-selected="true">Connexion</button>
+        <button role="tab" id="tSignup" aria-selected="false">Créer ma boutique</button>
+      </div>
+
+      <form id="fLogin" class="panel" style="border:0;padding:0">
+        <label class="field">Adresse email ou numéro de téléphone<input id="loginId" autocomplete="username" required placeholder="vous@mail.com ou 0990 000 001"></label>
+        <label class="field">Mot de passe<input id="loginPw" type="password" autocomplete="current-password" required></label>
+        <button class="btn" type="submit">Se connecter</button>
+        <button class="btn ghost small" type="button" id="forgot">Mot de passe oublié</button>
+      </form>
+
+      <form id="fSignup" class="panel" style="border:0;padding:0" hidden>
+        <label class="field">Nom de ta boutique ou entreprise<input id="shopName" required minlength="2" maxlength="60" autocomplete="organization"></label>
+        <div class="cols">
+          <label class="field">Numéro de téléphone (WhatsApp)<input id="phone" type="tel" required autocomplete="tel" placeholder="0990 000 001"></label>
+          <label class="field">Adresse email<input id="email" type="email" required autocomplete="email"></label>
+        </div>
+        <div class="cols">
+          <label class="field">Mot de passe (6 caractères minimum)<input id="pw" type="password" minlength="6" required autocomplete="new-password"></label>
+          <label class="field">Confirme le mot de passe<input id="pw2" type="password" minlength="6" required autocomplete="new-password"></label>
+        </div>
+        <button class="btn" type="submit">Créer ma boutique</button>
+        <p class="note">Ton numéro sera affiché sur tes articles. Les clients te contactent sur WhatsApp. En créant ta boutique, tu acceptes la <a href="confidentialite.html">politique de confidentialité</a>.</p>
+      </form>
+      <p class="msg" id="authMsg" hidden></p>
+    </div>
+  </section>
+
+  <!-- Finir la boutique après Google -->
+  <section id="complete" hidden>
+    <h1 style="font-size:clamp(1.6rem,4vw,2.1rem);margin-bottom:6px">Une dernière étape</h1>
+    <p class="note" style="margin:0 0 16px">Connecté avec Google : <b id="cMail"></b>. Il manque le nom de ta boutique et ton numéro WhatsApp.</p>
+    <form class="panel" id="fComplete">
+      <label class="field">Nom de ta boutique ou entreprise<input id="cShop" required minlength="2" maxlength="60" autocomplete="organization"></label>
+      <label class="field">Numéro de téléphone (WhatsApp)<input id="cPhone" type="tel" required autocomplete="tel" placeholder="0990 000 001"></label>
+      <button class="btn" type="submit">Créer ma boutique</button>
+      <button class="btn ghost" type="button" id="cCancel">Annuler</button>
+      <p class="note">Ton numéro sera affiché sur tes articles. 30 jours d'essai gratuit. <a href="confidentialite.html">Politique de confidentialité</a>.</p>
+      <p class="msg" id="cMsg" hidden></p>
+    </form>
+  </section>
+
+  <!-- Tableau de bord -->
+  <section id="dash" hidden>
+    <div class="sec" style="margin-top:0">
+      <div><h1 id="dShop" style="font-size:1.8rem"></h1><div class="note" id="dContact"></div></div>
+      <div class="row"><span class="pill" id="dStatus"></span><button class="btn ghost small" id="logout" hidden>Déconnexion</button></div>
+    </div>
+    <div class="msg warn" id="verifyBox" hidden>
+      <b>Vérifie ton adresse email</b> pour pouvoir publier. Nous avons envoyé un lien à <span id="verifyMail"></span>.
+      <div class="row" style="margin-top:8px"><button class="btn small" id="resend">Renvoyer le lien</button><button class="btn small ghost" id="refresh">J'ai cliqué sur le lien</button></div>
+    </div>
+    <div class="msg err" id="blockBox" hidden></div>
+    <div class="quota" id="quotaBox" hidden></div>
+
+    <form class="panel wiz" id="fItem" style="margin-top:14px" data-anchor="publier" novalidate><span id="publier"></span>
+      <h2 id="fTitle" style="font-size:1.3rem">Publier un article</h2>
+      <div class="wizbar" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <p class="wizlbl" id="wizLbl" aria-live="polite"></p>
+
+      <!-- Étape 1 : article -->
+      <section class="step" data-step="1">
+        <label class="field">Nom de l'article<input id="iTitle" required minlength="2" maxlength="100" placeholder="Ex. Pagne wax 6 yards"></label>
+        <label class="field">Catégorie<select id="iCat" required></select></label>
+        <label class="field">Description (facultatif)<textarea id="iDesc" maxlength="1500" placeholder="État, taille, couleur, quantité disponible, livraison…"></textarea></label>
+      </section>
+
+      <!-- Étape 2 : photos -->
+      <section class="step" data-step="2" hidden>
+        <label class="drop" for="iImgs"><b>Ajouter des photos</b><span>1 à 3 photos, 4 Mo maximum chacune</span></label>
+        <input id="iImgs" type="file" accept="image/*" multiple hidden>
+        <div class="previews" id="previews"></div>
+        <p class="note" id="photoNote"></p>
+      </section>
+
+      <!-- Étape 3 : prix -->
+      <section class="step" data-step="3" hidden>
+        <div class="field">Monnaie du prix
+          <div class="curpick" role="group" aria-label="Monnaie du prix">
+            <button type="button" data-cur="FC" aria-pressed="false"><b>FC</b><small>Franc congolais</small></button>
+            <button type="button" data-cur="USD" aria-pressed="true"><b>USD</b><small>Dollar américain</small></button>
+          </div>
+        </div>
+        <label class="field"><span id="priceLbl">Prix en dollars (USD)</span><input id="iPrice" type="number" inputmode="decimal" min="0.01" step="any" required placeholder="Ex. 25"></label>
+        <p class="note">Ton article s'affiche dans la monnaie que tu choisis. Aucune conversion automatique.</p>
+      </section>
+
+      <!-- Étape 4 : lieu -->
+      <section class="step" data-step="4" hidden>
+        <div class="field">Région<span id="iCityHost"></span></div>
+        <input type="hidden" id="iCity">
+        <label class="field">Quartier ou adresse<input id="iAddr" required maxlength="120" placeholder="Ex. Ndosho, avenue de la Paix"></label>
+      </section>
+
+      <!-- Étape 5 : récapitulatif -->
+      <section class="step" data-step="5" hidden>
+        <div class="recap" id="recap"></div>
+        <div class="quota" id="quotaRecap"></div>
+      </section>
+
+      <p class="msg" id="iMsg" hidden></p>
+      <div class="wizbtns">
+        <button class="btn ghost" type="button" id="wBack" hidden>Retour</button>
+        <button class="btn" type="button" id="wNext">Continuer</button>
+        <button class="btn ok" type="submit" id="iSubmit" hidden>Envoyer pour validation</button>
+      </div>
+      <button class="btn ghost small" type="button" id="iCancel" hidden>Annuler la modification</button>
+    </form>
+
+    <div class="sec"><h2 style="font-size:1.3rem">Mes articles</h2><span class="note" id="mineCount"></span></div>
+    <div class="mine" id="mine"></div>
+  </section>
+</main>
+
+
+<script type="module" src="js/ui.js"></script>
+<script type="module" src="js/vendor.js"></script>
+</body>
+</html>

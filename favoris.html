@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="fr">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Favoris – SokoPlus</title>
+  <meta name="theme-color" content="#03060d">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,700;0,800;0,900;1,900&family=Figtree:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/boot.js"></script>
+</head>
+
+<body data-page="favoris">
+  <main class="wrap">
+
+    <section class="pagehead row between" data-reveal>
+      <div>
+        <h1 data-i18n="favs.title">Favoris</h1>
+        <p class="note" data-i18n="favs.sub">Les articles que tu as gardés, prêts quand tu l'es.</p>
+      </div>
+      <button class="btn ghost small" id="clear" hidden data-i18n="favs.clear">Tout vider</button>
+    </section>
+    <div class="grid" id="grid"></div>
+    <div class="emptyst" id="empty" hidden>
+      <svg class="big" viewBox="0 0 24 24">
+        <path d="M12 21s-8-5.2-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 5.8-8 11-8 11z" />
+      </svg>
+      <h2>Aucun favori pour l'instant</h2>
+      <p class="note">Touche le cœur sur un article pour le retrouver ici, même sans connexion.</p>
+      <a class="btn" href="categories.html">Parcourir les catégories</a>
+    </div>
+  </main>
+  <script type="module" src="js/ui.js"></script>
+  <script type="module" src="js/favoris.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Recherche – SokoPlus</title>
+<meta name="theme-color" content="#03060d">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,700;0,800;0,900;1,900&family=Figtree:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="css/style.css">
+<script src="js/boot.js"></script>
+</head>
+<body data-page="recherche">
+<main class="wrap">
+
+  <form class="sform" id="sform" role="search" autocomplete="off">
+    <label class="search big"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" id="q" enterkeyhint="search" data-i18n-ph="search.ph" placeholder="Rechercher un produit ou une boutique" aria-label="Rechercher"><button type="button" class="qx" id="qx" aria-label="Effacer" hidden>×</button></label>
+  </form>
+  <div id="idle">
+    <section id="recentBox" hidden><div class="sech"><h2 data-i18n="search.recent">Recherches récentes</h2><button class="more" id="recentClear" type="button">Effacer</button></div><div class="chiprow wrapr" id="recent"></div></section>
+    <section><div class="sech"><h2 data-i18n="search.popular">Parcourir par catégorie</h2></div><div class="chiprow wrapr" id="popular"></div></section>
+  </div>
+  <div id="found" hidden>
+    <div class="filters"><select id="cat" aria-label="Catégorie"></select>
+      <select id="sort" aria-label="Trier"><option value="recent">Pertinence et récents</option><option value="low">Prix croissant</option><option value="high">Prix décroissant</option></select>
+      <label class="chk"><input type="checkbox" id="avail"> Disponibles</label></div>
+    <div class="active" id="active"></div>
+    <p class="note" id="count" aria-live="polite"></p>
+    <div class="grid" id="grid"></div>
+    <div class="emptyst" id="empty" hidden><svg class="big" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <h2>Aucun résultat</h2><p class="note">Vérifie l'orthographe ou essaie un mot plus court, par exemple « wax », « café » ou « téléphone ».</p></div>
+  </div>
+</main>
+<script type="module" src="js/ui.js"></script>
+<script type="module" src="js/recherche.js"></script>
+</body>
+</html>

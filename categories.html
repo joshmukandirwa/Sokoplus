@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="fr">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Catégories – SokoPlus</title>
+  <meta name="theme-color" content="#03060d">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,700;0,800;0,900;1,900&family=Figtree:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/boot.js"></script>
+</head>
+
+<body data-page="categories">
+  <main class="wrap">
+
+    <section class="pagehead" data-reveal>
+      <h1 data-i18n="cats.title">Catégories</h1>
+      <p class="note" data-i18n="cats.sub">Choisis une catégorie pour voir ce que la RDC vend.</p>
+      <a class="search" href="recherche.html"><svg viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="7" />
+          <path d="m20 20-3.5-3.5" />
+        </svg><span data-i18n="search.ph">Rechercher un produit ou une boutique</span></a>
+    </section>
+    <div class="tiles" id="tiles"></div>
+    <section id="res" hidden>
+      <div class="sech">
+        <h2 id="resT"></h2><span class="note" id="resN"></span>
+      </div>
+      <div class="filters"><select id="sort" aria-label="Trier">
+          <option value="recent">Plus récents</option>
+          <option value="low">Prix croissant</option>
+          <option value="high">Prix décroissant</option>
+        </select>
+        <label class="chk"><input type="checkbox" id="avail"> Disponibles seulement</label>
+      </div>
+      <div class="grid" id="grid"></div>
+      <p class="empty" id="empty" hidden>Aucun article dans cette catégorie pour le moment.</p>
+    </section>
+  </main>
+  <script type="module" src="js/ui.js"></script>
+  <script type="module" src="js/categories.js"></script>
+</body>
+
+</html>
