@@ -8,12 +8,18 @@ service cloud.firestore {
         (request.auth.token.email == 'joshmukandirwa@gmail.com' && request.auth.token.email_verified == true)
         || exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
     }
+    // Maintenance : quand l'admin l'active (config/maintenance), plus personne d'autre que lui ne peut écrire.
+    function siteOpen() {
+      return !(exists(/databases/$(database)/documents/config/maintenance)
+        && get(/databases/$(database)/documents/config/maintenance).data.on == true
+        && get(/databases/$(database)/documents/config/maintenance).data.until > request.time);
+    }
     function profile() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
     // Un vendeur peut publier s'il a vérifié son email, n'est pas bloqué et son abonnement court encore.
     function canPost() {
-      return signedIn()
+      return signedIn() && siteOpen()
         && request.auth.token.email_verified == true
         && exists(/databases/$(database)/documents/users/$(request.auth.uid))
         && profile().status == 'active'
@@ -42,7 +48,7 @@ service cloud.firestore {
     // Profil vendeur
     match /users/{uid} {
       allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
-      allow create: if signedIn() && request.auth.uid == uid
+      allow create: if signedIn() && siteOpen() && request.auth.uid == uid
         && request.resource.data.keys().hasOnly(['shopName', 'phone', 'email', 'status', 'plan', 'activeUntil', 'createdAt'])
         && request.resource.data.shopName is string
         && request.resource.data.shopName.size() >= 2 && request.resource.data.shopName.size() <= 60
@@ -62,7 +68,7 @@ service cloud.firestore {
     // Demandes de modification de boutique (nom, numéro, photo de profil) : une par boutique, validée ou refusée par l'admin
     match /profileRequests/{uid} {
       allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
-      allow create: if signedIn() && request.auth.uid == uid && request.auth.token.email_verified == true
+      allow create: if signedIn() && siteOpen() && request.auth.uid == uid && request.auth.token.email_verified == true
         && exists(/databases/$(database)/documents/users/$(request.auth.uid))
         && request.resource.data.keys().hasOnly(['shopName', 'phone', 'logo', 'status', 'createdAt'])
         && request.resource.data.keys().hasAny(['shopName', 'phone', 'logo'])
@@ -79,7 +85,7 @@ service cloud.firestore {
     match /phoneIndex/{phone} {
       allow get: if true;
       allow list: if false;
-      allow create: if signedIn()
+      allow create: if signedIn() && (siteOpen() || isAdmin())
         && request.resource.data.keys().hasOnly(['uid', 'email'])
         && ((request.resource.data.uid == request.auth.uid && request.resource.data.email == request.auth.token.email) || isAdmin());
       allow update, delete: if isAdmin();
@@ -111,7 +117,8 @@ service cloud.firestore {
         && request.resource.data.images.size() >= 1 && request.resource.data.images.size() <= 3;
 
       allow update: if isAdmin();
-      allow delete: if isAdmin();
+      // le vendeur peut supprimer ses propres articles refusés
+      allow delete: if isAdmin() || (signedIn() && siteOpen() && resource.data.ownerId == request.auth.uid && resource.data.status == 'rejected');
     }
 
     // Articles : lisibles par tous. Seul l'admin en crée (après validation d'une proposition).
@@ -132,7 +139,7 @@ service cloud.firestore {
         && request.resource.data.images.size() >= 1 && request.resource.data.images.size() <= 3;
 
       allow update: if isAdmin()
-        || (signedIn() && resource.data.ownerId == request.auth.uid
+        || (signedIn() && siteOpen() && resource.data.ownerId == request.auth.uid
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title', 'description', 'price', 'category', 'address', 'city', 'currency', 'images', 'status'])
             && request.resource.data.title.size() >= 2 && request.resource.data.title.size() <= 100
             && request.resource.data.description.size() <= 1500
@@ -142,16 +149,22 @@ service cloud.firestore {
         && (!('currency' in request.resource.data) || request.resource.data.currency in ['USD', 'FC'])
             && request.resource.data.status in ['available', 'sold']);
 
-      allow delete: if isAdmin() || (signedIn() && resource.data.ownerId == request.auth.uid);
+      allow delete: if isAdmin() || (signedIn() && siteOpen() && resource.data.ownerId == request.auth.uid);
     }
 
     // Signalements : tout le monde peut en envoyer, seul l'admin les lit
     match /reports/{id} {
-      allow create: if request.resource.data.keys().hasOnly(['itemId', 'reason', 'createdAt'])
+      allow create: if siteOpen() && request.resource.data.keys().hasOnly(['itemId', 'reason', 'createdAt'])
         && request.resource.data.itemId is string && request.resource.data.itemId.size() <= 60
         && request.resource.data.reason is string && request.resource.data.reason.size() <= 300
         && request.resource.data.createdAt == request.time;
       allow read, delete: if isAdmin();
+    }
+
+    // Réglages du site (mode maintenance) : lisibles par tous pour pouvoir bloquer le site, modifiables par l'admin seulement
+    match /config/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     // Appareils inscrits aux notifications (le jeton sert d'identifiant)

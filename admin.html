@@ -54,6 +54,9 @@
         </div>
         <span class="a-live"><i></i>En direct</span>
       </div>
+      <button class="a-maint" id="maintBtn" type="button"><span class="mi" data-ic="tools"></span><span
+          class="mtx"><b>Maintenance du site</b><small id="maintS">Site en ligne</small></span><i
+          aria-hidden="true">›</i></button>
       <div class="a-kpis">
         <div class="a-k" id="kPendBox">
           <div class="ic-wrap" data-ic="clock"></div><b id="kPend">0</b><span>À valider</span><small
@@ -90,6 +93,74 @@
       <div class="list a-list" id="list"></div>
     </section>
   </main>
+  <dialog id="maintDlg">
+    <div class="dlg">
+      <div class="dlg-head">
+        <h2>Maintenance du site</h2><button class="x" type="button" data-close aria-label="Fermer">×</button>
+      </div>
+      <div id="mOff" class="m-sec">
+        <p class="note">Le site est bloqué pour tout le monde (sauf cet espace admin) avec un message et un minuteur. Il
+          se rouvre tout seul à l'heure de fin.</p>
+        <label class="field">Message affiché<textarea id="mMsg" rows="3" maxlength="200"
+            placeholder="Ex. On améliore SokoPlus, retour très vite."></textarea></label>
+        <div class="a-chips a-pre" id="mPre"></div>
+        <div class="a-steps">
+          <div class="a-step"><span>Jours</span><button type="button" data-k="d" data-step="-1"
+              aria-label="Moins un jour">−</button><input data-k="d" type="number" inputmode="numeric" min="0"
+              max="30"><button type="button" data-k="d" data-step="1" aria-label="Plus un jour">+</button></div>
+          <div class="a-step"><span>Heures</span><button type="button" data-k="h" data-step="-1"
+              aria-label="Moins une heure">−</button><input data-k="h" type="number" inputmode="numeric" min="0"
+              max="23"><button type="button" data-k="h" data-step="1" aria-label="Plus une heure">+</button></div>
+          <div class="a-step"><span>Minutes</span><button type="button" data-k="n" data-step="-5"
+              aria-label="Moins cinq minutes">−</button><input data-k="n" type="number" inputmode="numeric" min="0"
+              max="59"><button type="button" data-k="n" data-step="5" aria-label="Plus cinq minutes">+</button></div>
+        </div>
+        <div class="a-sum" id="mSum"></div>
+        <div class="wnav"><button class="btn warn" type="button" id="mGo">Bloquer le site</button><button
+            class="btn ghost" type="button" data-close>Annuler</button></div>
+      </div>
+      <div id="mOn" class="m-sec" hidden>
+        <div class="a-sum"><small>Le site est bloqué. Il rouvre dans</small><b id="mLeft" class="m-left"></b><small
+            id="mEnd"></small></div>
+        <p class="note">Prolonger de :</p>
+        <div class="a-chips a-pre" id="mExt"><button type="button" class="a-chip" data-ext="15">+15 min</button><button
+            type="button" class="a-chip" data-ext="60">+1 h</button><button type="button" class="a-chip"
+            data-ext="180">+3 h</button></div>
+        <div class="wnav"><button class="btn ok" type="button" id="mStop">Terminer la maintenance</button><button
+            class="btn ghost" type="button" data-close>Fermer</button></div>
+      </div>
+    </div>
+  </dialog>
+  <dialog id="subDlg">
+    <div class="dlg">
+      <div class="dlg-head">
+        <h2>Abonner <span id="subWho"></span></h2><button class="x" type="button" data-close
+          aria-label="Fermer">×</button>
+      </div>
+      <p class="note" id="subNow"></p>
+      <div class="a-chips a-pre" id="subPre"></div>
+      <div class="a-steps">
+        <div class="a-step"><span>Mois</span><button type="button" data-k="m" data-step="-1"
+            aria-label="Moins un mois">−</button><input data-k="m" type="number" inputmode="numeric" min="0"
+            max="60"><button type="button" data-k="m" data-step="1" aria-label="Plus un mois">+</button></div>
+        <div class="a-step"><span>Jours</span><button type="button" data-k="d" data-step="-1"
+            aria-label="Moins un jour">−</button><input data-k="d" type="number" inputmode="numeric" min="0"
+            max="365"><button type="button" data-k="d" data-step="1" aria-label="Plus un jour">+</button></div>
+        <div class="a-step"><span>Heures</span><button type="button" data-k="h" data-step="-1"
+            aria-label="Moins une heure">−</button><input data-k="h" type="number" inputmode="numeric" min="0"
+            max="23"><button type="button" data-k="h" data-step="1" aria-label="Plus une heure">+</button></div>
+        <div class="a-step"><span>Minutes</span><button type="button" data-k="n" data-step="-5"
+            aria-label="Moins cinq minutes">−</button><input data-k="n" type="number" inputmode="numeric" min="0"
+            max="59"><button type="button" data-k="n" data-step="5" aria-label="Plus cinq minutes">+</button></div>
+        <div class="a-step"><span>Secondes</span><button type="button" data-k="s" data-step="-10"
+            aria-label="Moins dix secondes">−</button><input data-k="s" type="number" inputmode="numeric" min="0"
+            max="59"><button type="button" data-k="s" data-step="10" aria-label="Plus dix secondes">+</button></div>
+      </div>
+      <div class="a-sum" id="subSum"></div>
+      <div class="wnav"><button class="btn" type="button" id="subOk">Activer l'abonnement</button><button
+          class="btn ghost" type="button" data-close>Annuler</button></div>
+    </div>
+  </dialog>
   <script type="module" src="js/admin.js"></script>
 </body>
 

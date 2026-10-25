@@ -3,6 +3,7 @@ import {
   sendEmailVerification, sendPasswordResetEmail, GoogleAuthProvider, signInWithPopup, signInWithRedirect, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc,
   collection, query, where, onSnapshot, serverTimestamp, Timestamp
 } from "./fb.js";
+import { bindLogout } from "./logout.js";
 import {
   SITE, configured, configBanner, $, $$, esc, safeUrl, money, normPhone, prettyPhone, waLink,
   compress, uploadImage, thumb, tileColor, toast, ago
@@ -138,7 +139,7 @@ function leave() {
   user = null; profile = null; unsub && unsub(); unsub = null;
   $("#dash").hidden = true; $("#complete").hidden = true; $("#auth").hidden = false; $("#logout").hidden = true;
 }
-$("#logout").onclick = () => signOut(auth);
+bindLogout($("#logout"), () => signOut(auth), () => ($("#dShop")?.textContent || "").trim());
 addEventListener("hashchange", hashTab);   // les boutons « J'ai déjà un compte » / « Créer ma boutique » de la fenêtre Vendre
 
 let welcome = false;
@@ -367,7 +368,16 @@ function watchMine() {
     if (reqSeen && was?.status === "pending" && req?.status === "rejected") toast("SokoPlus n'a pas pu valider tes modifications. Le motif est dans Ma boutique.");
     reqSeen = true; renderReq();
   });
-  unsub = () => { u1(); u2(); u3(); };
+  let seenPlan = false;
+  const u4 = onSnapshot(doc(db, "users", user.uid), snap => {   // l'abonnement change en direct quand SokoPlus le met à jour
+    if (!snap.exists()) return;
+    const was = profile?.activeUntil?.toMillis?.() ?? 0, now = snap.data().activeUntil?.toMillis?.() ?? 0, st = profile?.status;
+    profile = snap.data(); renderStatus();
+    if (seenPlan && now !== was && !snap.metadata.hasPendingWrites) toast(now > Date.now() ? "SokoPlus a mis à jour ton abonnement." : "Ton abonnement a changé.");
+    if (seenPlan && st !== profile.status) toast(profile.status === "blocked" ? "Ton compte a été suspendu." : "Ton compte est de nouveau actif.");
+    seenPlan = true;
+  });
+  unsub = () => { u1(); u2(); u3(); u4(); };
 }
 function renderMine() {
   const shown = waiting.filter(it => it.status !== "approved");   // les validées sont déjà dans « mine »
@@ -383,6 +393,7 @@ function renderMine() {
       <div class="txt"><b>${esc(it.title)}</b><div class="note">${money(it.price, it.currency)} · ${ago(when(it))}
         ${it.status === "rejected" ? '<span class="pill bad">Refusé</span>' : '<span class="pill warn">En attente de validation</span>'}</div>
         ${it.status === "rejected" && it.reason ? `<div class="note">Motif : ${esc(it.reason)}</div>` : ""}
+        ${it.status === "rejected" ? '<div class="row"><button class="btn small ghost" data-a="delsub">Supprimer</button></div>' : ""}
         </div></div>`;
   }).join("");
   $("#mine").innerHTML = n ? wait + mine.map(it => {
@@ -399,8 +410,9 @@ function renderMine() {
 $("#mine").addEventListener("click", async e => {
   const b = e.target.closest("[data-a]"); if (!b) return;
   if (b.dataset.a === "delsub") {
+    if (!b.dataset.sure) { b.dataset.sure = "1"; b.textContent = "Confirmer ?"; setTimeout(() => { delete b.dataset.sure; b.textContent = "Supprimer"; }, 3000); return; }
     const sid = b.closest("[data-sid]").dataset.sid;
-    try { await deleteDoc(doc(db, "submissions", sid)); } catch (err) { toast(nice(err)); }
+    try { await deleteDoc(doc(db, "submissions", sid)); toast("Article supprimé."); } catch (err) { toast(nice(err)); }
     return;
   }
   const it = mine.find(x => x.id === b.closest("[data-id]").dataset.id); if (!it) return;

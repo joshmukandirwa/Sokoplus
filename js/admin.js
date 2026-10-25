@@ -6,10 +6,11 @@ import { SITE, configured, configBanner, $, $$, esc, money, prettyPhone, waLink,
 import { icon } from "./icons.js";
 import { notify } from "./notify.js";
 import { run, btnOf } from "./feedback.js";
+import { bindLogout } from "./logout.js";
 
 configBanner();
 const DAY = 864e5;
-let tab = "pending", users = [], items = [], reports = [], subs = [], reqs = [], unsubs = [], firstSubs = true, firstReqs = true;
+let maint = null, tab = "pending", users = [], items = [], reports = [], subs = [], reqs = [], unsubs = [], firstSubs = true, firstReqs = true;
 
 const say = (t, kind = "") => { const m = $("#aMsg"); m.hidden = !t; m.className = "msg " + kind; m.textContent = t || ""; };
 
@@ -24,7 +25,7 @@ $("#aGoogle").onclick = () => {
     .then(() => say(""))
     .catch(err => { say(["auth/popup-closed-by-user", "auth/cancelled-popup-request"].includes(err.code) ? "" : "Connexion Google impossible : " + (err.code || err.message), "err"); });
 };
-$("#logout").onclick = () => signOut(auth);
+bindLogout($("#logout"), () => signOut(auth));
 
 if (!configured) say("Firebase n'est pas configuré (voir README).", "warn");
 else onAuthStateChanged(auth, async u => {
@@ -53,6 +54,7 @@ else onAuthStateChanged(auth, async u => {
       firstReqs = false;
       reqs = s.docs.map(d => ({ id: d.id, ...d.data() })); render();
     }),
+    onSnapshot(doc(db, "config", "maintenance"), s => { maint = s.exists() ? s.data() : null; paintMaint(); }),
     onSnapshot(collection(db, "users"), s => { users = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }),
     onSnapshot(query(collection(db, "items"), orderBy("createdAt", "desc"), limit(200)), s => { items = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }),
     onSnapshot(query(collection(db, "reports"), orderBy("createdAt", "desc"), limit(100)), s => { reports = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); })
@@ -91,7 +93,7 @@ function userCard(u) {
     <div class="a-stats"><span><b>${mine.filter(i => i.status !== "sold").length}</b> en ligne</span><span><b>${mine.filter(i => i.status === "sold").length}</b> vendus</span>${u.createdAt?.toMillis ? `<span>Inscrite ${esc(ago(u.createdAt.toMillis()))}</span>` : ""}</div>
     <div class="a-actions">
       <a class="btn small ghost" href="${esc(waLink(u.phone, "Bonjour " + u.shopName + ", ici SokoPlus."))}" target="_blank" rel="noopener">WhatsApp</a>
-      <button class="btn small" data-a="d30">Abonner 30 j</button><button class="btn small" data-a="d90">Abonner 90 j</button>
+      <button class="btn small" data-a="sub">Abonner</button>
       <button class="btn small ${u.status === "blocked" ? "ok" : "warn"}" data-a="block">${u.status === "blocked" ? "Débloquer" : "Bloquer"}</button>
     </div></article>`;
 }
@@ -222,6 +224,116 @@ $$("[data-t]").forEach(b => b.onclick = () => { tab = b.dataset.t; fxNext = true
 $("#aSearch").addEventListener("input", () => render());
 $("#aChips").addEventListener("click", e => { const c = e.target.closest("[data-c]"); if (!c) return; chips[tab] = c.dataset.c; fxNext = true; render(); });
 
+/* Abonnement : fenêtre tactile (raccourcis + boutons + / −), plus besoin de saisir jours/heures/minutes */
+const sd = $("#subDlg"), sv = { m: 0, d: 0, h: 0, n: 0, s: 0 }, maxOf = { m: 60, d: 365, h: 23, n: 59, s: 59 };
+let subUser = null, subMode = "add";
+const subBase = () => subMode === "add" ? Math.max(Date.now(), until(subUser)) : Date.now();
+function subEnd() {
+  const dt = new Date(subBase()); dt.setMonth(dt.getMonth() + sv.m);
+  return dt.getTime() + sv.d * DAY + sv.h * 36e5 + sv.n * 6e4 + sv.s * 1e3;
+}
+function subPaint() {
+  const tot = sv.m + sv.d + sv.h + sv.n + sv.s, end = subEnd();
+  $$("#subDlg [data-k]").forEach(el => { el.value = sv[el.dataset.k]; });
+  $$("#subDlg [data-mode]").forEach(b => b.setAttribute("aria-pressed", b.dataset.mode === subMode));
+  $$("#subDlg [data-pre]").forEach(b => b.setAttribute("aria-pressed", b.dataset.pre === JSON.stringify(sv)));
+  const parts = [sv.m && `${sv.m} mois`, sv.d && `${sv.d} j`, sv.h && `${sv.h} h`, sv.n && `${sv.n} min`, sv.s && `${sv.s} s`].filter(Boolean);
+  $("#subSum").innerHTML = tot ? `<small>Remplace l'ancien abonnement, à partir de maintenant : ${esc(parts.join(" "))}</small><b>Fin le ${esc(new Date(end).toLocaleString("fr-FR", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" }))}</b>` : `<small>Choisis une durée ci-dessus</small>`;
+  $("#subOk").disabled = !tot;
+}
+function openSub(u) {
+  if (!u) return;
+  subUser = u; subMode = "reset"; Object.assign(sv, { m: 1, d: 0, h: 0, n: 0, s: 0 });
+  $("#subWho").textContent = u.shopName;
+  $("#subNow").textContent = left(u) > 0 ? `Il reste ${fmtD(left(u))} (jusqu'au ${dateFr(until(u))}).` : "Aucun abonnement en cours.";
+  subPaint(); sd.showModal();
+}
+const subPresets = { "1 semaine": { m: 0, d: 7, h: 0, n: 0, s: 0 }, "1 mois": { m: 1, d: 0, h: 0, n: 0, s: 0 }, "3 mois": { m: 3, d: 0, h: 0, n: 0, s: 0 }, "6 mois": { m: 6, d: 0, h: 0, n: 0, s: 0 }, "1 an": { m: 12, d: 0, h: 0, n: 0, s: 0 } };
+$("#subPre").innerHTML = Object.entries(subPresets).map(([l, v]) => `<button type="button" class="a-chip" data-pre='${JSON.stringify(v)}'>${l}</button>`).join("");
+sd.addEventListener("click", e => {
+  if (e.target === sd || e.target.closest("[data-close]")) return sd.close();
+  const pre = e.target.closest("[data-pre]"), st = e.target.closest("[data-step]"), md = e.target.closest("[data-mode]");
+  if (pre) Object.assign(sv, JSON.parse(pre.dataset.pre));
+  if (st) { const k = st.dataset.k, v = sv[k] + Number(st.dataset.step); sv[k] = Math.min(maxOf[k], Math.max(0, v)); }
+  if (md) subMode = md.dataset.mode;
+  if (pre || st || md) subPaint();
+});
+sd.addEventListener("input", e => {
+  const k = e.target.dataset.k; if (!k) return;
+  sv[k] = Math.min(maxOf[k], Math.max(0, Math.floor(Number(e.target.value) || 0))); subPaint();
+});
+$("#subOk").onclick = async e => {
+  const u = subUser, end = subEnd();
+  try {
+    await run(e.currentTarget, () => updateDoc(doc(db, "users", u.id), { activeUntil: Timestamp.fromMillis(end), status: "active", plan: "pro" }), { busy: "Activation…", done: "Activé", hold: 700 });
+    sd.close(); toast(`${u.shopName} : abonnement actif jusqu'au ${dateFr(end)}.`);
+  } catch (err) { toast("Échec : " + (err.code || err.message)); }
+};
+
+/* Mode maintenance : bloque tout le site (sauf l'admin) avec message et minuteur jusqu'à l'heure de fin */
+const md = $("#maintDlg"), mv = { d: 0, h: 1, n: 0 }, mMax = { d: 30, h: 23, n: 59 };
+const mOn = () => !!(maint?.on && (maint.until?.toMillis?.() ?? 0) > Date.now());
+const mEnd = () => maint?.until?.toMillis?.() ?? 0;
+const mDur = () => mv.d * DAY + mv.h * 36e5 + mv.n * 6e4;
+const longDate = t => new Date(t).toLocaleString("fr-FR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+const DEF_MSG = "SokoPlus fait un petit entretien pour mieux te servir. On revient très vite, merci de ta patience.";
+function paintMaint() {
+  const on = mOn();
+  $("#maintBtn").classList.toggle("on", on);
+  $("#maintS").textContent = on ? `Bloqué · rouvre dans ${fmtD(mEnd() - Date.now())}` : "Site en ligne · touche pour planifier";
+  if (!md.open) return;
+  $("#mOff").hidden = on; $("#mOn").hidden = !on;
+  if (on) { $("#mLeft").textContent = fmtD(mEnd() - Date.now()); $("#mEnd").textContent = "Retour prévu le " + longDate(mEnd()); }
+  else {
+    $$("#maintDlg [data-k]").forEach(el => { el.value = mv[el.dataset.k]; });
+    $$("#maintDlg [data-pre]").forEach(b => b.setAttribute("aria-pressed", b.dataset.pre === JSON.stringify(mv)));
+    $("#mSum").innerHTML = mDur() ? `<small>Le site sera bloqué dès que tu confirmes</small><b>Réouverture le ${esc(longDate(Date.now() + mDur()))}</b>` : "<small>Choisis une durée</small>";
+    $("#mGo").disabled = !mDur();
+  }
+}
+setInterval(paintMaint, 1000);
+const mPresets = { "30 min": { d: 0, h: 0, n: 30 }, "1 h": { d: 0, h: 1, n: 0 }, "2 h": { d: 0, h: 2, n: 0 }, "6 h": { d: 0, h: 6, n: 0 }, "12 h": { d: 0, h: 12, n: 0 }, "24 h": { d: 1, h: 0, n: 0 } };
+$("#mPre").innerHTML = Object.entries(mPresets).map(([l, v]) => `<button type="button" class="a-chip" data-pre='${JSON.stringify(v)}'>${l}</button>`).join("");
+$("#maintBtn").onclick = () => {
+  Object.assign(mv, { d: 0, h: 1, n: 0 }); $("#mMsg").value = maint?.message || ""; resetGo();
+  md.showModal(); paintMaint();
+};
+let goTimer = 0;
+function resetGo() { clearTimeout(goTimer); const b = $("#mGo"); delete b.dataset.sure; b.textContent = "Bloquer le site"; }
+md.addEventListener("click", async e => {
+  if (e.target === md || e.target.closest("[data-close]")) return md.close();
+  const pre = e.target.closest("[data-pre]"), st = e.target.closest("[data-step]"), ext = e.target.closest("[data-ext]");
+  if (pre) Object.assign(mv, JSON.parse(pre.dataset.pre));
+  if (st) { const k = st.dataset.k; mv[k] = Math.min(mMax[k], Math.max(0, mv[k] + Number(st.dataset.step))); }
+  if (pre || st) { resetGo(); paintMaint(); }
+  if (ext) {
+    try { await run(ext, () => setDoc(doc(db, "config", "maintenance"), { on: true, until: Timestamp.fromMillis(Math.max(mEnd(), Date.now()) + Number(ext.dataset.ext) * 6e4), message: maint?.message || "", startedAt: maint?.startedAt || serverTimestamp() }), { hold: 500 }); toast("Maintenance prolongée."); }
+    catch (err) { toast("Échec : " + (err.code || err.message)); }
+  }
+});
+md.addEventListener("input", e => {
+  const k = e.target.dataset.k; if (!k) return;
+  mv[k] = Math.min(mMax[k], Math.max(0, Math.floor(Number(e.target.value) || 0))); resetGo(); paintMaint();
+});
+$("#mGo").onclick = async e => {
+  const b = e.currentTarget;
+  if (!b.dataset.sure) {   // double toucher : ça bloque tout le monde
+    b.dataset.sure = "1"; b.textContent = "Confirmer le blocage ?";
+    goTimer = setTimeout(resetGo, 4000); return;
+  }
+  clearTimeout(goTimer);
+  try {
+    await run(b, () => setDoc(doc(db, "config", "maintenance"), { on: true, until: Timestamp.fromMillis(Date.now() + mDur()), message: $("#mMsg").value.trim().slice(0, 200) || DEF_MSG, startedAt: serverTimestamp() }), { busy: "Blocage…", done: "Site bloqué", hold: 700 });
+    toast("Le site est en maintenance. Il rouvrira tout seul à l'heure de fin.");
+  } catch (err) { resetGo(); toast("Échec : " + (err.code || err.message)); }
+};
+$("#mStop").onclick = async e => {
+  try {
+    await run(e.currentTarget, () => setDoc(doc(db, "config", "maintenance"), { on: false, until: Timestamp.fromMillis(Date.now()), message: maint?.message || "", startedAt: maint?.startedAt || serverTimestamp() }), { busy: "Réouverture…", done: "Site rouvert", hold: 700 });
+    md.close(); toast("Le site est de nouveau ouvert à tout le monde.");
+  } catch (err) { toast("Échec : " + (err.code || err.message)); }
+};
+
 $("#list").addEventListener("click", async e => {
   const b = e.target.closest("[data-a]"); if (!b) return;
   const row = b.closest("[data-row]"), a = b.dataset.a;
@@ -263,11 +375,7 @@ $("#list").addEventListener("click", async e => {
       if (a === "delsub") await deleteDoc(doc(db, "submissions", s.id));
       return;
     }
-    if (a === "d30" || a === "d90") {
-      const u = users.find(x => x.id === row.dataset.uid), days = a === "d30" ? 30 : 90;
-      await updateDoc(doc(db, "users", u.id), { activeUntil: Timestamp.fromMillis(Math.max(Date.now(), until(u)) + days * DAY), status: "active", plan: "pro" });
-      toast(`${u.shopName} : abonnement activé pour ${days} jours.`);
-    }
+    if (a === "sub") { openSub(users.find(x => x.id === row.dataset.uid)); return; }
     if (a === "block") {
       const u = users.find(x => x.id === row.dataset.uid);
       await updateDoc(doc(db, "users", u.id), { status: u.status === "blocked" ? "active" : "blocked" });
