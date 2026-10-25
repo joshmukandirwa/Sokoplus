@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /admin.html
 
-Sitemap: https://sokoplus.store/sitemap.xml
+Sitemap: https://sokoplus-rdc.vercel.app/sitemap.xml

@@ -1,7 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://sokoplus.store/</loc><lastmod>2026-10-24</lastmod><changefreq>daily</changefreq><priority>1.0</priority></url>
-  <url><loc>https://sokoplus.store/categories.html</loc><lastmod>2026-10-24</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
-  <url><loc>https://sokoplus.store/vendeur.html</loc><lastmod>2026-10-24</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://sokoplus.store/confidentialite.html</loc><lastmod>2026-10-24</lastmod><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url>
+    <loc>https://sokoplus-rdc.vercel.app/</loc>
+    <lastmod>2026-10-24</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://sokoplus-rdc.vercel.app/categories.html</loc>
+    <lastmod>2026-10-24</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://sokoplus-rdc.vercel.app/vendeur.html</loc>
+    <lastmod>2026-10-24</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://sokoplus-rdc.vercel.app/confidentialite.html</loc>
+    <lastmod>2026-10-24</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
 </urlset>

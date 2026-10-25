@@ -27,7 +27,7 @@ function fill() {
   if (!dlg) return;
   const all = live(), seen = seenAt(), latest = all.slice(0, 10), sug = suggest(5);
   $("#nBody").innerHTML =
-    `<h3 class="nh">Derniers articles</h3><div class="nlist">${latest.map(it => row(it, ms(it) > seen)).join("") || '<p class="note">Aucun article pour le moment.</p>'}</div>` +
+    `<h3 class="nh">Derniers articles</h3><div class="nlist">${latest.map(it => row(it, ms(it) > seen)).join("") || '<p class="note">Pas encore de nouveautés. Les nouveaux articles apparaîtront ici.</p>'}</div>` +
     (sug.length ? `<h3 class="nh">Suggestions pour toi</h3><div class="nlist">${sug.map(it => row(it, false)).join("")}</div>` : "");
   const perm = "Notification" in window ? Notification.permission : "unsupported";
   $("#nAlert").hidden = perm === "granted" || perm === "unsupported" || perm === "denied";

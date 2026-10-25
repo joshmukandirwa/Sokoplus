@@ -20,19 +20,19 @@ const DAY = 864e5;
 
 const say = (el, text, kind = "") => { el.hidden = !text; el.className = "msg " + kind; el.textContent = text || ""; };
 const nice = e => ({
-  "auth/email-already-in-use": "Cet email a déjà un compte. Connecte-toi.",
-  "auth/invalid-credential": "Email, numéro ou mot de passe incorrect.",
-  "auth/wrong-password": "Email, numéro ou mot de passe incorrect.",
-  "auth/user-not-found": "Email, numéro ou mot de passe incorrect.",
-  "auth/invalid-email": "Adresse email invalide.",
-  "auth/weak-password": "Mot de passe trop court (6 caractères minimum).",
-  "auth/too-many-requests": "Trop d'essais. Attends quelques minutes.",
+  "auth/email-already-in-use": "Tu as déjà un compte avec cet email. Connecte-toi, c'est plus simple.",
+  "auth/invalid-credential": "On n'a pas reconnu ces infos. Vérifie ton email (ou ton numéro) et ton mot de passe.",
+  "auth/wrong-password": "On n'a pas reconnu ces infos. Vérifie ton email (ou ton numéro) et ton mot de passe.",
+  "auth/user-not-found": "On n'a pas reconnu ces infos. Vérifie ton email (ou ton numéro) et ton mot de passe.",
+  "auth/invalid-email": "Cette adresse email n'a pas l'air correcte. Vérifie-la.",
+  "auth/weak-password": "Choisis un mot de passe un peu plus long (6 caractères au minimum).",
+  "auth/too-many-requests": "Trop d'essais pour le moment. Respire un instant et réessaie dans quelques minutes.",
   "auth/unauthorized-domain": "Ce site n'est pas encore autorisé pour la connexion Google (Authentication > Paramètres > Domaines autorisés).",
   "auth/operation-not-allowed": "La connexion Google n'est pas encore activée dans Firebase.",
   "auth/popup-blocked": "Le navigateur a bloqué la fenêtre Google. Autorise les fenêtres pop-up et réessaie.",
-  "auth/network-request-failed": "Pas de connexion internet.",
-  "permission-denied": "Action refusée. Vérifie que ton email est confirmé et que ton compte est actif, puis recharge la page et réessaie."
-}[e.code] || e.message || "Une erreur est survenue.");
+  "auth/network-request-failed": "Pas de connexion internet. Vérifie ton réseau et réessaie.",
+  "permission-denied": "Cette action n'est pas possible pour le moment. Vérifie que ton email est confirmé et que ton compte est actif, puis recharge la page."
+}[e.code] || e.message || "Oups, quelque chose n'a pas marché. Réessaie dans un instant.");
 
 /* ---------------- Onglets ---------------- */
 function tab(login) {
@@ -187,6 +187,8 @@ function state() {
 
 function renderStatus() {
   const s = state();
+  const hr = new Date().getHours();
+  $("#dHello").textContent = `${hr < 12 ? "Bonjour" : hr < 18 ? "Bon après-midi" : "Bonsoir"}, content de te revoir.`;
   $("#dShop").textContent = profile.shopName;
   const av = $("#dAvatar"); av.style.background = tileColor(profile.shopName);
   av.innerHTML = profile.logo ? `<img src="${esc(thumb(profile.logo, 160))}" alt="">` : esc((profile.shopName || "?")[0].toUpperCase());
@@ -392,7 +394,7 @@ function renderMine() {
         <div class="row"><button class="btn small ghost" data-a="edit">Modifier</button>
         <button class="btn small ghost" data-a="sold">${it.status === "sold" ? "Remettre en vente" : "Marquer vendu"}</button>
         <button class="btn small ghost" data-a="del">Supprimer</button></div></div></div>`;
-  }).join("") : `<p class="empty">Aucun article pour l'instant. Publie le premier ci-dessus.</p>`;
+  }).join("") : `<p class="empty">Ta boutique est prête. Publie ton premier article ci-dessus pour commencer à vendre.</p>`;
 }
 $("#mine").addEventListener("click", async e => {
   const b = e.target.closest("[data-a]"); if (!b) return;

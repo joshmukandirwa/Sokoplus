@@ -4,7 +4,7 @@
 
 const ADMIN_EMAIL = "joshmukandirwa@gmail.com";
 const API_KEY = "AIzaSyD1uI7s5-cnkL7sf3_2Xqwo5BxTGo3jEC0";   // la même apiKey que dans firebase-config.js
-const SITE_URL = "https://sokoplus.store";   // adresse du site
+const SITE_URL = "https://sokoplus-rdc.vercel.app";   // adresse du site
 
 function doPost(e) {
   try {

@@ -180,7 +180,7 @@ function dialog() {
     if (e.target.id === "rSend") {
       if (!configured) return toast("Mode démo : signalement non envoyé.");
       try { await addDoc(collection(db, "reports"), { itemId: current.id, reason: $("#rReason").value, createdAt: serverTimestamp() }); toast("Merci, ton signalement est envoyé."); d.close(); }
-      catch { toast("Envoi impossible pour le moment."); }
+      catch { toast("Oups, l'envoi n'a pas marché. Réessaie dans un instant."); }
     }
   });
   return d;

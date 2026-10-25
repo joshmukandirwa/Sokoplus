@@ -111,16 +111,17 @@ Crée un 2ᵉ compte vendeur (autre email, autre téléphone), publie un article
 
 ---
 
-## Nom de domaine sokoplus.store et référencement (SEO)
+## Mise en ligne sur Vercel (adresse provisoire) et référencement (SEO)
 
-1. **Chez ton vendeur de domaine** (DNS) : crée 4 enregistrements A pour `@` vers 185.199.108.153, 185.199.109.153, 185.199.110.153 et 185.199.111.153, et un CNAME `www` vers `joshmukandirwa.github.io`. (Vérifie ces valeurs dans la documentation GitHub Pages au moment de le faire.)
-2. **GitHub** : Settings > Pages > Custom domain : `sokoplus.store`, puis coche **Enforce HTTPS** quand GitHub a validé le DNS. Le fichier `CNAME` du projet contient déjà le domaine.
-3. **Firebase** : Authentication > Paramètres > Domaines autorisés : ajoute `sokoplus.store` et `www.sokoplus.store` (sinon la connexion Google échoue sur le vrai site).
-4. **Apps Script** : dans ton script déployé, mets `SITE_URL = "https://sokoplus.store"`.
-5. **Google Search Console** : ajoute `sokoplus.store`, puis envoie `https://sokoplus.store/sitemap.xml`.
+1. **Vercel** : https://vercel.com, **Add New > Project**, importe le dépôt GitHub `Sokoplus`, laisse tous les réglages par défaut (pas de commande de build), puis **Deploy**. Chaque `git push` republie le site tout seul.
+2. **Adresse** : le site est servi sur `https://sokoplus-rdc.vercel.app` (si Vercel a donné une autre adresse, remplace-la partout, voir plus bas).
+3. **Firebase** : Authentication > Paramètres > Domaines autorisés : ajoute `sokoplus-rdc.vercel.app` (sinon la connexion Google est refusée en ligne).
+4. **Apps Script** : dans ton script déployé, mets `SITE_URL = "https://sokoplus-rdc.vercel.app"`.
+5. **Google Search Console** : ajoute le site, puis envoie `https://sokoplus-rdc.vercel.app/sitemap.xml`.
 
-Le projet contient : titres et descriptions par page, adresses canoniques, balises de partage (Open Graph et Twitter) avec l'image `icons/og-image.png`, données structurées (organisation et recherche) sur l'accueil, `robots.txt` et `sitemap.xml`. Les pages Recherche, Favoris, Paramètres et Admin sont en `noindex`.
+**Le jour où tu achètes `sokoplus.store`** : dans Vercel, Settings > Domains > ajoute le domaine et recopie les enregistrements DNS demandés chez ton vendeur. Puis, dans VS Code, Ctrl + Maj + H : remplace `sokoplus-rdc.vercel.app` par `sokoplus.store` dans tout le projet, republie, ajoute `sokoplus.store` dans les domaines autorisés de Firebase et renvoie le sitemap à la Search Console.
 
+Le projet contient : titres et descriptions par page, adresses canoniques, balises de partage (Open Graph et Twitter) avec `icons/og-image.png`, données structurées sur l'accueil, `robots.txt`, `sitemap.xml` et `vercel.json`. Les pages Recherche, Favoris, Paramètres et Admin sont en `noindex`.
 ---
 
 ## Option B : notifications push (site fermé)

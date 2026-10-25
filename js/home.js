@@ -9,7 +9,8 @@ function render() {
   const grid = $("#grid"), empty = $("#empty");
   if (loadError && !items.size) {
     grid.innerHTML = ""; empty.hidden = false;
-    empty.textContent = loadError === "perm" ? "Accès refusé : colle les règles de firestore.rules dans la console Firebase (README, étape 4)." : "Impossible de charger les articles. Vérifie ta connexion.";
+    if (loadError === "perm") console.warn("Règles Firestore : colle le contenu de firestore.rules dans la console Firebase, puis publie.");
+    empty.textContent = loadError === "perm" ? "Le marché est en cours de mise à jour. Réessaie dans quelques minutes." : "Oups, on n'arrive pas à charger les articles. Vérifie ta connexion et réessaie dans un instant.";
     return;
   }
   const list = filter({ sort });

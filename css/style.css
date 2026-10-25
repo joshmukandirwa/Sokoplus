@@ -521,3 +521,6 @@ dialog[open]{animation:sheet .38s cubic-bezier(.2,.9,.25,1)}dialog[open]::backdr
 .a-chg{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 0;border-top:1px dashed var(--line)}
 .a-chg small{flex:0 0 100%;color:var(--muted);font-weight:700}.a-chg i{font-style:normal;color:var(--muted)}
 .a-chg img{width:56px;height:56px;border-radius:50%;object-fit:cover;border:2px solid var(--line)}
+
+/* Petit mot d'accueil dans Ma boutique */
+.hello{font:700 .85rem var(--body);color:var(--muted);margin-bottom:2px}
