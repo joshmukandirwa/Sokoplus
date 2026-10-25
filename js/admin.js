@@ -2,7 +2,7 @@ import {
   auth, db, onAuthStateChanged, signInWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp,
   collection, query, orderBy, limit, where, getDocs, onSnapshot, Timestamp
 } from "./fb.js";
-import { SITE, configured, configBanner, $, $$, esc, money, prettyPhone, waLink, ago, toast, thumb, tileColor } from "./common.js";
+import { SITE, configured, configBanner, $, $$, esc, safeUrl, money, prettyPhone, waLink, ago, toast, thumb, tileColor } from "./common.js";
 import { icon } from "./icons.js";
 import { notify } from "./notify.js";
 import { run, btnOf } from "./feedback.js";
@@ -140,11 +140,11 @@ async function applyProfile(r, u) {
 }
 
 function subCard(s) {
-  const imgs = (s.images || []).map(u => `<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(thumb(u, 360))}" alt="" loading="lazy"></a>`).join("");
+  const imgs = (s.images || []).map(u => `<a href="${esc(safeUrl(u))}" target="_blank" rel="noopener noreferrer"><img src="${esc(thumb(u, 360))}" alt="" loading="lazy"></a>`).join("");
   return `<article class="a-card a-sub" data-row data-sid="${esc(s.id)}">
     <div class="a-gal">${imgs}</div>
     <div class="a-top"><b>${esc(s.title)}</b><span class="a-price">${money(s.price, s.currency)}</span></div>
-    <div class="a-meta">${s.status === "rejected" ? '<span class="pill bad">Refusé</span>' : '<span class="pill warn">À valider</span>'} <span>${esc(s.shopName)}</span> · <span>${esc(s.category)}</span> · <span>${esc(s.city ? s.city + ", " + s.address : s.address)}</span> · <span>${ago(when(s.createdAt))}</span></div>
+    <div class="a-meta">${s.status === "rejected" ? '<span class="pill bad">Refusé</span>' : '<span class="pill warn">À valider</span>'}${s.replaces ? ' <span class="pill ok">Modification d\'un article en ligne</span>' : ""} <span>${esc(s.shopName)}</span> · <span>${esc(s.category)}</span> · <span>${esc(s.city ? s.city + ", " + s.address : s.address)}</span> · <span>${ago(when(s.createdAt))}</span></div>
     ${s.description ? `<p class="a-desc">${esc(s.description)}</p>` : ""}
     ${s.status === "rejected" && s.reason ? `<p class="a-desc">Motif : ${esc(s.reason)}</p>` : ""}
     <div class="a-actions">${s.status === "pending" ? '<button class="btn ok" data-a="ok">Valider et publier</button><button class="btn ghost" data-a="no">Refuser</button>' : '<button class="btn small ghost" data-a="delsub">Supprimer</button>'}</div>
@@ -354,6 +354,15 @@ $("#list").addEventListener("click", async e => {
       const owner = users.find(x => x.id === s.ownerId);
       if (a === "ok") {
         await run(b, async () => {
+          if (s.replaces) {   // modification d'un article déjà en ligne : on vérifie que l'article appartient bien à ce vendeur
+            const cur = await getDoc(doc(db, "items", s.replaces));
+            if (!cur.exists() || cur.data().ownerId !== s.ownerId) throw { message: "L'article à modifier n'existe plus ou n'appartient pas à ce vendeur." };
+            await updateDoc(cur.ref, { title: s.title, description: s.description, price: s.price, category: s.category, address: s.address, city: s.city || "", currency: s.currency || "USD", images: s.images });
+            await deleteDoc(doc(db, "submissions", s.id));
+            if (owner?.email) notify("approved", { to: owner.email, title: s.title, shopName: s.shopName });
+            return;
+          }
+          if ((await getDoc(doc(db, "items", s.id))).exists()) throw { message: "Un article avec cet identifiant existe déjà : proposition suspecte, refuse-la." };   // empêche d'écraser l'article d'un autre vendeur
           await setDoc(doc(db, "items", s.id), {
             title: s.title, description: s.description, price: s.price, category: s.category, address: s.address, city: s.city || "", currency: s.currency || "USD", images: s.images,
             ownerId: s.ownerId, shopName: owner?.shopName || s.shopName, phone: owner?.phone || s.phone, shopLogo: owner?.logo || "", status: "available", featured: false, createdAt: serverTimestamp()

@@ -11,6 +11,7 @@ function doPost(e) {
     const d = JSON.parse(e.postData.contents);
     const who = verify_(d.idToken);          // on vérifie qui appelle, grâce à son jeton de connexion Firebase
     if (!who) return out_("refus");
+    if (d.type === "new_submission" && (!who.verified || tooMany_(who.email))) return out_("limite");   // anti-spam : e-mail vérifié, 10 envois par heure au maximum
     const title = clean_(d.title), shop = clean_(d.shopName);
 
     if (d.type === "new_submission") {
@@ -39,6 +40,12 @@ function verify_(idToken) {
   if (r.getResponseCode() !== 200) return null;
   const u = (JSON.parse(r.getContentText()).users || [])[0];
   return u ? { email: String(u.email || "").toLowerCase(), verified: !!u.emailVerified } : null;
+}
+function tooMany_(email) {
+  const c = CacheService.getScriptCache(), k = "n_" + email, n = Number(c.get(k) || 0);
+  if (n >= 10) return true;
+  c.put(k, String(n + 1), 3600);
+  return false;
 }
 const clean_ = s => String(s || "").replace(/[\r\n]+/g, " ").slice(0, 200);
 const out_ = t => ContentService.createTextOutput(t);

@@ -40,6 +40,20 @@ service cloud.firestore {
       return !isTrial() || id == request.auth.uid + '_' + dayKey() + '_1' || id == request.auth.uid + '_' + dayKey() + '_2';
     }
 
+    // Photos : uniquement des liens Cloudinary de SokoPlus (1 à 3)
+    function imgUrl(u) { return u is string && u.size() <= 300 && u.matches('https://res[.]cloudinary[.]com/dqtu9carq/.*'); }
+    function imgsOk(l) {
+      return l is list && l.size() >= 1 && l.size() <= 3 && imgUrl(l[0])
+        && (l.size() < 2 || imgUrl(l[1])) && (l.size() < 3 || imgUrl(l[2]));
+    }
+    // Proposition de modification d'un article existant : un seul identifiant possible par article (uid_edit_idArticle), et l'article doit être à soi
+    function editOk(id) {
+      let r = request.resource.data.replaces;
+      return r is string && r.size() <= 60 && id == request.auth.uid + '_edit_' + r
+        && exists(/databases/$(database)/documents/items/$(r))
+        && get(/databases/$(database)/documents/items/$(r)).data.ownerId == request.auth.uid;
+    }
+
     // Administrateurs : documents créés à la main dans la console (README, étape 7)
     match /admins/{uid} {
       allow read: if signedIn() && request.auth.uid == uid;
@@ -87,7 +101,9 @@ service cloud.firestore {
       allow list: if false;
       allow create: if signedIn() && (siteOpen() || isAdmin())
         && request.resource.data.keys().hasOnly(['uid', 'email'])
-        && ((request.resource.data.uid == request.auth.uid && request.resource.data.email == request.auth.token.email) || isAdmin());
+        && ((request.resource.data.uid == request.auth.uid && request.resource.data.email == request.auth.token.email
+            && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+            && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.phone == phone) || isAdmin());
       allow update, delete: if isAdmin();
     }
 
@@ -97,12 +113,13 @@ service cloud.firestore {
       allow read: if isAdmin() || (signedIn() && resource.data.ownerId == request.auth.uid);
 
       allow create: if canPost()
-        && request.resource.data.keys().hasOnly(['title', 'description', 'price', 'category', 'address', 'city', 'currency', 'images', 'ownerId', 'shopName', 'phone', 'status', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['title', 'description', 'price', 'category', 'address', 'city', 'currency', 'images', 'ownerId', 'shopName', 'phone', 'status', 'createdAt', 'replaces'])
         && request.resource.data.ownerId == request.auth.uid
         && request.resource.data.shopName == profile().shopName
         && request.resource.data.phone == profile().phone
         && request.resource.data.status == 'pending'
-        && slotOk(id)
+        && id.matches(request.auth.uid + '_.*')
+        && ('replaces' in request.resource.data ? editOk(id) : slotOk(id))
         && request.resource.data.createdAt == request.time
         && request.resource.data.title is string
         && request.resource.data.title.size() >= 2 && request.resource.data.title.size() <= 100
@@ -113,8 +130,7 @@ service cloud.firestore {
         && (!('currency' in request.resource.data) || request.resource.data.currency in ['USD', 'FC'])
         && request.resource.data.price is number
         && request.resource.data.price > 0 && request.resource.data.price < 100000000
-        && request.resource.data.images is list
-        && request.resource.data.images.size() >= 1 && request.resource.data.images.size() <= 3;
+        && imgsOk(request.resource.data.images);
 
       allow update: if isAdmin();
       // le vendeur peut supprimer ses propres articles refusés
@@ -135,18 +151,14 @@ service cloud.firestore {
         && request.resource.data.price is number && request.resource.data.price > 0
         && (!('city' in request.resource.data) || (request.resource.data.city is string && request.resource.data.city.size() <= 40))
         && (!('currency' in request.resource.data) || request.resource.data.currency in ['USD', 'FC'])
-        && request.resource.data.images is list
-        && request.resource.data.images.size() >= 1 && request.resource.data.images.size() <= 3;
+        && imgsOk(request.resource.data.images);
 
       allow update: if isAdmin()
         || (signedIn() && siteOpen() && resource.data.ownerId == request.auth.uid
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title', 'description', 'price', 'category', 'address', 'city', 'currency', 'images', 'status'])
-            && request.resource.data.title.size() >= 2 && request.resource.data.title.size() <= 100
-            && request.resource.data.description.size() <= 1500
-            && request.resource.data.price is number && request.resource.data.price > 0
-            && request.resource.data.images.size() >= 1 && request.resource.data.images.size() <= 3
-            && (!('city' in request.resource.data) || (request.resource.data.city is string && request.resource.data.city.size() <= 40))
-        && (!('currency' in request.resource.data) || request.resource.data.currency in ['USD', 'FC'])
+            && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+            && profile().status == 'active'
+            // le vendeur ne change que « disponible / vendu » ; tout autre changement passe par une proposition validée par l'admin
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
             && request.resource.data.status in ['available', 'sold']);
 
       allow delete: if isAdmin() || (signedIn() && siteOpen() && resource.data.ownerId == request.auth.uid);
@@ -156,7 +168,7 @@ service cloud.firestore {
     match /reports/{id} {
       allow create: if siteOpen() && request.resource.data.keys().hasOnly(['itemId', 'reason', 'createdAt'])
         && request.resource.data.itemId is string && request.resource.data.itemId.size() <= 60
-        && request.resource.data.reason is string && request.resource.data.reason.size() <= 300
+        && request.resource.data.reason in ['Arnaque ou faux article', 'Article interdit', 'Prix faux', 'Déjà vendu', 'Autre']
         && request.resource.data.createdAt == request.time;
       allow read, delete: if isAdmin();
     }
@@ -169,7 +181,9 @@ service cloud.firestore {
 
     // Appareils inscrits aux notifications (le jeton sert d'identifiant)
     match /pushTokens/{token} {
-      allow create, update: if request.resource.data.keys().hasOnly(['cats', 'updatedAt'])
+      allow create, update: if token.size() >= 100 && token.size() <= 300
+        && request.resource.data.keys().hasOnly(['cats', 'updatedAt'])
+        && request.resource.data.updatedAt == request.time
         && request.resource.data.cats is list && request.resource.data.cats.size() <= 12;
       allow delete: if true;
       allow read: if false;

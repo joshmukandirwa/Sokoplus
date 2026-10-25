@@ -281,7 +281,7 @@ function recap() {
     <dl class="rlist"><div><dt>Catégorie</dt><dd>${esc($("#iCat").value)}</dd></div>
       <div><dt>Lieu</dt><dd>${esc($("#iCity").value)}, ${esc($("#iAddr").value.trim())}</dd></div>
       ${desc ? `<div><dt>Description</dt><dd>${esc(desc)}</dd></div>` : ""}</dl>
-    <p class="note">${editing ? "Tes modifications sont enregistrées tout de suite."
+    <p class="note">${editing ? "SokoPlus vérifie tes modifications avant de les mettre en ligne."
       : `SokoPlus vérifie ton article avant de le mettre en ligne, puis te prévient.${after === null ? "" : ` Après cet envoi, il te restera ${after} publication${after > 1 ? "s" : ""} aujourd'hui.`}`}</p>`;
 }
 $("#iNext").onclick = () => { if (validStep(step)) showStep(step + 1); };
@@ -318,14 +318,23 @@ $("#fItem").addEventListener("submit", e => {
     };
     say(m, editing ? "Enregistrement…" : "Envoi pour validation…");
     if (editing) {
-      await updateDoc(doc(db, "items", editing.id), { ...data, images: urls.length ? urls : editing.images });
-      toast("C'est enregistré, ton article est à jour.");
+      // une modification n'est plus appliquée directement : SokoPlus la vérifie avant de la mettre en ligne
+      const eid = `${user.uid}_edit_${editing.id}`, old = waiting.find(x => x.id === eid);
+      if (old && old.status === "pending") throw { message: "Une modification de cet article attend déjà la validation de SokoPlus. Patiente un instant." };
+      if (old) await deleteDoc(doc(db, "submissions", eid));   // ancienne demande refusée
+      await setDoc(doc(db, "submissions", eid), {
+        ...data, images: urls.length ? urls : editing.images, replaces: editing.id,
+        ownerId: user.uid, shopName: profile.shopName, phone: profile.phone, status: "pending", createdAt: serverTimestamp()
+      });
+      notify("new_submission", { title: data.title, shopName: profile.shopName });
+      toast("Modification envoyée. Elle sera en ligne dès que SokoPlus l'aura vérifiée."); 
     } else {
       const sub = {
         ...data, images: urls, ownerId: user.uid, shopName: profile.shopName, phone: profile.phone,
         status: "pending", createdAt: serverTimestamp()
       };
-      if (slot) await setDoc(doc(db, "submissions", slot), sub); else await addDoc(collection(db, "submissions"), sub);
+      const sid = slot || `${user.uid}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;   // l'identifiant commence toujours par ton uid
+      await setDoc(doc(db, "submissions", sid), sub);
       notify("new_submission", { title: data.title, shopName: profile.shopName });
       toast("C'est parti ! Ton article est entre nos mains. Dès qu'il est validé, on te prévient.");
     }

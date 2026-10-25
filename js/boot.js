@@ -7,3 +7,4 @@
   apply(); mq.addEventListener && mq.addEventListener("change", apply);
   window.__applyTheme = apply;
 })();
+document.addEventListener("click", function (e) { if (e.target.closest && e.target.closest("[data-reload]")) location.reload(); });

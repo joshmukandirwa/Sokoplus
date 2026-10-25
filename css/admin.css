@@ -650,7 +650,7 @@
   color: var(--ink);
   font: 900 1.3rem var(--display);
   font-variant-numeric: tabular-nums;
-  -moz-apperance: textfield
+  -moz-appearance: textfield
 }
 
 .a-step input::-webkit-outer-spin-button,
