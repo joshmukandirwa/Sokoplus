@@ -22,5 +22,5 @@ export const sendPasswordResetEmail = g(S, "sendPasswordResetEmail");
 export const GoogleAuthProvider = g(S, "GoogleAuthProvider"), signInWithPopup = g(S, "signInWithPopup"), signInWithRedirect = g(S, "signInWithRedirect");
 export const collection = g(F, "collection"), doc = g(F, "doc"), getDoc = g(F, "getDoc"), setDoc = g(F, "setDoc");
 export const addDoc = g(F, "addDoc"), updateDoc = g(F, "updateDoc"), deleteDoc = g(F, "deleteDoc");
-export const query = g(F, "query"), orderBy = g(F, "orderBy"), limit = g(F, "limit"), where = g(F, "where");
+export const query = g(F, "query"), orderBy = g(F, "orderBy"), limit = g(F, "limit"), where = g(F, "where"), getDocs = g(F, "getDocs");
 export const onSnapshot = g(F, "onSnapshot"), serverTimestamp = g(F, "serverTimestamp"), Timestamp = F.Timestamp || {};

@@ -103,6 +103,26 @@ Crée un 2ᵉ compte vendeur (autre email, autre téléphone), publie un article
 
 ---
 
+## Modifier sa boutique (nom, numéro, photo)
+
+- Dans « Ma boutique », **Modifier ma boutique** envoie une demande (collection `profileRequests`). Rien ne change tant que l'admin n'a pas validé.
+- Dans `admin.html`, onglet **À valider**, la demande montre l'ancien et le nouveau côte à côte. **Valider** met à jour la boutique, l'index de connexion par numéro et tous ses articles en ligne ; **Refuser** envoie un motif que la boutique voit.
+- Republie `firestore.rules` : le nom ne peut plus être changé directement par le vendeur.
+
+---
+
+## Nom de domaine sokoplus.store et référencement (SEO)
+
+1. **Chez ton vendeur de domaine** (DNS) : crée 4 enregistrements A pour `@` vers 185.199.108.153, 185.199.109.153, 185.199.110.153 et 185.199.111.153, et un CNAME `www` vers `joshmukandirwa.github.io`. (Vérifie ces valeurs dans la documentation GitHub Pages au moment de le faire.)
+2. **GitHub** : Settings > Pages > Custom domain : `sokoplus.store`, puis coche **Enforce HTTPS** quand GitHub a validé le DNS. Le fichier `CNAME` du projet contient déjà le domaine.
+3. **Firebase** : Authentication > Paramètres > Domaines autorisés : ajoute `sokoplus.store` et `www.sokoplus.store` (sinon la connexion Google échoue sur le vrai site).
+4. **Apps Script** : dans ton script déployé, mets `SITE_URL = "https://sokoplus.store"`.
+5. **Google Search Console** : ajoute `sokoplus.store`, puis envoie `https://sokoplus.store/sitemap.xml`.
+
+Le projet contient : titres et descriptions par page, adresses canoniques, balises de partage (Open Graph et Twitter) avec l'image `icons/og-image.png`, données structurées (organisation et recherche) sur l'accueil, `robots.txt` et `sitemap.xml`. Les pages Recherche, Favoris, Paramètres et Admin sont en `noindex`.
+
+---
+
 ## Option B : notifications push (site fermé)
 
 Sans cette option, les visiteurs voient les nouveaux articles **en direct tant que le site est ouvert** (onglet ouvert ou appli installée). Pour alerter aussi ceux qui ont fermé le site, il faut une fonction serveur, et Firebase la réserve au forfait **Blaze** (carte bancaire demandée, à ton volume tu ne paies rien).

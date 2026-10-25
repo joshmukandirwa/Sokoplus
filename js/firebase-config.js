@@ -28,6 +28,7 @@ export const SITE = {
   name: "SokoPlus",
   adminWhatsapp: "243845289561", // ton numéro WhatsApp (les vendeurs t'écrivent pour s'abonner)
   adminEmail: "joshmukandirwa@gmail.com", // compte administrateur (connexion Google ou e-mail)
+  rate: 2800,                    // sert seulement à classer ensemble des prix en dollars et en francs, jamais affiché
   notifyUrl: "https://script.google.com/macros/s/AKfycbwDZK7m02OPP6PnNOObc8INMgCyhE0gskTzz4yAomSgcLJ3usUGAUBIVSMapGjyUqfJmg/exec",                 // adresse du script e-mail (voir apps-script/notify.gs), laisse vide pour désactiver
   subscriptionText: "5 $ par mois",
   cities: ["Kinshasa", "Lubumbashi", "Goma", "Bukavu", "Kisangani", "Mbuji-Mayi", "Kolwezi", "Likasi", "Matadi", "Butembo", "Uvira", "Kananga", "Tshikapa", "Bunia", "Mbandaka", "Beni", "Kalemie", "Autre ville"],

@@ -1,12 +1,17 @@
 {
+  "id": "/",
   "name": "SokoPlus",
   "short_name": "SokoPlus",
-  "description": "Le marché en ligne de la RDC",
+  "description": "Achetez et vendez partout en RDC",
   "start_url": "index.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f1f4fb",
   "theme_color": "#03060d",
+  "lang": "fr",
+  "categories": [
+    "shopping"
+  ],
   "icons": [
     {
       "src": "icons/icon-192.png",
@@ -21,7 +26,6 @@
       "purpose": "any maskable"
     }
   ],
-  "lang": "fr",
   "shortcuts": [
     {
       "name": "Rechercher",

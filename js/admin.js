@@ -1,6 +1,6 @@
 import {
   auth, db, onAuthStateChanged, signInWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp,
-  collection, query, orderBy, limit, onSnapshot, Timestamp
+  collection, query, orderBy, limit, where, getDocs, onSnapshot, Timestamp
 } from "./fb.js";
 import { SITE, configured, configBanner, $, $$, esc, money, prettyPhone, waLink, ago, toast, thumb, tileColor } from "./common.js";
 import { icon } from "./icons.js";
@@ -9,7 +9,7 @@ import { run, btnOf } from "./feedback.js";
 
 configBanner();
 const DAY = 864e5;
-let tab = "pending", users = [], items = [], reports = [], subs = [], unsubs = [], firstSubs = true;
+let tab = "pending", users = [], items = [], reports = [], subs = [], reqs = [], unsubs = [], firstSubs = true, firstReqs = true;
 
 const say = (t, kind = "") => { const m = $("#aMsg"); m.hidden = !t; m.className = "msg " + kind; m.textContent = t || ""; };
 
@@ -37,7 +37,7 @@ else onAuthStateChanged(auth, async u => {
     return;
   }
   $("#login").hidden = true; $("#panel").hidden = false; $("#logout").hidden = false; say("");
-  firstSubs = true;
+  firstSubs = true; firstReqs = true;
   unsubs.push(
     onSnapshot(query(collection(db, "submissions"), orderBy("createdAt", "desc"), limit(100)), s => {
       if (!firstSubs) s.docChanges().forEach(ch => {
@@ -45,6 +45,13 @@ else onAuthStateChanged(auth, async u => {
       });
       firstSubs = false;
       subs = s.docs.map(d => ({ id: d.id, ...d.data() })); render();
+    }),
+    onSnapshot(collection(db, "profileRequests"), s => {
+      if (!firstReqs) s.docChanges().forEach(ch => {
+        if (ch.type === "added" && !ch.doc.metadata.hasPendingWrites) toast(`Demande de modification de boutique : ${users.find(x => x.id === ch.doc.id)?.shopName || "une boutique"}`, { onClick: () => { tab = "pending"; render(); } });
+      });
+      firstReqs = false;
+      reqs = s.docs.map(d => ({ id: d.id, ...d.data() })); render();
     }),
     onSnapshot(collection(db, "users"), s => { users = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }),
     onSnapshot(query(collection(db, "items"), orderBy("createdAt", "desc"), limit(200)), s => { items = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }),
@@ -97,6 +104,39 @@ function usersView(q) {
   return list.map(userCard).join("") || empty("shop", "Aucune boutique ne correspond.");
 }
 
+/* Modification de boutique : on affiche l'ancien et le nouveau côte à côte, puis l'admin valide ou refuse */
+function reqCard(r) {
+  const u = users.find(x => x.id === r.id) || {};
+  const chg = (label, now, next) => next ? `<div class="a-chg"><small>${label}</small><span>${esc(now || "—")}</span><i>devient</i><b>${esc(next)}</b></div>` : "";
+  return `<article class="a-card a-sub" data-row data-rid="${esc(r.id)}">
+    <div class="a-top"><b>Modification de la boutique ${esc(u.shopName || "")}</b></div>
+    <div class="a-meta">${r.status === "rejected" ? '<span class="pill bad">Refusée</span>' : '<span class="pill warn">À valider</span>'} <span>${esc(u.email || "")}</span> · <span>${ago(when(r.createdAt))}</span></div>
+    ${chg("Nom", u.shopName, r.shopName && r.shopName !== u.shopName ? r.shopName : "")}
+    ${chg("Numéro", u.phone ? prettyPhone(u.phone) : "", r.phone && r.phone !== u.phone ? prettyPhone(r.phone) : "")}
+    ${r.logo ? `<div class="a-chg"><small>Photo de profil</small>${u.logo ? `<img src="${esc(thumb(u.logo, 120))}" alt="">` : "<span>aucune</span>"}<i>devient</i><a href="${esc(r.logo)}" target="_blank" rel="noopener"><img src="${esc(thumb(r.logo, 160))}" alt=""></a></div>` : ""}
+    ${r.status === "rejected" && r.reason ? `<p class="a-desc">Motif : ${esc(r.reason)}</p>` : ""}
+    <div class="a-actions">${r.status === "pending" ? '<button class="btn ok" data-a="rok">Valider</button><button class="btn ghost" data-a="rno">Refuser</button>' : '<button class="btn small ghost" data-a="rdel">Supprimer</button>'}</div>
+  </article>`;
+}
+async function applyProfile(r, u) {
+  if (!u) throw { message: "Boutique introuvable." };
+  const patch = {};
+  if (r.shopName) patch.shopName = r.shopName;
+  if (r.logo) patch.logo = r.logo;
+  if (r.phone && r.phone !== u.phone) {   // l'index « numéro -> email » suit le nouveau numéro
+    if ((await getDoc(doc(db, "phoneIndex", r.phone))).exists()) throw { message: "Ce numéro est déjà utilisé par une autre boutique." };
+    await setDoc(doc(db, "phoneIndex", r.phone), { uid: u.id, email: u.email });
+    if (u.phone) await deleteDoc(doc(db, "phoneIndex", u.phone)).catch(() => { });
+    patch.phone = r.phone;
+  }
+  await updateDoc(doc(db, "users", u.id), patch);
+  const mineSnap = await getDocs(query(collection(db, "items"), where("ownerId", "==", u.id)));   // les articles déjà en ligne suivent
+  await Promise.all(mineSnap.docs.map(d => updateDoc(d.ref, {
+    shopName: patch.shopName ?? d.data().shopName, phone: patch.phone ?? d.data().phone, shopLogo: patch.logo ?? d.data().shopLogo ?? ""
+  })));
+  await deleteDoc(doc(db, "profileRequests", r.id));
+}
+
 function subCard(s) {
   const imgs = (s.images || []).map(u => `<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(thumb(u, 360))}" alt="" loading="lazy"></a>`).join("");
   return `<article class="a-card a-sub" data-row data-sid="${esc(s.id)}">
@@ -110,9 +150,10 @@ function subCard(s) {
 }
 function pendingView(q) {
   const base = subs.filter(s => s.status !== "approved");
-  chipsHTML([["wait", "En attente"], ["rej", "Refusés"]], { wait: base.filter(s => s.status === "pending").length, rej: base.filter(s => s.status === "rejected").length });
+  chipsHTML([["wait", "En attente"], ["rej", "Refusés"]], { wait: base.filter(s => s.status === "pending").length + reqs.filter(r => r.status === "pending").length, rej: base.filter(s => s.status === "rejected").length + reqs.filter(r => r.status === "rejected").length });
   const list = base.filter(s => (chips.pending === "wait" ? s.status === "pending" : s.status === "rejected") && (!q || norm(`${s.title} ${s.shopName} ${s.category}`).includes(q)));
-  return list.map(subCard).join("") || empty("clock", chips.pending === "wait" ? "Rien à valider pour le moment. Tout est à jour." : "Aucun article refusé.");
+  const rl = reqs.filter(r => (chips.pending === "wait" ? r.status === "pending" : r.status === "rejected") && (!q || norm(`${users.find(x => x.id === r.id)?.shopName || ""} ${r.shopName || ""}`).includes(q)));
+  return (rl.map(reqCard).join("") + list.map(subCard).join("")) || empty("clock", chips.pending === "wait" ? "Rien à valider pour le moment. Tout est à jour." : "Aucun article refusé.");
 }
 
 function itemCard(i) {
@@ -147,7 +188,7 @@ function reportsView(q) {
 }
 
 function render() {
-  const now = Date.now(), waiting = subs.filter(s => s.status === "pending").length;
+  const now = Date.now(), waiting = subs.filter(s => s.status === "pending").length + reqs.filter(r => r.status === "pending").length;
   const live = items.filter(i => i.status !== "sold").length, pro = users.filter(u => userState(u) === "pro").length;
   $("#aWho").textContent = auth.currentUser?.email || "";
   $("#aDate").textContent = new Date(now).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
@@ -185,17 +226,28 @@ $("#list").addEventListener("click", async e => {
   const b = e.target.closest("[data-a]"); if (!b) return;
   const row = b.closest("[data-row]"), a = b.dataset.a;
   try {
+    if (a === "rok" || a === "rno" || a === "rdel") {
+      const r = reqs.find(x => x.id === row.dataset.rid); if (!r) return;
+      if (a === "rok") { await run(b, () => applyProfile(r, users.find(x => x.id === r.id)), { busy: "Validation…", done: "Validé", hold: 700 }); toast("Modifications validées : la boutique et ses articles sont à jour."); }
+      if (a === "rno") {
+        const reason = window.prompt("Motif du refus (la boutique le verra). Laisse vide si tu ne veux rien préciser.", ""); if (reason === null) return;
+        await run(b, () => updateDoc(doc(db, "profileRequests", r.id), { status: "rejected", reason: reason.trim().slice(0, 200) }), { busy: "Refus…", done: "Refusé", hold: 600 });
+        toast("Demande refusée. La boutique voit le motif.");
+      }
+      if (a === "rdel") await deleteDoc(doc(db, "profileRequests", r.id));
+      return;
+    }
     if (a === "ok" || a === "no" || a === "delsub") {
       const s = subs.find(x => x.id === row.dataset.sid); if (!s) return;
       const owner = users.find(x => x.id === s.ownerId);
       if (a === "ok") {
         await run(b, async () => {
-        await setDoc(doc(db, "items", s.id), {
-          title: s.title, description: s.description, price: s.price, currency: s.currency || "USD", category: s.category, address: s.address, city: s.city || "", images: s.images,
-          ownerId: s.ownerId, shopName: s.shopName, phone: s.phone, status: "available", featured: false, createdAt: serverTimestamp()
-        });
-        await updateDoc(doc(db, "submissions", s.id), { status: "approved" });
-        if (owner?.email) notify("approved", { to: owner.email, title: s.title, shopName: s.shopName });
+          await setDoc(doc(db, "items", s.id), {
+            title: s.title, description: s.description, price: s.price, category: s.category, address: s.address, city: s.city || "", currency: s.currency || "USD", images: s.images,
+            ownerId: s.ownerId, shopName: owner?.shopName || s.shopName, phone: owner?.phone || s.phone, shopLogo: owner?.logo || "", status: "available", featured: false, createdAt: serverTimestamp()
+          });
+          await updateDoc(doc(db, "submissions", s.id), { status: "approved" });
+          if (owner?.email) notify("approved", { to: owner.email, title: s.title, shopName: s.shopName });
         }, { busy: "Validation…", done: "Validé", hold: 700 });
         toast("Article validé et en ligne. Le vendeur est prévenu.");
       }

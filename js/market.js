@@ -11,6 +11,7 @@ export const ms = it => it.createdAt?.toMillis?.() ?? it.createdAt ?? Date.now()
 export const norm = s => String(s ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 /* Ville choisie dans l'en-tête : « Toute la RDC » (vide) montre tout. Les anciens articles sans ville sont reconnus par leur adresse. */
 export const cityOk = it => { const c = store.get("city", ""); return !c || it.city === c || (!it.city && norm(it.address).includes(norm(c))); };
+const usd = it => it.currency === "FC" ? it.price / SITE.rate : it.price;   // seulement pour classer
 const where = it => it.city ? `${it.city}, ${it.address}` : it.address;
 const baseUrl = () => new URL("index.html", location.href);
 const shareUrl = id => { const u = baseUrl(); u.searchParams.set("item", id); return u.href; };
@@ -112,7 +113,7 @@ export function filter({ cat = "Tous", shop = "tous", q = "", fav = false, sort 
     for (const k of toks) { if (T.includes(k)) s += T.startsWith(k) ? 6 : 4; else if (R.includes(k)) s += 1; else return -1; }
     return s;
   };
-  const by = { recent: (a, b) => ms(b) - ms(a), low: (a, b) => a.price - b.price, high: (a, b) => b.price - a.price }[sort] || (() => 0);
+  const by = { recent: (a, b) => ms(b) - ms(a), low: (a, b) => usd(a) - usd(b), high: (a, b) => usd(b) - usd(a) }[sort] || (() => 0);
   return [...items.values()].map(it => [it, score(it)]).filter(([it, s]) =>
     s >= 0 && (cat === "Tous" || it.category === cat) && (shop === "tous" || it.ownerId === shop) &&
     (!fav || favs.has(it.id)) && (fav || cityOk(it)) && (!avail || it.status !== "sold"))

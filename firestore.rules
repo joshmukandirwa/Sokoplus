@@ -11,20 +11,19 @@ service cloud.firestore {
     function profile() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
-    // Un vendeur peut publier s'il a vérifié son email et n'est pas bloqué (même sans abonnement : 2 par jour).
+    // Un vendeur peut publier s'il a vérifié son email, n'est pas bloqué et son abonnement court encore.
     function canPost() {
       return signedIn()
         && request.auth.token.email_verified == true
         && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        && profile().status == 'active';
+        && profile().status == 'active'
+        && profile().activeUntil > request.time;
     }
 
-    // Abonné : plan 'pro' et abonnement encore actif => publications illimitées.
-    // Sans abonnement (essai, ou abonnement expiré) : 2 publications par jour.
-    function isSub() {
-      return ('plan' in profile()) && profile().plan == 'pro' && profile().activeUntil > request.time;
+    // Essai gratuit (plan 'essai') : 2 publications par jour. Les comptes sans champ 'plan' comptent comme essai.
+    function isTrial() {
+      return !('plan' in profile()) || profile().plan == 'essai';
     }
-    function isTrial() { return !isSub(); }
     // Jour en RDC (UTC+2), au format AAAAMMJJ
     function dayKey() {
       let t = request.time + duration.value(2, 'h');
@@ -56,9 +55,24 @@ service cloud.firestore {
         // essai gratuit : environ 30 jours, pas plus
         && request.resource.data.activeUntil > request.time + duration.value(28, 'd')
         && request.resource.data.activeUntil < request.time + duration.value(32, 'd');
-      allow update: if isAdmin()
-        || (signedIn() && request.auth.uid == uid
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['shopName']));
+      // nom, numéro et photo ne changent plus directement : le vendeur envoie une demande (profileRequests), l'admin la valide
+      allow update: if isAdmin();
+    }
+
+    // Demandes de modification de boutique (nom, numéro, photo de profil) : une par boutique, validée ou refusée par l'admin
+    match /profileRequests/{uid} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow create: if signedIn() && request.auth.uid == uid && request.auth.token.email_verified == true
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && request.resource.data.keys().hasOnly(['shopName', 'phone', 'logo', 'status', 'createdAt'])
+        && request.resource.data.keys().hasAny(['shopName', 'phone', 'logo'])
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt == request.time
+        && (!('shopName' in request.resource.data) || (request.resource.data.shopName is string && request.resource.data.shopName.size() >= 2 && request.resource.data.shopName.size() <= 60))
+        && (!('phone' in request.resource.data) || (request.resource.data.phone is string && request.resource.data.phone.size() >= 10 && request.resource.data.phone.size() <= 15))
+        && (!('logo' in request.resource.data) || (request.resource.data.logo is string && request.resource.data.logo.matches('https://.*') && request.resource.data.logo.size() <= 300));
+      allow update: if isAdmin();
+      allow delete: if isAdmin() || (signedIn() && request.auth.uid == uid && resource.data.status == 'rejected');
     }
 
     // Numéro -> email, pour se connecter avec le téléphone (lecture d'un seul document à la fois, pas de liste)
@@ -67,8 +81,7 @@ service cloud.firestore {
       allow list: if false;
       allow create: if signedIn()
         && request.resource.data.keys().hasOnly(['uid', 'email'])
-        && request.resource.data.uid == request.auth.uid
-        && request.resource.data.email == request.auth.token.email;
+        && ((request.resource.data.uid == request.auth.uid && request.resource.data.email == request.auth.token.email) || isAdmin());
       allow update, delete: if isAdmin();
     }
 
@@ -78,7 +91,7 @@ service cloud.firestore {
       allow read: if isAdmin() || (signedIn() && resource.data.ownerId == request.auth.uid);
 
       allow create: if canPost()
-        && request.resource.data.keys().hasOnly(['title', 'description', 'price', 'currency', 'category', 'address', 'city', 'images', 'ownerId', 'shopName', 'phone', 'status', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['title', 'description', 'price', 'category', 'address', 'city', 'currency', 'images', 'ownerId', 'shopName', 'phone', 'status', 'createdAt'])
         && request.resource.data.ownerId == request.auth.uid
         && request.resource.data.shopName == profile().shopName
         && request.resource.data.phone == profile().phone
@@ -91,10 +104,9 @@ service cloud.firestore {
         && request.resource.data.category is string && request.resource.data.category.size() <= 40
         && request.resource.data.address is string && request.resource.data.address.size() <= 150
         && (!('city' in request.resource.data) || (request.resource.data.city is string && request.resource.data.city.size() <= 40))
-        && request.resource.data.currency in ['USD', 'FC']
+        && (!('currency' in request.resource.data) || request.resource.data.currency in ['USD', 'FC'])
         && request.resource.data.price is number
-        && request.resource.data.price > 0
-        && request.resource.data.price < (request.resource.data.currency == 'FC' ? 100000000 : 1000000)
+        && request.resource.data.price > 0 && request.resource.data.price < 100000000
         && request.resource.data.images is list
         && request.resource.data.images.size() >= 1 && request.resource.data.images.size() <= 3;
 
@@ -107,27 +119,27 @@ service cloud.firestore {
       allow read: if true;
 
       allow create: if isAdmin()
-        && request.resource.data.keys().hasOnly(['title', 'description', 'price', 'currency', 'category', 'address', 'city', 'images', 'ownerId', 'shopName', 'phone', 'status', 'featured', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['title', 'description', 'price', 'category', 'address', 'city', 'currency', 'images', 'ownerId', 'shopName', 'phone', 'shopLogo', 'status', 'featured', 'createdAt'])
         && request.resource.data.ownerId is string
         && request.resource.data.status == 'available'
         && request.resource.data.featured == false
         && request.resource.data.createdAt == request.time
         && request.resource.data.title is string && request.resource.data.title.size() <= 100
         && request.resource.data.price is number && request.resource.data.price > 0
-        && (!('currency' in request.resource.data) || request.resource.data.currency in ['USD', 'FC'])
         && (!('city' in request.resource.data) || (request.resource.data.city is string && request.resource.data.city.size() <= 40))
+        && (!('currency' in request.resource.data) || request.resource.data.currency in ['USD', 'FC'])
         && request.resource.data.images is list
         && request.resource.data.images.size() >= 1 && request.resource.data.images.size() <= 3;
 
       allow update: if isAdmin()
         || (signedIn() && resource.data.ownerId == request.auth.uid
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title', 'description', 'price', 'currency', 'category', 'address', 'city', 'images', 'status'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title', 'description', 'price', 'category', 'address', 'city', 'currency', 'images', 'status'])
             && request.resource.data.title.size() >= 2 && request.resource.data.title.size() <= 100
             && request.resource.data.description.size() <= 1500
             && request.resource.data.price is number && request.resource.data.price > 0
-            && (!('currency' in request.resource.data) || request.resource.data.currency in ['USD', 'FC'])
             && request.resource.data.images.size() >= 1 && request.resource.data.images.size() <= 3
             && (!('city' in request.resource.data) || (request.resource.data.city is string && request.resource.data.city.size() <= 40))
+        && (!('currency' in request.resource.data) || request.resource.data.currency in ['USD', 'FC'])
             && request.resource.data.status in ['available', 'sold']);
 
       allow delete: if isAdmin() || (signedIn() && resource.data.ownerId == request.auth.uid);

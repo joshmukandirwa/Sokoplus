@@ -16,9 +16,8 @@ export const store = {
 };
 
 /* ---------- Prix ---------- */
-/* Chaque article garde la monnaie choisie par le vendeur : "USD" (par défaut, anciens articles) ou "FC". */
-export function money(amount, cur = "USD") {
-  const n = Number(amount) || 0;
+export function money(price, cur = "USD") {   // chaque article garde sa monnaie (USD ou FC), aucune conversion
+  const n = Number(price) || 0;
   if (cur === "FC") return Math.round(n).toLocaleString("fr-FR") + " FC";
   return Number(n.toFixed(2)).toLocaleString("fr-FR") + " $";
 }

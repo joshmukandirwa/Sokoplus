@@ -4,7 +4,29 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Ma boutique - SokoPlus</title>
+  <title>Vendre sur SokoPlus : crée ta boutique gratuitement en RDC</title>
+  <!-- SEO -->
+  <meta name="description"
+    content="Crée ta boutique en 2 minutes et vends partout en RDC. 30 jours d'essai gratuit. Tes clients te contactent directement sur WhatsApp.">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <link rel="canonical" href="https://sokoplus.store/vendeur.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="SokoPlus">
+  <meta property="og:locale" content="fr_FR">
+  <meta property="og:title" content="Vendre sur SokoPlus : crée ta boutique gratuitement en RDC">
+  <meta property="og:description"
+    content="Crée ta boutique en 2 minutes et vends partout en RDC. 30 jours d'essai gratuit. Tes clients te contactent directement sur WhatsApp.">
+  <meta property="og:url" content="https://sokoplus.store/vendeur.html">
+  <meta property="og:image" content="https://sokoplus.store/icons/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="SokoPlus, le marché en ligne de la RDC">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Vendre sur SokoPlus : crée ta boutique gratuitement en RDC">
+  <meta name="twitter:description"
+    content="Crée ta boutique en 2 minutes et vends partout en RDC. 30 jours d'essai gratuit. Tes clients te contactent directement sur WhatsApp.">
+  <meta name="twitter:image" content="https://sokoplus.store/icons/og-image.png">
+  <!-- /SEO -->
   <meta name="theme-color" content="#03060d">
   <link rel="manifest" href="manifest.json">
   <script src="js/boot.js"></script>
@@ -92,14 +114,22 @@
 
     <!-- Tableau de bord -->
     <section id="dash" hidden>
-      <div class="sec" style="margin-top:0">
-        <div>
-          <h1 id="dShop" style="font-size:1.8rem"></h1>
+      <div class="shophead">
+        <div class="avatar" id="dAvatar" aria-hidden="true"></div>
+        <div class="shopinfo">
+          <h1 id="dShop"></h1>
           <div class="note" id="dContact"></div>
+          <div class="row" style="margin-top:6px"><span class="pill" id="dStatus"></span></div>
         </div>
-        <div class="row"><span class="pill" id="dStatus"></span><button class="btn ghost small" id="logout"
-            hidden>Déconnexion</button></div>
+        <div class="shopbtns"><button class="btn small" id="editShop" type="button">Modifier ma boutique</button><button
+            class="btn ghost small" id="logout" hidden>Déconnexion</button></div>
       </div>
+      <div class="vstats" id="vstats">
+        <div><b id="vsOn">0</b><span>En ligne</span></div>
+        <div><b id="vsWait">0</b><span>En attente</span></div>
+        <div><b id="vsSold">0</b><span>Vendus</span></div>
+      </div>
+      <div class="msg" id="reqBox" hidden></div>
       <div class="msg warn" id="verifyBox" hidden>
         <b>Vérifie ton adresse email</b> pour pouvoir publier. Nous avons envoyé un lien à <span
           id="verifyMail"></span>.
@@ -107,67 +137,67 @@
             class="btn small ghost" id="refresh">J'ai cliqué sur le lien</button></div>
       </div>
       <div class="msg err" id="blockBox" hidden></div>
-      <div class="quota" id="quotaBox" hidden></div>
 
-      <form class="panel wiz" id="fItem" style="margin-top:14px" data-anchor="publier" novalidate><span
-          id="publier"></span>
+      <form class="panel" id="fItem" style="margin-top:14px" data-anchor="publier" novalidate><span id="publier"></span>
         <h2 id="fTitle" style="font-size:1.3rem">Publier un article</h2>
-        <div class="wizbar" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
-        <p class="wizlbl" id="wizLbl" aria-live="polite"></p>
+        <div class="qbox" id="quotaBox" hidden></div>
+        <div id="wiz">
+          <ol class="steps" id="steps" aria-label="Étapes de publication">
+            <li data-s="1"><b>1</b><span>Article</span></li>
+            <li data-s="2"><b>2</b><span>Prix et lieu</span></li>
+            <li data-s="3"><b>3</b><span>Photos</span></li>
+            <li data-s="4"><b>4</b><span>Envoi</span></li>
+          </ol>
+          <div class="stepbar" aria-hidden="true"><i id="stepFill"></i></div>
 
-        <!-- Étape 1 : article -->
-        <section class="step" data-step="1">
-          <label class="field">Nom de l'article<input id="iTitle" required minlength="2" maxlength="100"
-              placeholder="Ex. Pagne wax 6 yards"></label>
-          <label class="field">Catégorie<select id="iCat" required></select></label>
-          <label class="field">Description (facultatif)<textarea id="iDesc" maxlength="1500"
-              placeholder="État, taille, couleur, quantité disponible, livraison…"></textarea></label>
-        </section>
+          <fieldset class="step" data-step="1">
+            <legend>Dis-nous ce que tu vends</legend>
+            <label class="field">Nom de l'article<input id="iTitle" required minlength="2" maxlength="100"
+                placeholder="Ex. Pagne wax 6 yards"></label>
+            <label class="field">Catégorie<select id="iCat" required></select></label>
+            <label class="field">Description (facultatif)<textarea id="iDesc" maxlength="1500"
+                placeholder="État, taille, couleur, quantité disponible, livraison…"></textarea></label>
+          </fieldset>
 
-        <!-- Étape 2 : photos -->
-        <section class="step" data-step="2" hidden>
-          <label class="drop" for="iImgs"><b>Ajouter des photos</b><span>1 à 3 photos, 4 Mo maximum
-              chacune</span></label>
-          <input id="iImgs" type="file" accept="image/*" multiple hidden>
-          <div class="previews" id="previews"></div>
-          <p class="note" id="photoNote"></p>
-        </section>
-
-        <!-- Étape 3 : prix -->
-        <section class="step" data-step="3" hidden>
-          <div class="field">Monnaie du prix
-            <div class="curpick" role="group" aria-label="Monnaie du prix">
-              <button type="button" data-cur="FC" aria-pressed="false"><b>FC</b><small>Franc congolais</small></button>
-              <button type="button" data-cur="USD" aria-pressed="true"><b>USD</b><small>Dollar
-                  américain</small></button>
+          <fieldset class="step" data-step="2" hidden>
+            <legend>Combien et où ?</legend>
+            <div class="cols">
+              <label class="field">Monnaie<select id="iCur">
+                  <option value="USD">Dollars (USD)</option>
+                  <option value="FC">Francs congolais (FC)</option>
+                </select></label>
+              <label class="field">Prix<input id="iPrice" type="number" min="1" step="any" required inputmode="decimal"
+                  placeholder="Ex. 25 ou 70000"></label>
             </div>
+            <div class="cols">
+              <label class="field">Ville<select id="iCity" required></select></label>
+              <label class="field">Quartier ou adresse<input id="iAddr" required maxlength="120"
+                  placeholder="Ex. Ndosho, avenue de la Paix"></label>
+            </div>
+          </fieldset>
+
+          <fieldset class="step" data-step="3" hidden>
+            <legend>Montre-le avec de belles photos</legend>
+            <label class="field">Photos (1 à 3, 4 Mo maximum chacune)<input id="iImgs" type="file" accept="image/*"
+                multiple></label>
+            <div class="previews" id="previews"></div>
+            <p class="note">Photos nettes, bien éclairées, sur un fond simple : les articles bien photographiés se
+              vendent plus vite.</p>
+          </fieldset>
+
+          <fieldset class="step" data-step="4" hidden>
+            <legend>Tout est bon ? Vérifie et envoie</legend>
+            <div class="recap" id="recap"></div>
+          </fieldset>
+
+          <p class="msg" id="iMsg" hidden></p>
+          <div class="wnav">
+            <button class="btn ghost" type="button" id="iBack" hidden>Retour</button>
+            <button class="btn" type="button" id="iNext">Continuer</button>
+            <button class="btn" type="submit" id="iSubmit" hidden>Publier</button>
+            <button class="btn ghost" type="button" id="iCancel" hidden>Annuler la modification</button>
           </div>
-          <label class="field"><span id="priceLbl">Prix en dollars (USD)</span><input id="iPrice" type="number"
-              inputmode="decimal" min="0.01" step="any" required placeholder="Ex. 25"></label>
-          <p class="note">Ton article s'affiche dans la monnaie que tu choisis. Aucune conversion automatique.</p>
-        </section>
-
-        <!-- Étape 4 : lieu -->
-        <section class="step" data-step="4" hidden>
-          <div class="field">Région<span id="iCityHost"></span></div>
-          <input type="hidden" id="iCity">
-          <label class="field">Quartier ou adresse<input id="iAddr" required maxlength="120"
-              placeholder="Ex. Ndosho, avenue de la Paix"></label>
-        </section>
-
-        <!-- Étape 5 : récapitulatif -->
-        <section class="step" data-step="5" hidden>
-          <div class="recap" id="recap"></div>
-          <div class="quota" id="quotaRecap"></div>
-        </section>
-
-        <p class="msg" id="iMsg" hidden></p>
-        <div class="wizbtns">
-          <button class="btn ghost" type="button" id="wBack" hidden>Retour</button>
-          <button class="btn" type="button" id="wNext">Continuer</button>
-          <button class="btn ok" type="submit" id="iSubmit" hidden>Envoyer pour validation</button>
         </div>
-        <button class="btn ghost small" type="button" id="iCancel" hidden>Annuler la modification</button>
       </form>
 
       <div class="sec">
@@ -177,6 +207,25 @@
     </section>
   </main>
 
+
+  <dialog id="shopDlg">
+    <form class="dlg" id="fShop" novalidate>
+      <div class="dlg-head">
+        <h2>Modifier ma boutique</h2><button class="x" type="button" data-close aria-label="Fermer">×</button>
+      </div>
+      <p class="note">SokoPlus vérifie chaque modification avant de l'appliquer. Tu es prévenu dès que c'est fait.</p>
+      <div class="logoPick">
+        <div class="avatar big" id="sAvatar"></div><label class="btn ghost small">Choisir une photo<input id="sLogo"
+            type="file" accept="image/*" hidden></label>
+      </div>
+      <label class="field">Nom de la boutique<input id="sName" required minlength="2" maxlength="60"></label>
+      <label class="field">Numéro WhatsApp<input id="sPhone" type="tel" required inputmode="tel"
+          placeholder="Ex. 0990 000 001"></label>
+      <p class="msg" id="sMsg" hidden></p>
+      <div class="wnav"><button class="btn" type="submit" id="sSend">Envoyer la demande</button><button
+          class="btn ghost" type="button" data-close>Annuler</button></div>
+    </form>
+  </dialog>
 
   <script type="module" src="js/ui.js"></script>
   <script type="module" src="js/vendor.js"></script>

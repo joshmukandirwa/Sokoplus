@@ -1,7 +1,7 @@
 /* SokoPlus : fonctionne hors connexion. Augmente VERSION à chaque nouvelle livraison pour déclencher la mise à jour. */
-const VERSION = "1.7.0", CACHE = "sokoplus-" + VERSION;
+const VERSION = "1.9.0", CACHE = "sokoplus-" + VERSION;
 const SHELL = ["index.html", "categories.html", "favoris.html", "recherche.html", "parametres.html", "confidentialite.html", "icons/ebenjosh-logo.png", "vendeur.html", "offline.html", "css/style.css",
-  "js/boot.js", "js/ui.js", "js/regions.js", "js/util.js", "js/common.js", "js/market.js", "js/fb.js", "js/firebase-config.js", "js/home.js", "js/categories.js", "js/favoris.js",
+  "js/boot.js", "js/ui.js", "js/util.js", "js/common.js", "js/market.js", "js/fb.js", "js/firebase-config.js", "js/home.js", "js/categories.js", "js/favoris.js",
   "js/recherche.js", "js/parametres.js", "js/vendor.js", "js/notify.js", "js/feedback.js", "js/notifs.js", "js/icons.js", "icons/icon-192.png", "icons/logo-mark.png", "icons/logo-full.png", "manifest.json"];
 const EXTERNAL = /^https:\/\/(fonts\.(googleapis|gstatic)\.com|www\.gstatic\.com\/firebasejs|res\.cloudinary\.com|loremflickr\.com|live\.staticflickr\.com)\//;
 

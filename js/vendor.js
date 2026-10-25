@@ -4,17 +4,16 @@ import {
   collection, query, where, onSnapshot, serverTimestamp, Timestamp
 } from "./fb.js";
 import {
-  SITE, configured, configBanner, $, esc, safeUrl, money, normPhone, prettyPhone, waLink,
+  SITE, configured, configBanner, $, $$, esc, safeUrl, money, normPhone, prettyPhone, waLink,
   compress, uploadImage, thumb, tileColor, toast, ago
 } from "./common.js";
 import { notify } from "./notify.js";
 import { run, btnOf } from "./feedback.js";
-import { regionBtnHTML, openRegionPicker, cityLabel } from "./regions.js";
 
 configBanner();
 $("#subTxt").textContent = SITE.subscriptionText;
 $("#iCat").innerHTML = SITE.categories.map(c => `<option>${esc(c)}</option>`).join("");
-$("#iCityHost").innerHTML = regionBtnHTML("", "iCityBtn", "field-like");
+$("#iCity").innerHTML = '<option value="">Choisis ta ville</option>' + SITE.cities.map(c => `<option>${esc(c)}</option>`).join("");
 
 let user = null, pending = null, profile = null, editing = null, unsub = null, signingUp = false;
 const DAY = 864e5;
@@ -164,207 +163,157 @@ async function enter(u) {
 }
 
 const MAX_MB = 4;                                   // poids maximum d'une photo
-const PER_DAY = 2;                                  // publications par jour sans abonnement
 const isTrial = () => (profile.plan || "essai") === "essai";
-const subLeft = () => profile.plan === "pro" ? profile.activeUntil.toMillis() - Date.now() : 0;
-const isSub = () => subLeft() > 0;                  // abonné actif : publications illimitées
 const dayKey = () => new Date(Date.now() + 2 * 3600e3).toISOString().slice(0, 10).replace(/-/g, "");   // jour en RDC (UTC+2)
-const midnight = () => (Math.floor((Date.now() + 2 * 3600e3) / DAY) + 1) * DAY - 2 * 3600e3;          // prochain minuit en RDC
 const usedToday = () => waiting.filter(x => x.id.startsWith(`${user.uid}_${dayKey()}_`)).length;
-const leftToday = () => Math.max(0, PER_DAY - usedToday());
-const isFull = () => !!profile && !isSub() && profile.status !== "blocked" && leftToday() === 0;
-const p2 = n => String(n).padStart(2, "0");
-const fmtHMS = ms => { ms = Math.max(0, ms); return `${p2(Math.floor(ms / 3600e3))} h ${p2(Math.floor(ms % 3600e3 / 60e3))} min ${p2(Math.floor(ms % 60e3 / 1e3))} s`; };
+const quotaText = () => `${profile.shopName}, tu as déjà publié tes 2 articles d'aujourd'hui avec l'essai gratuit. Reviens demain pour en publier d'autres, ou passe à la version complète pour publier sans limite.`;
 function fmtLeft(ms) {
   const d = Math.floor(ms / DAY), h = Math.floor(ms % DAY / 3600e3), m = Math.floor(ms % 3600e3 / 60e3), s = Math.floor(ms % 60e3 / 1e3);
-  return (d ? `${d} j ` : "") + (d || h ? `${p2(h)} h ` : "") + `${p2(m)} min ${p2(s)} s`;
+  return (d ? `${d} j ` : "") + (d || h ? `${h} h ` : "") + `${m} min ${s} s`;
 }
-const waTo = text => waLink(SITE.adminWhatsapp, `Bonjour SokoPlus, je suis ${profile.shopName} (${prettyPhone(profile.phone)}). ${text}`);
 
 function state() {
   if (!profile) return { ok: false };
-  const shop = profile.shopName;
+  const shop = profile.shopName, trial = isTrial();
   if (profile.status === "blocked") return { ok: false, label: "Compte suspendu", kind: "bad", why: `${shop}, ton compte est suspendu pour le moment. Écris-nous sur WhatsApp, on t'explique et on règle ça ensemble.`, wa: "Mon compte est suspendu, pouvez-vous m'aider ?" };
-  const ms = profile.activeUntil.toMillis() - Date.now(), ok = user.emailVerified;
-  if (isSub()) return { ok, label: `Abonnement · ${fmtLeft(ms)}`, kind: ms <= 5 * DAY ? "warn" : "ok" };
-  if (isTrial() && ms > 0) return { ok, label: `Essai · ${fmtLeft(ms)}`, kind: ms <= 5 * DAY ? "warn" : "ok" };
-  return { ok, label: "Sans abonnement", kind: "warn" };   // essai ou abonnement fini : on garde 2 publications par jour
-}
-
-/* Message de quota : une seule source, affichée en haut du formulaire et rappelée à l'étape 5 */
-function quotaHTML() {
-  const waSub = `<a href="${esc(waTo("Je voudrais m'abonner à SokoPlus."))}" target="_blank" rel="noopener">Passer à l'abonnement (${esc(SITE.subscriptionText)})</a>`;
-  if (isSub()) {
-    const ms = subLeft(), soon = ms <= 5 * DAY;
-    return { cls: soon ? "warn" : "good", html: `<div class="qrow"><b>Abonnement : <span class="qclock" data-until="${profile.activeUntil.toMillis()}" data-fmt="long">${fmtLeft(ms)}</span> restants</b></div>`
-      + `<div class="qrow">Publication illimitée.${soon ? ` <a class="btn small warn" href="${esc(waTo("Je voudrais renouveler mon abonnement SokoPlus."))}" target="_blank" rel="noopener">Renouveler sur WhatsApp</a>` : ""}</div>` };
-  }
-  const left = leftToday(), pips = Array.from({ length: PER_DAY }, (_, i) => `<i class="${i < usedToday() ? "used" : ""}"></i>`).join("");
-  const wasSub = profile.plan === "pro", pre = wasSub ? "Ton abonnement est terminé. " : "";
-  if (left > 0) return { cls: "good", html: `<div class="qrow"><span class="pips" aria-hidden="true">${pips}</span><b>${pre}Il te reste ${left} publication${left > 1 ? "s" : ""} aujourd'hui</b></div>`
-    + `<div class="qrow">Remise à zéro dans <span class="qclock" data-until="${midnight()}" data-fmt="hms">${fmtHMS(midnight() - Date.now())}</span> · ${waSub}</div>` };
-  return { cls: "warn", html: `<div class="qrow"><span class="pips" aria-hidden="true">${pips}</span><b>${pre}Tes ${PER_DAY} publications du jour sont utilisées</b></div>`
-    + `<div class="qrow">Nouvelle publication dans <span class="qclock" data-until="${midnight()}" data-fmt="hms">${fmtHMS(midnight() - Date.now())}</span></div><div class="qrow">${waSub} pour publier sans limite.</div>` };
+  const ms = profile.activeUntil.toMillis() - Date.now();
+  if (ms <= 0) return { ok: false, label: trial ? "Essai terminé" : "Abonnement terminé", kind: "bad",
+    why: trial ? `${shop}, ton essai gratuit de 30 jours est terminé. Passe à la version complète pour continuer à publier et vendre sans limite (${SITE.subscriptionText}).`
+               : `${shop}, ton abonnement est arrivé à échéance. Renouvelle-le pour continuer à publier (${SITE.subscriptionText}).`,
+    wa: trial ? "Je voudrais passer à la version complète de SokoPlus." : "Je voudrais renouveler mon abonnement SokoPlus.",
+    cta: trial ? "Passer à la version complète sur WhatsApp" : "Renouveler sur WhatsApp" };
+  return { ok: user.emailVerified, label: `${trial ? "Essai" : "Abonnement"} · ${fmtLeft(ms)}`, kind: ms <= 5 * DAY ? "warn" : "ok" };
 }
 
 function renderStatus() {
   const s = state();
   $("#dShop").textContent = profile.shopName;
+  const av = $("#dAvatar"); av.style.background = tileColor(profile.shopName);
+  av.innerHTML = profile.logo ? `<img src="${esc(thumb(profile.logo, 160))}" alt="">` : esc((profile.shopName || "?")[0].toUpperCase());
   $("#dContact").textContent = `${prettyPhone(profile.phone)} · ${profile.email}`;
   const pill = $("#dStatus"); pill.textContent = s.label || ""; pill.className = "pill " + (s.kind || "");
   $("#verifyBox").hidden = user.emailVerified; $("#verifyMail").textContent = profile.email;
   const bb = $("#blockBox");
   bb.hidden = !s.why;
-  if (s.why) bb.innerHTML = `${esc(s.why)} <a href="${esc(waTo(s.wa || "Je voudrais activer mon abonnement."))}" target="_blank" rel="noopener">${s.cta || "Écrire sur WhatsApp"}</a>`;
-  const q = quotaHTML(), qb = $("#quotaBox"), qr = $("#quotaRecap");
-  qb.hidden = !!s.why; qb.className = "quota " + q.cls; qb.innerHTML = q.html;
-  qr.className = "quota " + q.cls; qr.innerHTML = q.html;
-  syncSubmit();
+  if (s.why) bb.innerHTML = `${esc(s.why)} <a href="${esc(waLink(SITE.adminWhatsapp, `Bonjour SokoPlus, je suis ${profile.shopName} (${prettyPhone(profile.phone)}). ${s.wa || "Je voudrais activer mon abonnement."}`))}" target="_blank" rel="noopener">${s.cta || "Écrire sur WhatsApp"}</a>`;
+  lastDay = dayKey();
+  const trial = isTrial(), used = usedToday(), full = trial && used >= 2 && !s.why, qb = $("#quotaBox");
+  qb.hidden = !(trial && !s.why);
+  if (!qb.hidden) {
+    const left = Math.max(0, 2 - used);
+    qb.className = "qbox " + (full ? "full" : "open");
+    qb.innerHTML = `<div class="qdots" aria-hidden="true">${[0, 1].map(n => `<i class="${n < used ? "on" : ""}"></i>`).join("")}</div>
+      <div class="qtx"><b>${full ? "Tu as utilisé tes 2 publications du jour" : `Encore ${left} publication${left > 1 ? "s" : ""} aujourd'hui`}</b>
+        <small>${full ? `${esc(profile.shopName)}, la prochaine publication gratuite s'ouvre dans` : "Le compteur repart à zéro dans"} <span class="qcd" data-reset></span>.${full ? " Pour publier sans limite, passe à la version complète." : ""}</small>
+        ${full ? `<a class="btn small" href="${esc(waLink(SITE.adminWhatsapp, `Bonjour SokoPlus, je suis ${profile.shopName} (${prettyPhone(profile.phone)}). Je voudrais passer à la version complète de SokoPlus.`))}" target="_blank" rel="noopener">Passer à la version complète</a>` : ""}</div>`;
+    tickReset();
+  }
+  $("#wiz").hidden = (!s.ok || full) && !editing;
+  $("#iSubmit").disabled = (!s.ok && !editing) || (full && !editing);
 }
-function syncSubmit() {
-  const s = state(), full = isFull() && !editing, b = $("#iSubmit");
-  if (b.dataset.fx) return;
-  b.disabled = !s.ok && !editing || full || (profile.status === "blocked" && !editing);
-  b.textContent = editing ? "Enregistrer" : full ? `Prochaine publication dans ${fmtHMS(midnight() - Date.now())}` : "Envoyer pour validation";
+/* Compte à rebours jusqu'à minuit (heure de RDC) : la limite du jour repart à zéro */
+let lastDay = "";
+const untilReset = () => { const n = Date.now() + 2 * 3600e3, d = new Date(n); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1) - n; };
+function tickReset() {
+  const ms = untilReset(), t = `${Math.floor(ms / 3600e3)} h ${String(Math.floor(ms % 3600e3 / 60e3)).padStart(2, "0")} min ${String(Math.floor(ms % 60e3 / 1e3)).padStart(2, "0")} s`;
+  $$("[data-reset]").forEach(el => { el.textContent = t; });
 }
-/* Comptes à rebours : tout défile en direct, une fois par seconde */
+/* Compte à rebours : le temps restant défile en direct */
 setInterval(() => {
   if (!profile || !user || $("#dash").hidden) return;
+  tickReset();
+  if (lastDay && lastDay !== dayKey()) renderStatus();   // minuit passé : les 2 publications sont de nouveau disponibles
   const s = state(), pill = $("#dStatus");
-  if (pill.textContent !== s.label) { pill.textContent = s.label; pill.className = "pill " + (s.kind || ""); }
-  let again = false;
-  document.querySelectorAll(".qclock").forEach(el => {
-    const ms = Number(el.dataset.until) - Date.now();
-    if (ms <= 0) { again = true; return; }
-    el.textContent = el.dataset.fmt === "hms" ? fmtHMS(ms) : fmtLeft(ms);
-  });
-  if (again) renderStatus(); else syncSubmit();
+  if (pill.textContent === s.label) return;
+  pill.textContent = s.label; pill.className = "pill " + (s.kind || "");
+  if (s.why) renderStatus();
 }, 1000);
 $("#resend").onclick = async () => { try { await sendEmailVerification(user); toast("Lien renvoyé. Regarde aussi dans les spams."); } catch (e) { toast(nice(e)); } };
 $("#refresh").onclick = async () => { await user.reload(); await user.getIdToken(true); renderStatus(); if (!user.emailVerified) toast("Email pas encore vérifié."); };
 
-/* ---------------- Formulaire article : 5 étapes ---------------- */
-const STEPS = ["Article", "Photos", "Prix", "Lieu", "Récapitulatif"];
-let step = 1, picked = [], cur = "USD";
-
-function setCity(c) {
-  $("#iCity").value = c || "";
-  $("#iCityBtn span").textContent = c ? cityLabel(c) : "Choisis ta région";
-}
-$("#iCityBtn").onclick = () => openRegionPicker({ current: $("#iCity").value, all: false, onPick: setCity });
-
-function setCur(c) {
-  cur = c;
-  document.querySelectorAll(".curpick button").forEach(b => b.setAttribute("aria-pressed", b.dataset.cur === c));
-  $("#priceLbl").textContent = c === "FC" ? "Prix en francs congolais (FC)" : "Prix en dollars (USD)";
-  $("#iPrice").placeholder = c === "FC" ? "Ex. 50000" : "Ex. 25";
-  $("#iPrice").inputMode = c === "FC" ? "numeric" : "decimal";
-}
-document.querySelector(".curpick").addEventListener("click", e => { const b = e.target.closest("[data-cur]"); if (b) setCur(b.dataset.cur); });
-
-function goStep(n, scroll = true) {
-  step = n;
-  document.querySelectorAll(".step").forEach(el => { el.hidden = Number(el.dataset.step) !== n; });
-  document.querySelectorAll(".wizbar i").forEach((el, i) => el.classList.toggle("on", i < n));
-  $("#wizLbl").textContent = `Étape ${n} sur 5 · ${STEPS[n - 1]}`;
-  $("#wBack").hidden = n === 1; $("#wNext").hidden = n === 5; $("#iSubmit").hidden = n !== 5;
-  say($("#iMsg"), "");
-  if (n === 5) renderRecap();
-  if (scroll) $("#fItem").scrollIntoView({ behavior: "smooth", block: "start" });
-}
-const amountOf = () => { const v = Number($("#iPrice").value); return cur === "FC" ? Math.round(v) : Math.round(v * 100) / 100; };
-function checkStep(n) {
-  if (n === 1) {
-    if ($("#iTitle").value.trim().length < 2) return "Donne un nom à ton article (2 lettres minimum).";
-    if (!$("#iCat").value) return "Choisis une catégorie.";
-  }
-  if (n === 2 && !picked.length && !(editing && editing.images?.length)) return "Ajoute au moins une photo pour continuer.";
-  if (n === 3) {
-    const v = amountOf();
-    if (!(v > 0)) return "Entre un prix valide.";
-    if (v >= (cur === "FC" ? 1e8 : 1e6)) return `Ce prix est trop élevé en ${cur === "FC" ? "FC" : "dollars"}. Vérifie la monnaie choisie.`;
-  }
-  if (n === 4) {
-    if (!$("#iCity").value) return "Choisis ta région.";
-    if (!$("#iAddr").value.trim()) return "Écris ton quartier ou ton adresse.";
-  }
-  return "";
-}
-function next() {
-  const err = checkStep(step);
-  if (err) return say($("#iMsg"), err, "err");
-  goStep(step + 1);
-}
-$("#wNext").onclick = next;
-$("#wBack").onclick = () => goStep(step - 1);
-
-/* Photos : ajout par petits lots, aperçu, suppression d'une photo */
-function drawPhotos() {
-  const box = $("#previews");
-  if (picked.length) {
-    box.innerHTML = picked.map((p, i) => `<div class="pv"><img src="${esc(p.url)}" alt="Photo ${i + 1}"><button type="button" class="pvx" data-i="${i}" aria-label="Supprimer la photo ${i + 1}">✕</button></div>`).join("");
-    $("#photoNote").textContent = `${picked.length} photo${picked.length > 1 ? "s" : ""} sur 3.`;
-  } else if (editing?.images?.length) {
-    box.innerHTML = editing.images.map(u => `<div class="pv"><img src="${esc(thumb(u, 160))}" alt=""></div>`).join("");
-    $("#photoNote").textContent = "Tes photos actuelles sont gardées. Ajoute-en de nouvelles pour les remplacer.";
-  } else { box.innerHTML = ""; $("#photoNote").textContent = ""; }
-}
-function clearPhotos() { picked.forEach(p => URL.revokeObjectURL(p.url)); picked = []; }
+/* ---------------- Formulaire article ---------------- */
 $("#iImgs").addEventListener("change", e => {
-  for (const f of [...e.target.files]) {
-    if (picked.length >= 3) { toast("3 photos maximum par article."); break; }
-    if (!f.type.startsWith("image/")) continue;
-    if (f.size > MAX_MB * 1048576) { toast(`La photo « ${f.name} » est trop lourde (${(f.size / 1048576).toFixed(1).replace(".", ",")} Mo). Maximum ${MAX_MB} Mo par photo.`); continue; }
-    picked.push({ file: f, url: URL.createObjectURL(f) });
-  }
-  e.target.value = ""; drawPhotos();
+  const files = [...e.target.files].slice(0, 3);
+  const big = files.find(f => f.size > MAX_MB * 1048576);
+  if (big) { e.target.value = ""; $("#previews").innerHTML = ""; return toast(`La photo « ${big.name} » est trop lourde (${(big.size / 1048576).toFixed(1).replace(".", ",")} Mo). Maximum ${MAX_MB} Mo par photo.`); }
+  $("#previews").innerHTML = "";
+  files.forEach(f => { const i = new Image(); i.src = URL.createObjectURL(f); i.alt = ""; $("#previews").append(i); });
 });
-$("#previews").addEventListener("click", e => {
-  const b = e.target.closest(".pvx"); if (!b) return;
-  const [p] = picked.splice(Number(b.dataset.i), 1); p && URL.revokeObjectURL(p.url); drawPhotos();
-});
-
-function renderRecap() {
-  const pic = picked[0]?.url || (editing?.images?.[0] ? thumb(editing.images[0], 400) : "");
-  const where = [cityLabel($("#iCity").value), $("#iAddr").value.trim()].filter(Boolean).join(" · ");
-  const desc = $("#iDesc").value.trim();
-  $("#recap").innerHTML = `<div class="rc">${pic ? `<img src="${esc(pic)}" alt="">` : ""}<div><b>${esc($("#iTitle").value.trim())}</b>
-    <div class="price">${esc(money(amountOf(), cur))}</div><div class="note">${esc($("#iCat").value)} · ${esc(where)}</div>
-    ${desc ? `<p class="rcd">${esc(desc.length > 140 ? desc.slice(0, 140) + "…" : desc)}</p>` : ""}</div></div>`
-    + `<p class="note">${picked.length || editing?.images?.length || 0} photo(s) · prix en ${cur === "FC" ? "francs congolais" : "dollars"}. Vérifie tout, puis envoie.</p>`;
-}
 
 function resetForm() {
-  editing = null; $("#fItem").reset(); clearPhotos(); drawPhotos(); setCur("USD"); setCity("");
-  $("#fTitle").textContent = "Publier un article"; $("#iCancel").hidden = true;
-  goStep(1, false); renderStatus();
+  editing = null; $("#fItem").reset(); $("#previews").innerHTML = "";
+  $("#fTitle").textContent = "Publier un article"; $("#iSubmit").textContent = "Publier"; $("#iCancel").hidden = true;
+  showStep(1); renderStatus();
 }
 $("#iCancel").onclick = resetForm;
-setCur("USD"); setCity(""); goStep(1, false);
+
+/* ---------- Publication guidée, étape par étape ---------- */
+const STEPS = 4; let step = 1;
+const stepEl = n => document.querySelector(`.step[data-step="${n}"]`);
+function validStep(n) {
+  const ok = [...stepEl(n).querySelectorAll("input,select,textarea")].every(el => el.type === "file" || el.reportValidity());
+  if (!ok) return false;
+  if (n === 3 && !editing && !$("#iImgs").files.length) { say($("#iMsg"), "Ajoute au moins une photo pour continuer.", "err"); return false; }
+  say($("#iMsg"), "");
+  return true;
+}
+function showStep(n, scroll = true) {
+  step = Math.max(1, Math.min(STEPS, n));
+  for (let i = 1; i <= STEPS; i++) stepEl(i).hidden = i !== step;
+  $$("#steps li").forEach(li => {
+    const i = Number(li.dataset.s); li.className = i < step ? "done" : i === step ? "now" : "";
+    if (i === step) li.setAttribute("aria-current", "step"); else li.removeAttribute("aria-current");
+  });
+  $("#stepFill").style.width = `${(step - 1) / (STEPS - 1) * 100}%`;
+  $("#iBack").hidden = step === 1; $("#iNext").hidden = step === STEPS; $("#iSubmit").hidden = step !== STEPS;
+  if (step === STEPS) recap();
+  if (scroll) $("#fItem").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+function recap() {
+  const cur = $("#iCur").value === "FC" ? "FC" : "USD", price = Number($("#iPrice").value), desc = $("#iDesc").value.trim();
+  const after = isTrial() && !editing ? Math.max(0, 1 - usedToday()) : null;   // publications restantes après cet envoi
+  $("#recap").innerHTML = `<div class="rprev">${$("#previews").innerHTML}</div>
+    <h3>${esc($("#iTitle").value.trim())}</h3>
+    <div class="rprice">${money(cur === "FC" ? Math.round(price) : price, cur)}</div>
+    <dl class="rlist"><div><dt>Catégorie</dt><dd>${esc($("#iCat").value)}</dd></div>
+      <div><dt>Lieu</dt><dd>${esc($("#iCity").value)}, ${esc($("#iAddr").value.trim())}</dd></div>
+      ${desc ? `<div><dt>Description</dt><dd>${esc(desc)}</dd></div>` : ""}</dl>
+    <p class="note">${editing ? "Tes modifications sont enregistrées tout de suite."
+      : `SokoPlus vérifie ton article avant de le mettre en ligne, puis te prévient.${after === null ? "" : ` Après cet envoi, il te restera ${after} publication${after > 1 ? "s" : ""} aujourd'hui.`}`}</p>`;
+}
+$("#iNext").onclick = () => { if (validStep(step)) showStep(step + 1); };
+$("#iBack").onclick = () => showStep(step - 1);
+showStep(1, false);
 
 $("#fItem").addEventListener("submit", e => {
   e.preventDefault();
-  if (step < 5) return next();                         // Entrée au clavier = Continuer
+  if (step < STEPS) { if (validStep(step)) showStep(step + 1); return; }   // la touche Entrée = « Continuer »
+  for (let i = 1; i < STEPS; i++) if (!validStep(i)) { showStep(i); setTimeout(() => validStep(i), 50); return; }
   const m = $("#iMsg"), btn = $("#iSubmit");
-  for (let n = 1; n <= 4; n++) { const er = checkStep(n); if (er) { goStep(n); return say(m, er, "err"); } }
   run(btn, async () => {
-    const files = picked.map(p => p.file);
-    let slot = null;                                   // sans abonnement : 2 publications par jour, chaque place ne sert qu'une fois
-    if (!editing && !isSub()) {
+    const files = [...$("#iImgs").files].slice(0, 3);
+    if (!editing && !files.length) throw { message: "Ajoute au moins une photo." };
+    const big = files.find(f => f.size > MAX_MB * 1048576);
+    if (big) throw { message: `La photo « ${big.name} » fait ${(big.size / 1048576).toFixed(1).replace(".", ",")} Mo. Maximum ${MAX_MB} Mo par photo : choisis-en une plus légère.` };
+    let slot = null;                                   // essai : 2 publications par jour, chaque place ne sert qu'une fois
+    if (!editing && isTrial()) {
       const taken = new Set(waiting.map(x => x.id)), p = `${user.uid}_${dayKey()}_`;
       slot = [1, 2].map(n => p + n).find(id => !taken.has(id));
-      if (!slot) throw { message: `${profile.shopName}, tes ${PER_DAY} publications du jour sont utilisées. La prochaine est possible dans ${fmtHMS(midnight() - Date.now())}.` };
+      if (!slot) throw { message: quotaText() };
     }
     const urls = [];
     for (let i = 0; i < files.length; i++) {
       say(m, `Envoi de la photo ${i + 1} sur ${files.length}…`);
       urls.push(await uploadImage(await compress(files[i])));
     }
+    const cur = $("#iCur").value === "FC" ? "FC" : "USD", raw = Number($("#iPrice").value);
+    const usd = cur === "FC" ? Math.round(raw) : Math.round(raw * 100) / 100;   // le prix reste dans la monnaie choisie
+    if (!(usd > 0)) throw { message: "Prix invalide." };
     const data = {
-      title: $("#iTitle").value.trim(), category: $("#iCat").value, price: amountOf(), currency: cur,
+      title: $("#iTitle").value.trim(), category: $("#iCat").value, price: usd, currency: cur,
       description: $("#iDesc").value.trim(), address: $("#iAddr").value.trim(), city: $("#iCity").value
     };
-    say(m, editing ? "Enregistrement…" : "Envoi pour vérification…");
+    say(m, editing ? "Enregistrement…" : "Envoi pour validation…");
     if (editing) {
       await updateDoc(doc(db, "items", editing.id), { ...data, images: urls.length ? urls : editing.images });
       toast("C'est enregistré, ton article est à jour.");
@@ -375,7 +324,7 @@ $("#fItem").addEventListener("submit", e => {
       };
       if (slot) await setDoc(doc(db, "submissions", slot), sub); else await addDoc(collection(db, "submissions"), sub);
       notify("new_submission", { title: data.title, shopName: profile.shopName });
-      toast("Article reçu. Il passe en vérification, on te prévient dès qu'il est en ligne.");
+      toast("C'est parti ! Ton article est entre nos mains. Dès qu'il est validé, on te prévient.");
     }
     resetForm();
   }, { busy: editing ? "Enregistrement…" : "Envoi…", done: editing ? "Enregistré" : "Envoyé", hold: 1300 })
@@ -383,11 +332,12 @@ $("#fItem").addEventListener("submit", e => {
 });
 
 /* ---------------- Mes articles ---------------- */
-let mine = [], waiting = [];
+let mine = [], waiting = [], req = null, reqSeen = false;
 const when = it => it.createdAt?.toMillis?.() ?? Date.now();
 function watchMine() {
   unsub && unsub();
   let firstItems = true, firstSubs = true;
+  req = null; reqSeen = false;
   const u1 = onSnapshot(query(collection(db, "items"), where("ownerId", "==", user.uid)), snap => {
     if (!firstItems) snap.docChanges().forEach(ch => {
       if (ch.type === "added" && !ch.doc.metadata.hasPendingWrites) toast(`Ton article « ${ch.doc.data().title} » a été validé. Il est en ligne.`);
@@ -406,11 +356,23 @@ function watchMine() {
     waiting.sort((a, b) => when(b) - when(a));
     renderMine(); renderStatus();
   });
-  unsub = () => { u1(); u2(); };
+  const u3 = onSnapshot(doc(db, "profileRequests", user.uid), async snap => {   // demande de modification de la boutique
+    const was = req; req = snap.exists() ? snap.data() : null;
+    if (reqSeen && was?.status === "pending" && !req) {   // la demande a disparu : elle a été validée
+      const p = await getDoc(doc(db, "users", user.uid)); if (p.exists()) profile = p.data();
+      toast("SokoPlus a validé les modifications de ta boutique."); renderStatus();
+    }
+    if (reqSeen && was?.status === "pending" && req?.status === "rejected") toast("SokoPlus n'a pas pu valider tes modifications. Le motif est dans Ma boutique.");
+    reqSeen = true; renderReq();
+  });
+  unsub = () => { u1(); u2(); u3(); };
 }
 function renderMine() {
   const shown = waiting.filter(it => it.status !== "approved");   // les validées sont déjà dans « mine »
   const n = mine.length + shown.length;
+  $("#vsOn").textContent = mine.filter(it => it.status !== "sold").length;
+  $("#vsWait").textContent = shown.filter(it => it.status === "pending").length;
+  $("#vsSold").textContent = mine.filter(it => it.status === "sold").length;
   $("#mineCount").textContent = n ? `${n} article${n > 1 ? "s" : ""}` : "";
   const wait = shown.map(it => {
     const img = thumb(it.images?.[0], 160);
@@ -447,12 +409,68 @@ $("#mine").addEventListener("click", async e => {
       else { b.dataset.sure = "1"; b.textContent = "Confirmer ?"; setTimeout(() => { delete b.dataset.sure; b.textContent = "Supprimer"; }, 3000); }
     }
     if (b.dataset.a === "edit") {
-      editing = it; clearPhotos();
-      $("#iTitle").value = it.title; $("#iCat").value = it.category; $("#iPrice").value = it.price;
-      $("#iDesc").value = it.description || ""; $("#iAddr").value = it.address;
-      setCur(it.currency === "FC" ? "FC" : "USD"); setCity(it.city || ""); drawPhotos();
-      $("#fTitle").textContent = "Modifier l'article"; $("#iCancel").hidden = false;
-      goStep(1); syncSubmit();
+      editing = it;
+      $("#iTitle").value = it.title; $("#iCat").value = it.category; $("#iPrice").value = it.price; $("#iCur").value = it.currency || "USD";
+      $("#iDesc").value = it.description || ""; $("#iAddr").value = it.address; $("#iCity").value = it.city || "";
+      $("#previews").innerHTML = (it.images || []).map(u => `<img src="${esc(thumb(u, 160))}" alt="">`).join("");
+      $("#fTitle").textContent = "Modifier l'article"; $("#iSubmit").textContent = "Enregistrer"; $("#iCancel").hidden = false;
+      renderStatus(); $("#iSubmit").disabled = false; showStep(1);
+      $("#fItem").scrollIntoView({ behavior: "smooth" });
     }
   } catch (err) { toast(nice(err)); }
+});
+
+
+/* ---------------- Modifier ma boutique : nom, numéro, photo (validés par SokoPlus) ---------------- */
+const shopDlg = $("#shopDlg"); let newLogo = null;
+function renderReq() {
+  const b = $("#reqBox"); $("#editShop").disabled = req?.status === "pending";
+  if (!req) { b.hidden = true; return; }
+  const what = [req.shopName && `nom : ${esc(req.shopName)}`, req.phone && `numéro : ${esc(prettyPhone(req.phone))}`, req.logo && "nouvelle photo de profil"].filter(Boolean).join(", ");
+  b.hidden = false;
+  if (req.status === "pending") {
+    b.className = "msg warn";
+    b.innerHTML = `<b>Ta demande est en cours de vérification par SokoPlus.</b> On te prévient dès qu'elle est traitée. Demandé : ${what}.`;
+  } else {
+    b.className = "msg err";
+    b.innerHTML = `<b>SokoPlus n'a pas pu valider ta demande.</b>${req.reason ? ` Motif : ${esc(req.reason)}.` : ""} <button class="btn small" id="reqRetry" type="button">Refaire une demande</button>`;
+    $("#reqRetry").onclick = openShop;
+  }
+}
+function paintLogo(src) {
+  const a = $("#sAvatar"); a.style.background = tileColor(profile.shopName);
+  a.innerHTML = src ? `<img src="${esc(src)}" alt="">` : esc((profile.shopName || "?")[0].toUpperCase());
+}
+async function openShop() {
+  try { if (req?.status === "rejected") await deleteDoc(doc(db, "profileRequests", user.uid)); } catch (err) { return toast(nice(err)); }
+  newLogo = null; $("#sLogo").value = ""; say($("#sMsg"), "");
+  $("#sName").value = profile.shopName; $("#sPhone").value = prettyPhone(profile.phone);
+  paintLogo(profile.logo ? thumb(profile.logo, 160) : ""); shopDlg.showModal();
+}
+$("#editShop").onclick = openShop;
+shopDlg.addEventListener("click", e => { if (e.target === shopDlg || e.target.closest("[data-close]")) shopDlg.close(); });
+$("#sLogo").addEventListener("change", e => {
+  const f = e.target.files[0]; if (!f) return;
+  if (f.size > MAX_MB * 1048576) { e.target.value = ""; return toast(`Cette photo fait ${(f.size / 1048576).toFixed(1).replace(".", ",")} Mo. Maximum ${MAX_MB} Mo.`); }
+  newLogo = f; paintLogo(URL.createObjectURL(f));
+});
+$("#fShop").addEventListener("submit", e => {
+  e.preventDefault();
+  const m = $("#sMsg");
+  run($("#sSend"), async () => {
+    const name = $("#sName").value.trim(), phone = normPhone($("#sPhone").value), data = {};
+    if (name.length < 2) throw { message: "Le nom de la boutique doit avoir au moins 2 caractères." };
+    if (!phone) throw { message: "Numéro invalide. Exemple : 0990 000 001 ou +243 990 000 001." };
+    if (name !== profile.shopName) data.shopName = name;
+    if (phone !== profile.phone) {
+      if ((await getDoc(doc(db, "phoneIndex", phone))).exists()) throw { message: "Ce numéro est déjà utilisé par une boutique." };
+      data.phone = phone;
+    }
+    if (newLogo) { say(m, "Envoi de la photo…"); data.logo = await uploadImage(await compress(newLogo)); }
+    if (!Object.keys(data).length) throw { message: "Rien n'a changé : modifie le nom, le numéro ou la photo." };
+    await setDoc(doc(db, "profileRequests", user.uid), { ...data, status: "pending", createdAt: serverTimestamp() });
+    notify("new_submission", { title: "Modification de la boutique", shopName: profile.shopName });
+  }, { busy: "Envoi…", done: "Envoyé", hold: 900 })
+    .then(() => { say(m, ""); shopDlg.close(); toast("Demande envoyée. SokoPlus la vérifie et te prévient."); })
+    .catch(err => say(m, nice(err), "err"));
 });

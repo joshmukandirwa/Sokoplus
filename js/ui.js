@@ -1,7 +1,6 @@
 /* Couche d'interface partagée : en-tête, barre du bas, protections, animations, langue, hors-ligne.
    Ne dépend d'aucun service externe : elle s'affiche même sans connexion. */
-import { $, $$, store, SITE, configured } from "./util.js";
-import { regionBtnHTML, openRegionPicker, setRegionBtn } from "./regions.js";
+import { $, $$, store, SITE, configured, toast } from "./util.js";
 
 const page = document.body.dataset.page || "";
 const HAS_ITEMS = ["home", "categories", "favoris", "recherche"].includes(page);   // pages qui chargent les articles
@@ -55,7 +54,7 @@ function mount() {
       <a href="favoris.html" data-p="favoris" data-i18n="nav.favs">Favoris</a><a href="vendeur.html" data-p="vendeur" data-i18n="nav.shop">Ma boutique</a><a href="parametres.html" data-p="parametres" data-i18n="nav.settings">Paramètres</a>
     </nav>
     <div class="nav">
-      ${regionBtnHTML(city, "citySel")}
+      <button class="iconbtn" id="cityBtn" type="button" aria-label="Choisir ma région">${svg("pin")}<i class="cnt dot" id="cityDot"${city ? "" : " hidden"}></i></button>
       ${HAS_ITEMS ? `<button class="iconbtn" id="bell" type="button" aria-label="Notifications">${svg("bell")}<i class="cnt" id="bellCnt" hidden></i></button>` : `<a class="iconbtn" id="bell" href="index.html?notifs=1" aria-label="Notifications">${svg("bell")}</a>`}
       <a class="iconbtn" href="recherche.html" aria-label="Rechercher">${svg("search")}</a>
     </div>
@@ -72,13 +71,44 @@ function mount() {
   $$("[data-p]").forEach(a => { if (a.dataset.p === page) a.setAttribute("aria-current", "page"); });
   // la bande défilante doit avoir deux copies pour boucler sans saut
   const m = $(".marq"); m.innerHTML += m.innerHTML;
-  $("#citySel").onclick = () => openRegionPicker({ current: store.get("city", ""), onPick: c => { citySet(c); setRegionBtn($("#citySel"), c); } });
+  $("#cityBtn").onclick = cityDialog; const rc = $("#regionChip"); if (rc) rc.onclick = cityDialog; cityLabel();
   favBadge();
   if (HAS_ITEMS) import("./notifs.js");
 }
+/* ---------- Région : bouton compact dans l'en-tête, puce sur l'accueil, fenêtre de choix ---------- */
+const normTxt = s => String(s ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+function cityLabel() {
+  const c = store.get("city", "");
+  const dot = $("#cityDot"); if (dot) dot.hidden = !c;
+  const lbl = $("#regionLbl"); if (lbl) lbl.textContent = c || "Toute la RDC";
+}
 function citySet(c) {   // les pages réaffichent leurs listes grâce à l'événement « cur » (ancien réglage de devise)
-  store.set("city", c);
+  store.set("city", c); cityLabel();
   document.dispatchEvent(new CustomEvent("cur"));
+}
+let cityEl;
+function cityDialog() {
+  const cur = store.get("city", "");
+  if (!cityEl) {
+    cityEl = document.createElement("dialog"); cityEl.id = "cityDlg"; document.body.append(cityEl);
+    cityEl.addEventListener("click", e => {
+      if (e.target === cityEl || e.target.closest("[data-close]")) return cityEl.close();
+      const b = e.target.closest("[data-city]"); if (!b) return;
+      citySet(b.dataset.city); cityEl.close();
+      toast(b.dataset.city ? `Région : ${b.dataset.city}. On te montre d'abord ce qui est près de toi.` : "Tu vois maintenant toute la RDC.", { ms: 2200 });
+    });
+    cityEl.addEventListener("input", e => {
+      if (e.target.id !== "cityQ") return;
+      const q = normTxt(e.target.value);
+      $$("[data-city]", cityEl).forEach(b => { b.hidden = !!q && !normTxt(b.textContent).includes(q); });
+    });
+  }
+  cityEl.innerHTML = `<div class="dlg">
+    <div class="dlg-head"><h2>Choisis ta région</h2><button class="x" data-close aria-label="Fermer">×</button></div>
+    <p class="note">Tu vois d'abord les articles de ta ville. Tu peux changer quand tu veux.</p>
+    <input class="cityQ" id="cityQ" type="search" placeholder="Chercher une ville" autocomplete="off" aria-label="Chercher une ville">
+    <div class="cityGrid">${["", ...SITE.cities].map(c => `<button type="button" class="cityOpt" data-city="${c}" aria-pressed="${c === cur}">${svg("pin")}<span>${c || "Toute la RDC"}</span></button>`).join("")}</div></div>`;
+  cityEl.showModal();
 }
 export function favBadge() {
   const n = store.get("favs", []).length, b = $("#favCnt"); if (!b) return;

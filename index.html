@@ -4,7 +4,31 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>SokoPlus – Tous vos achats, un seul endroit</title>
+  <title>SokoPlus - Achetez et vendez partout en RDC</title>
+  <!-- SEO -->
+  <meta name="description"
+    content="Le marché en ligne de la RDC : trouve des articles près de chez toi, contacte le vendeur sur WhatsApp et paie en Mobile Money. Vends gratuitement 30 jours.">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <link rel="canonical" href="https://sokoplus.store/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="SokoPlus">
+  <meta property="og:locale" content="fr_FR">
+  <meta property="og:title" content="SokoPlus - Achetez et vendez partout en RDC">
+  <meta property="og:description"
+    content="Le marché en ligne de la RDC : trouve des articles près de chez toi, contacte le vendeur sur WhatsApp et paie en Mobile Money. Vends gratuitement 30 jours.">
+  <meta property="og:url" content="https://sokoplus.store/">
+  <meta property="og:image" content="https://sokoplus.store/icons/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="SokoPlus, le marché en ligne de la RDC">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="SokoPlus - Achetez et vendez partout en RDC">
+  <meta name="twitter:description"
+    content="Le marché en ligne de la RDC : trouve des articles près de chez toi, contacte le vendeur sur WhatsApp et paie en Mobile Money. Vends gratuitement 30 jours.">
+  <meta name="twitter:image" content="https://sokoplus.store/icons/og-image.png">
+  <script
+    type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Organization","@id":"https://sokoplus.store/#org","name":"SokoPlus","url":"https://sokoplus.store/","logo":"https://sokoplus.store/icons/icon-512.png","areaServed":{"@type":"Country","name":"République démocratique du Congo"}},{"@type":"WebSite","@id":"https://sokoplus.store/#site","url":"https://sokoplus.store/","name":"SokoPlus","inLanguage":"fr","publisher":{"@id":"https://sokoplus.store/#org"},"potentialAction":{"@type":"SearchAction","target":"https://sokoplus.store/recherche.html?q={search_term_string}","query-input":"required name=search_term_string"}}]}</script>
+  <!-- /SEO -->
   <meta name="theme-color" content="#03060d">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon-192.png">
@@ -17,6 +41,10 @@
 </head>
 
 <body data-page="home">
+  <noscript>
+    <p style="padding:16px;font:16px/1.5 sans-serif">SokoPlus a besoin de JavaScript pour afficher les articles.
+      Active-le dans ton navigateur pour parcourir le marché en ligne de la RDC.</p>
+  </noscript>
   <main class="wrap">
 
     <section class="hero" data-reveal>
@@ -25,6 +53,11 @@
           <circle cx="11" cy="11" r="7" />
           <path d="m20 20-3.5-3.5" />
         </svg><span data-i18n="search.ph">Rechercher un produit ou une boutique</span></a>
+      <button class="regionchip" id="regionChip" type="button" aria-label="Changer de région"><svg class="ic"
+          viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z" />
+          <circle cx="12" cy="10" r="2.5" />
+        </svg><span id="regionLbl">Toute la RDC</span><small>Changer</small></button>
     </section>
 
     <div class="promos" id="promos">
