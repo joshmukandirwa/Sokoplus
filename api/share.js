@@ -16,10 +16,10 @@ const money = (price, cur) => {
   return Number(n.toFixed(2)).toLocaleString("fr-FR") + " $";
 };
 
-/* Photo 1200x630 via Cloudinary (fond flou autour si la photo n'est pas au bon format) */
+/* Photo 600x315 légère via Cloudinary (WhatsApp ignore les images trop lourdes ; fond sombre si le format ne colle pas) */
 const ogImage = u => {
   if (typeof u !== "string" || !u.startsWith("https://res.cloudinary.com/") || !u.includes("/upload/")) return DEFAULT_IMG;
-  return u.replace("/upload/", "/upload/w_1200,h_630,c_pad,b_blurred:400:15,q_auto,f_jpg/");
+  return u.replace("/upload/", "/upload/w_600,h_315,c_pad,b_rgb:0b1220,q_70,f_jpg/");
 };
 
 const val = f => f == null ? undefined : (f.stringValue ?? f.integerValue ?? f.doubleValue ?? f.booleanValue);
@@ -68,8 +68,8 @@ module.exports = async function handler(req, res) {
 <meta property="og:description" content="${esc(desc)}">
 <meta property="og:url" content="${esc(pageUrl)}">
 <meta property="og:image" content="${esc(img)}">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
+<meta property="og:image:width" content="${img === DEFAULT_IMG ? 1200 : 600}">
+<meta property="og:image:height" content="${img === DEFAULT_IMG ? 630 : 315}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${esc(title)}">
 <meta name="twitter:description" content="${esc(desc)}">
