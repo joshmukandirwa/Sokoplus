@@ -3727,3 +3727,19 @@ dialog[open]::backdrop {
   color: var(--muted);
   margin-bottom: 2px
 }
+/* ---- Sobriété ----
+   Conservés : rond de chargement, squelettes, coche de réussite, messages, étapes, fenêtres, cœur des favoris.
+   Retirés : bandeau défilant, éclats lumineux, texte dégradé animé, formes flottantes, rebonds, apparition au défilement, fondu entre pages. */
+@keyframes fade-soft { from { opacity: 0 } }
+main { animation: fade-soft .2s ease-out both }
+body { transition: none }
+body.leaving { opacity: 1 }
+.js [data-reveal], .js:not(.rvfail) [data-reveal], .js:not(.rvfail) [data-reveal].shown { opacity: 1; transform: none; transition: none }
+.strip { white-space: normal }
+.marq { animation: none; will-change: auto; display: flex; flex-wrap: wrap; justify-content: center }
+.marq span { padding: 8px 16px }
+@media (max-width: 640px) { .marq span:nth-child(n+3) { display: none } }
+a.search::after, .search.big:focus-within::after, .promo .btn::after, .sellband .btn::after { animation: none; opacity: 0 }
+.hero h1 em { animation: none }
+.p1, .p2, .p3, .promo img, .sellband img, .logo .mark, .emptyst .big, .gate-ic, .tabbar .sell .pl, .status i { animation: none }
+.step:not([hidden]) { animation-duration: .2s }

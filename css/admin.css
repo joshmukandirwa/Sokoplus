@@ -784,3 +784,5 @@
 #maintDlg .a-step {
   grid-template-columns: 72px 48px 1fr 48px
 }
+/* Sobriété : plus de pulsation ni de rebond décoratif */
+.a-live i, .a-k.hot, .a-maint.on .mi { animation: none }

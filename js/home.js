@@ -35,16 +35,13 @@ bind($("#sugGrid"));
 $("#sort").addEventListener("change", e => { sort = e.target.value; render(); });
 document.addEventListener("cur", render);
 
-/* Bannières : points + défilement automatique */
+/* Bannières : points et balayage au doigt (pas de défilement automatique) */
 const promos = $("#promos"), dots = $$("#dots i");
 const slide = i => { const w = promos.firstElementChild.offsetWidth + 12; promos.scrollTo({ left: i * w, behavior: "smooth" }); };
-let idx = 0, paused = 0;
+let idx = 0;
 promos.addEventListener("scroll", () => {
   const w = promos.firstElementChild.offsetWidth + 12;
   idx = Math.min(2, Math.round(promos.scrollLeft / w));
   dots.forEach((d, n) => d.classList.toggle("on", n === idx));
 }, { passive: true });
-["pointerdown", "touchstart", "wheel"].forEach(ev => promos.addEventListener(ev, () => { paused = Date.now() + 9000; }, { passive: true }));
 dots.forEach((d, n) => d.addEventListener("click", () => slide(n)));
-if (!matchMedia("(prefers-reduced-motion: reduce)").matches)
-  setInterval(() => { if (document.hidden || Date.now() < paused || promos.scrollWidth <= promos.clientWidth + 8) return; slide((idx + 1) % 3); }, 5000);

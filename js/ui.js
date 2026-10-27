@@ -59,8 +59,7 @@ function mount() {
       ${HAS_ITEMS ? `<button class="iconbtn" id="bell" type="button" aria-label="Notifications">${svg("bell")}<i class="cnt" id="bellCnt" hidden></i></button>` : `<a class="iconbtn" id="bell" href="index.html?notifs=1" aria-label="Notifications">${svg("bell")}</a>`}
       <a class="iconbtn" href="recherche.html" aria-label="Rechercher">${svg("search")}</a>
     </div>
-  </div></header>
-  <div class="strip" aria-hidden="true"><div class="marq"><span data-i18n="strip.1">Commande sur WhatsApp</span><span data-i18n="strip.2">Paiement Mobile Money</span><span data-i18n="strip.3">Articles en direct de toute la RDC</span><span data-i18n="strip.4">30 jours d'essai pour les vendeurs</span></div></div>`);
+  </div></header>`);
   document.body.insertAdjacentHTML("beforeend", `
   <nav class="tabbar" aria-label="Navigation principale">
     <a href="index.html" data-p="home">${svg("home")}<span data-i18n="nav.home">Accueil</span></a>
@@ -70,8 +69,6 @@ function mount() {
     <a href="vendeur.html" data-p="vendeur">${svg("user")}<span data-i18n="nav.shop">Ma boutique</span></a>
   </nav>`);
   $$("[data-p]").forEach(a => { if (a.dataset.p === page) a.setAttribute("aria-current", "page"); });
-  // la bande défilante doit avoir deux copies pour boucler sans saut
-  const m = $(".marq"); m.innerHTML += m.innerHTML;
   $("#cityBtn").onclick = cityDialog; const rc = $("#regionChip"); if (rc) rc.onclick = cityDialog; cityLabel();
   favBadge();
   if (HAS_ITEMS) import("./notifs.js");
@@ -136,7 +133,7 @@ addEventListener("error", e => {
 /* ---------- Animations ---------- */
 const io = "IntersectionObserver" in window ? new IntersectionObserver(es => es.forEach(en => { if (en.isIntersecting) { en.target.classList.add("shown"); io.unobserve(en.target); } }), { threshold: .12 }) : null;
 export function reveal(root = document) { $$("[data-reveal]:not(.shown)", root).forEach(e => io ? io.observe(e) : e.classList.add("shown")); }
-export function countUp(el, to, ms = 900) {
+export function countUp(el, to, ms = 500) {
   if (reduce) { el.textContent = to; return; }
   const from = Number(el.textContent) || 0, t0 = performance.now();
   const step = t => { const k = Math.min(1, (t - t0) / ms), e = 1 - Math.pow(1 - k, 3); el.textContent = Math.round(from + (to - from) * e); if (k < 1) requestAnimationFrame(step); };
@@ -166,9 +163,7 @@ document.addEventListener("click", e => {
   const u = new URL(a.href, location.href);
   if (u.origin !== location.origin || (u.pathname === location.pathname && u.search === location.search)) return;
   if (a.hasAttribute("data-sell")) return;
-  e.preventDefault(); document.body.classList.add("leaving"); setTimeout(() => { location.href = u.href; }, 170);
-  setTimeout(() => document.body.classList.remove("leaving"), 1500);   // sécurité : la page ne reste jamais invisible
-});
+});   // le navigateur change de page tout seul, sans fondu ni attente
 addEventListener("pageshow", e => { if (e.persisted) document.body.classList.remove("leaving"); });
 
 /* ---------- Vendre : vérifier le compte avant de continuer ---------- */
@@ -205,7 +200,7 @@ document.addEventListener("click", async e => {
     else { history.replaceState(null, "", "#publier"); dispatchEvent(new HashChangeEvent("hashchange")); scrollTo({ top: 0, behavior: "smooth" }); }
     return;
   }
-  if (u) { document.body.classList.add("leaving"); setTimeout(() => { location.href = a.href; }, 150); setTimeout(() => document.body.classList.remove("leaving"), 1500); }
+  if (u) location.href = a.href;
   else gateDialog().showModal();
 });
 
