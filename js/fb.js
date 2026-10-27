@@ -5,7 +5,9 @@ const B = "https://www.gstatic.com/firebasejs/10.12.2/";
 export const ready = !/COLLE_ICI/.test(firebaseConfig.apiKey || "COLLE_ICI");
 let A = {}, S = {}, F = {};
 if (ready) {
-  try { [A, S, F] = await Promise.all([import(B + "firebase-app.js"), import(B + "firebase-auth.js"), import(B + "firebase-firestore.js")]); }
+  // Délai de 8 s : si le réseau est trop lent, on n'attend plus et la page affiche « Réessayer » au lieu de rester grise.
+  const lent = new Promise((_, no) => setTimeout(() => no(new Error("Réseau trop lent")), 8000));
+  try { [A, S, F] = await Promise.race([Promise.all([import(B + "firebase-app.js"), import(B + "firebase-auth.js"), import(B + "firebase-firestore.js")]), lent]); }
   catch (e) { console.warn("Firebase indisponible", e); }
 }
 function no() { throw Object.assign(new Error("Pas de connexion à Firebase."), { code: "auth/network-request-failed" }); }
@@ -23,4 +25,5 @@ export const GoogleAuthProvider = g(S, "GoogleAuthProvider"), signInWithPopup = 
 export const collection = g(F, "collection"), doc = g(F, "doc"), getDoc = g(F, "getDoc"), setDoc = g(F, "setDoc");
 export const addDoc = g(F, "addDoc"), updateDoc = g(F, "updateDoc"), deleteDoc = g(F, "deleteDoc");
 export const query = g(F, "query"), orderBy = g(F, "orderBy"), limit = g(F, "limit"), where = g(F, "where"), getDocs = g(F, "getDocs");
+export const deleteField = g(F, "deleteField");
 export const onSnapshot = g(F, "onSnapshot"), serverTimestamp = g(F, "serverTimestamp"), Timestamp = F.Timestamp || {};

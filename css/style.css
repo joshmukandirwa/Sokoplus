@@ -79,7 +79,7 @@ a {
 }
 
 .wrap {
-  max-width: 1120px;
+  max-width: 1500px;
   margin: 0 auto
 }
 
@@ -3727,28 +3727,144 @@ dialog[open]::backdrop {
   color: var(--muted);
   margin-bottom: 2px
 }
+
 /* ---- Sobriété ----
    Conservés : rond de chargement, squelettes, coche de réussite, messages, étapes, fenêtres, cœur des favoris.
    Retirés : bandeau défilant, éclats lumineux, texte dégradé animé, formes flottantes, rebonds, apparition au défilement, fondu entre pages. */
-@keyframes fade-soft { from { opacity: 0 } }
-main { animation: fade-soft .2s ease-out both }
-body { transition: none }
-body.leaving { opacity: 1 }
-.js [data-reveal], .js:not(.rvfail) [data-reveal], .js:not(.rvfail) [data-reveal].shown { opacity: 1; transform: none; transition: none }
-.strip { white-space: normal }
-.marq { animation: none; will-change: auto; display: flex; flex-wrap: wrap; justify-content: center }
-.marq span { padding: 8px 16px }
-@media (max-width: 640px) { .marq span:nth-child(n+3) { display: none } }
-a.search::after, .search.big:focus-within::after, .promo .btn::after, .sellband .btn::after { animation: none; opacity: 0 }
-.hero h1 em { animation: none }
-.p1, .p2, .p3, .promo img, .sellband img, .logo .mark, .emptyst .big, .gate-ic, .tabbar .sell .pl, .status i { animation: none }
-.step:not([hidden]) { animation-duration: .2s }
+@keyframes fade-soft {
+  from {
+    opacity: 0
+  }
+}
+
+main {
+  animation: fade-soft .2s ease-out both
+}
+
+body {
+  transition: none
+}
+
+body.leaving {
+  opacity: 1
+}
+
+.js [data-reveal],
+.js:not(.rvfail) [data-reveal],
+.js:not(.rvfail) [data-reveal].shown {
+  opacity: 1;
+  transform: none;
+  transition: none
+}
+
+.strip {
+  white-space: normal
+}
+
+.marq {
+  animation: none;
+  will-change: auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center
+}
+
+.marq span {
+  padding: 8px 16px
+}
+
+@media (max-width: 640px) {
+  .marq span:nth-child(n+3) {
+    display: none
+  }
+}
+
+a.search::after,
+.search.big:focus-within::after,
+.promo .btn::after,
+.sellband .btn::after {
+  animation: none;
+  opacity: 0
+}
+
+.hero h1 em {
+  animation: none
+}
+
+.p1,
+.p2,
+.p3,
+.promo img,
+.sellband img,
+.logo .mark,
+.emptyst .big,
+.gate-ic,
+.tabbar .sell .pl,
+.status i {
+  animation: none
+}
+
+.step:not([hidden]) {
+  animation-duration: .2s
+}
 
 /* ---------- Connexion : bannière et message dans les listes ---------- */
-.offbar { background: #b4231a; color: #fff; text-align: center; font-size: .85rem; font-weight: 600; padding: calc(env(safe-area-inset-top, 0px) + 8px) 14px 8px; line-height: 1.35; }
-.offbar.ok { background: var(--ok); }
-.offbar[hidden] { display: none; }
-.netbox { background: var(--surface); border: 1px dashed var(--line, #c9d4ee); border-radius: 16px; padding: 22px 18px; margin: 14px 0; text-align: center; }
-.netbox[hidden] { display: none; }
-.netbox b { display: block; font-size: 1.05rem; color: var(--ink); margin-bottom: 6px; }
-.netbox p { margin: 0 0 14px; color: var(--muted); font-size: .92rem; }
+.offbar {
+  background: #b4231a;
+  color: #fff;
+  text-align: center;
+  font-size: .85rem;
+  font-weight: 600;
+  padding: calc(env(safe-area-inset-top, 0px) + 8px) 14px 8px;
+  line-height: 1.35;
+}
+
+.offbar.ok {
+  background: var(--ok);
+}
+
+.offbar[hidden] {
+  display: none;
+}
+
+.netbox {
+  background: var(--surface);
+  border: 1px dashed var(--line, #c9d4ee);
+  border-radius: 16px;
+  padding: 22px 18px;
+  margin: 14px 0;
+  text-align: center;
+}
+
+.netbox[hidden] {
+  display: none;
+}
+
+.netbox b {
+  display: block;
+  font-size: 1.05rem;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+
+.netbox p {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: .92rem;
+}
+
+/* Champ mot de passe avec bouton Afficher / Masquer */
+.pwrap {
+  display: flex;
+  gap: 8px;
+  align-items: stretch
+}
+
+.pwrap input {
+  flex: 1;
+  min-width: 0
+}
+
+.pwrap .btn {
+  flex: none
+}

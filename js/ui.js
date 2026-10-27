@@ -1,6 +1,7 @@
 /* Couche d'interface partagée : en-tête, barre du bas, protections, animations, langue, hors-ligne.
    Ne dépend d'aucun service externe : elle s'affiche même sans connexion. */
-import { $, $$, store, SITE, configured, toast } from "./util.js";
+import { $, $$, store, SITE, configured, toast, esc, thumb, tileColor } from "./util.js";
+import { COUNTRIES, OTHER_CITY, countryName, citiesOf } from "./pays.js";
 
 const page = document.body.dataset.page || "";
 const HAS_ITEMS = ["home", "categories", "favoris", "recherche"].includes(page);   // pages qui chargent les articles
@@ -44,6 +45,15 @@ const I = {
 };
 export const svg = (n, c = "") => `<svg class="ic ${c}" viewBox="0 0 24 24" aria-hidden="true">${I[n]}</svg>`;
 
+/* ---------- Photo de profil dans la barre du bas ----------
+   Quand la personne est connectée, vendor.js garde son nom et sa photo (clé « me »). Sinon : l'icône personne. */
+function meIcon() {
+  const me = store.get("me", null);
+  if (!me || !me.n) return svg("user");
+  const inner = me.l ? `<img src="${esc(thumb(me.l, 96))}" alt="" draggable="false">` : esc(me.n[0].toUpperCase());
+  return `<span class="meav" style="background:${tileColor(me.n)}">${inner}</span>`;
+}
+
 /* ---------- En-tête et barre du bas ---------- */
 function mount() {
   if (!page || $("header.top")) return;
@@ -67,7 +77,7 @@ function mount() {
     <a href="categories.html" data-p="categories">${svg("grid")}<span data-i18n="nav.cats">Catégories</span></a>
     <a href="vendeur.html#publier" class="sell" data-sell><span class="pl">${svg("plus")}</span><span data-i18n="nav.sell">Vendre</span></a>
     <a href="favoris.html" data-p="favoris">${svg("heart")}<span data-i18n="nav.favs">Favoris</span><i class="cnt" id="favCnt" hidden></i></a>
-    <a href="vendeur.html" data-p="vendeur">${svg("user")}<span data-i18n="nav.shop">Ma boutique</span></a>
+    <a href="vendeur.html" data-p="vendeur">${meIcon()}<span data-i18n="nav.shop">Ma boutique</span></a>
   </nav>`);
   $$("[data-p]").forEach(a => { if (a.dataset.p === page) a.setAttribute("aria-current", "page"); });
   $("#cityBtn").onclick = cityDialog; const rc = $("#regionChip"); if (rc) rc.onclick = cityDialog; cityLabel();
@@ -77,36 +87,53 @@ function mount() {
 /* ---------- Région : bouton compact dans l'en-tête, puce sur l'accueil, fenêtre de choix ---------- */
 const normTxt = s => String(s ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 function cityLabel() {
-  const c = store.get("city", "");
-  const dot = $("#cityDot"); if (dot) dot.hidden = !c;
-  const lbl = $("#regionLbl"); if (lbl) lbl.textContent = c || "Toute la RDC";
+  const c = store.get("city", ""), k = store.get("country", "");
+  const dot = $("#cityDot"); if (dot) dot.hidden = !(c || k);
+  const lbl = $("#regionLbl"); if (lbl) lbl.textContent = c || (k ? countryName(k) : "Toute l'Afrique");
 }
-function citySet(c) {   // les pages réaffichent leurs listes grâce à l'événement « cur » (ancien réglage de devise)
-  store.set("city", c); cityLabel();
+function citySet(k, c) {   // les pages réaffichent leurs listes grâce à l'événement « cur »
+  store.set("country", k); store.set("city", c); cityLabel();
   document.dispatchEvent(new CustomEvent("cur"));
 }
-let cityEl;
+let cityEl, pickC = null;   // pickC : pays choisi, on affiche alors ses villes
+function drawCity() {
+  const curK = store.get("country", ""), curC = store.get("city", "");
+  const opt = (attr, val, label, on) => `<button type="button" class="cityOpt" ${attr}="${esc(val)}" aria-pressed="${on}">${svg("pin")}<span>${esc(label)}</span></button>`;
+  cityEl.innerHTML = pickC === null
+    ? `<div class="dlg">
+    <div class="dlg-head"><h2>Choisis ton pays</h2><button class="x" data-close aria-label="Fermer">×</button></div>
+    <p class="note">Tu vois d'abord les articles de ton pays, puis de ta ville. Tu peux changer quand tu veux.</p>
+    <input class="cityQ" id="cityQ" type="search" placeholder="Chercher un pays" autocomplete="off" aria-label="Chercher un pays">
+    <div class="cityGrid">${opt("data-country", "", "Toute l'Afrique", !curK)}${COUNTRIES.map(c => opt("data-country", c[0], c[1], c[0] === curK)).join("")}</div></div>`
+    : `<div class="dlg">
+    <div class="dlg-head"><h2>${esc(countryName(pickC))}</h2><button class="x" data-close aria-label="Fermer">×</button></div>
+    <p class="note"><button type="button" class="more" data-back>← Changer de pays</button></p>
+    <input class="cityQ" id="cityQ" type="search" placeholder="Chercher une ville" autocomplete="off" aria-label="Chercher une ville">
+    <div class="cityGrid">${opt("data-city", "", "Tout le pays", curK === pickC && !curC)}${citiesOf(pickC).map(c => opt("data-city", c, c === OTHER_CITY ? "Autres" : c, curK === pickC && c === curC)).join("")}</div></div>`;
+}
 function cityDialog() {
-  const cur = store.get("city", "");
   if (!cityEl) {
     cityEl = document.createElement("dialog"); cityEl.id = "cityDlg"; document.body.append(cityEl);
     cityEl.addEventListener("click", e => {
       if (e.target === cityEl || e.target.closest("[data-close]")) return cityEl.close();
+      if (e.target.closest("[data-back]")) { pickC = null; return drawCity(); }
+      const k = e.target.closest("[data-country]");
+      if (k) {
+        if (!k.dataset.country) { citySet("", ""); cityEl.close(); return toast("Tu vois maintenant toute l'Afrique.", { ms: 2200 }); }
+        pickC = k.dataset.country; return drawCity();
+      }
       const b = e.target.closest("[data-city]"); if (!b) return;
-      citySet(b.dataset.city); cityEl.close();
-      toast(b.dataset.city ? `Région : ${b.dataset.city}. On te montre d'abord ce qui est près de toi.` : "Tu vois maintenant toute la RDC.", { ms: 2200 });
+      citySet(pickC, b.dataset.city); cityEl.close();
+      toast(b.dataset.city ? `Région : ${b.dataset.city}. On te montre d'abord ce qui est près de toi.` : `Tu vois maintenant tout le pays : ${countryName(pickC)}.`, { ms: 2200 });
     });
     cityEl.addEventListener("input", e => {
       if (e.target.id !== "cityQ") return;
       const q = normTxt(e.target.value);
-      $$("[data-city]", cityEl).forEach(b => { b.hidden = !!q && !normTxt(b.textContent).includes(q); });
+      $$("[data-city],[data-country]", cityEl).forEach(b => { b.hidden = !!q && !normTxt(b.textContent).includes(q); });
     });
   }
-  cityEl.innerHTML = `<div class="dlg">
-    <div class="dlg-head"><h2>Choisis ta région</h2><button class="x" data-close aria-label="Fermer">×</button></div>
-    <p class="note">Tu vois d'abord les articles de ta ville. Tu peux changer quand tu veux.</p>
-    <input class="cityQ" id="cityQ" type="search" placeholder="Chercher une ville" autocomplete="off" aria-label="Chercher une ville">
-    <div class="cityGrid">${["", ...SITE.cities].map(c => `<button type="button" class="cityOpt" data-city="${c}" aria-pressed="${c === cur}">${svg("pin")}<span>${c || "Toute la RDC"}</span></button>`).join("")}</div></div>`;
+  const k = store.get("country", ""); pickC = k || null;   // si un pays est déjà choisi, on ouvre directement ses villes
+  drawCity();
   cityEl.showModal();
 }
 export function favBadge() {

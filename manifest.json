@@ -2,7 +2,7 @@
   "id": "/",
   "name": "SokoPlus",
   "short_name": "SokoPlus",
-  "description": "Achetez et vendez partout en RDC",
+  "description": "Achetez et vendez partout en Afrique",
   "start_url": "index.html",
   "scope": "./",
   "display": "standalone",

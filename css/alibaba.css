@@ -1,0 +1,629 @@
+/* SokoPlus : thème inspiré des marchés en ligne type Alibaba.
+   Orange vif, fond gris clair, cartes blanches sobres, prix en orange, catégories en pastilles.
+   Chargé APRÈS style.css : il suffit de retirer le lien pour revenir à l'ancien aspect. */
+:root {
+  --blue: #ff6a00;
+  --blue-d: #e05a00;
+  --sky: #ff8a3d;
+  --orange: #ff6a00;
+  --orange-d: #e05a00;
+  --bg: #f4f4f4;
+  --surface: #ffffff;
+  --ink: #222222;
+  --muted: #6b6b6b;
+  --soft: #eeeeee;
+  --line: #e4e4e4;
+  --inv: #ff6a00;
+  --night: #1b1b1f;
+  --bw: 1px;
+  --r: 10px;
+}
+
+:root[data-theme=dark] {
+  --bg: #121214;
+  --surface: #1c1c20;
+  --ink: #f1f1f1;
+  --muted: #a5a5ab;
+  --soft: #2a2a30;
+  --line: #34343b;
+  --inv: #ff6a00;
+  --blue-d: #ff8a3d;
+}
+
+/* Boutons : orange plein, coins nets */
+.btn {
+  border-radius: 8px;
+  border-width: 1px;
+  box-shadow: none;
+}
+
+.btn.ghost {
+  background: var(--surface);
+}
+
+.btn.ok {
+  background: #25a244;
+  border-color: #25a244;
+  color: #fff;
+}
+
+/* En-tête : sombre (le logo a un fond noir), accent orange */
+.iconbtn {
+  border-width: 1px;
+  border-radius: 10px;
+}
+
+.strip {
+  color: #fff;
+}
+
+/* Titre d'accueil discret, recherche en vedette */
+.hero {
+  padding: 14px 0 6px;
+}
+
+.hero h1 {
+  font: 700 1rem/1.3 var(--body);
+  letter-spacing: 0;
+  max-width: none;
+  color: var(--muted);
+}
+
+.hero h1 em {
+  color: var(--blue);
+}
+
+.search {
+  height: 46px;
+  margin-top: 10px;
+  padding: 0 0 0 14px;
+  border: 2px solid var(--blue);
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.search .sbtn {
+  margin-left: auto;
+  flex: none;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 0 20px;
+  background: var(--blue);
+  color: #fff;
+  font: 700 .92rem var(--body);
+}
+
+.regionchip {
+  margin-top: 10px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: .84rem;
+}
+
+/* Bannières : rectangles francs, orange et gris */
+.promos {
+  margin-top: 12px;
+  gap: 10px;
+}
+
+.promo {
+  flex-basis: min(88%, 460px);
+  min-height: 150px;
+  border: 0;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.promo h2 {
+  font: 800 1.25rem/1.15 var(--body);
+  letter-spacing: -.01em;
+}
+
+.promo .btn {
+  background: #fff;
+  color: var(--blue);
+  border-color: #fff;
+}
+
+.p1 {
+  background: linear-gradient(120deg, #ff6a00, #ff9a3d);
+}
+
+.p2 {
+  background: linear-gradient(120deg, #2b2b30, #4a4a52);
+}
+
+.p3 {
+  background: linear-gradient(120deg, #ff8a00, #ffb347);
+  color: #222;
+}
+
+.p3 .btn {
+  background: #222;
+  color: #fff;
+  border-color: #222;
+}
+
+.dots i {
+  background: #cfcfcf;
+}
+
+.dots i.on {
+  background: var(--blue);
+}
+
+/* Titres de section avec barre orange */
+.sech h2 {
+  font: 800 1.1rem var(--body);
+  letter-spacing: 0;
+  padding-left: 10px;
+  border-left: 4px solid var(--blue);
+}
+
+.sech .more {
+  color: var(--blue);
+  font-weight: 700;
+}
+
+/* Catégories : pastilles rondes en grille, comme les marchés pro */
+#cats.chiprow {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px 4px;
+  overflow: visible;
+  margin: 0;
+  padding: 12px 4px;
+  background: var(--surface);
+  border-radius: 12px;
+}
+
+#cats .chipc {
+  flex-direction: column;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  text-align: center;
+  font-size: .72rem;
+  font-weight: 600;
+  color: var(--ink);
+  min-width: 0;
+}
+
+#cats .chipc .ic {
+  width: 46px;
+  height: 46px;
+  padding: 12px;
+  border-radius: 50%;
+  background: #fff1e6;
+  color: var(--blue);
+}
+
+:root[data-theme=dark] #cats .chipc .ic {
+  background: #3a2415;
+}
+
+#cats .chipc span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#cats .chipc small {
+  display: none;
+}
+
+#cats .chipc:hover {
+  background: transparent;
+  color: var(--ink);
+  transform: none;
+}
+
+#cats .chipc:hover .ic {
+  color: #fff;
+  background: var(--blue);
+}
+
+/* Boutiques */
+.shopav span {
+  border-width: 1px;
+}
+
+/* Cartes article : blanches, fines, prix orange */
+.grid {
+  gap: 8px;
+}
+
+.card {
+  border: 0;
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .06);
+}
+
+.card.new {
+  box-shadow: 0 0 0 2px var(--blue);
+}
+
+.card .thumb {
+  border-bottom: 0;
+  font-size: 2.2rem;
+}
+
+.card .in {
+  padding: 8px 10px 10px;
+  gap: 3px;
+}
+
+.card h3 {
+  font: 500 .88rem/1.3 var(--body);
+}
+
+.price {
+  font: 800 1.1rem var(--body);
+  color: var(--blue);
+  padding-top: 2px;
+}
+
+.vend {
+  font-size: .74rem;
+}
+
+.badge {
+  border: 0;
+  border-radius: 4px;
+  background: var(--blue);
+  color: #fff;
+  letter-spacing: .03em;
+}
+
+.badge.sold {
+  background: #444;
+}
+
+.skeleton {
+  border-radius: 10px;
+  border-width: 0;
+}
+
+/* Bandeau vendeur */
+.sellband {
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(120deg, #ff6a00, #ff9a3d);
+}
+
+.sellband h2 em {
+  color: #222;
+}
+
+.sellband p {
+  color: #fff;
+}
+
+.sellband .btn {
+  background: #fff;
+  color: var(--blue);
+  border-color: #fff;
+}
+
+.sellband img {
+  opacity: .25;
+}
+
+/* Barre du bas : bouton Vendre orange sans ombre dure */
+.tabbar {
+  border-top-width: 1px;
+}
+
+.tabbar a[aria-current=page] {
+  color: var(--blue);
+}
+
+.tabbar .sell {
+  color: var(--ink);
+}
+
+.tabbar .sell span.pl {
+  background: var(--blue);
+  border: 3px solid var(--surface);
+  box-shadow: 0 2px 6px rgba(255, 106, 0, .45);
+  color: #fff;
+}
+
+dialog {
+  border-radius: 14px;
+  border-width: 1px;
+}
+
+footer.foot {
+  color: #b5b5ba;
+}
+
+@media (min-width: 760px) {
+  #cats.chiprow {
+    grid-template-columns: repeat(9, minmax(0, 1fr));
+  }
+
+  .grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .search {
+    max-width: 640px;
+  }
+}
+
+/* Photo de profil dans la barre du bas (remplace l'icône « Ma boutique » quand on est connecté) */
+.tabbar .meav {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  font: 800 .8rem var(--display, inherit);
+  color: #fff;
+  border: 2px solid var(--line, #ddd);
+  box-sizing: border-box;
+}
+
+.tabbar .meav img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.tabbar a[aria-current=page] .meav {
+  border-color: var(--blue, #ff6a00);
+  box-shadow: 0 0 0 2px rgba(255, 106, 0, .25);
+}
+
+/* ---- Promotions, offres du jour, certification (style AliExpress) ---- */
+.price {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+}
+
+.price .now,
+.dprice .now {
+  color: #e6194b;
+  font-weight: 900;
+}
+
+.price .old,
+.dprice .old {
+  color: var(--muted, #888);
+  font-weight: 600;
+  font-size: .78em;
+  text-decoration: line-through;
+}
+
+.price .off,
+.dprice .off {
+  background: #ffe4ea;
+  color: #e6194b;
+  font-size: .72em;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 6px;
+}
+
+.badge.promo {
+  background: #e6194b;
+  color: #fff;
+}
+
+.badge.deal {
+  background: #ffd400;
+  color: #222;
+}
+
+.cert-ic {
+  width: 15px;
+  height: 15px;
+  margin-left: 3px;
+  vertical-align: -3px;
+  color: #1d9bf0;
+  flex: none;
+}
+
+.pill.ok {
+  background: #e2f6e9;
+  color: #14803c;
+}
+
+.cert {
+  font-size: .72em;
+  background: #e8f4fe;
+  color: #1d9bf0;
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-weight: 800;
+}
+
+.rail {
+  border-radius: 14px;
+  padding: 12px 0 4px 12px;
+  margin: 14px 0;
+}
+
+.rail.promo {
+  background: linear-gradient(120deg, #ff1f5a, #ff5b3d);
+}
+
+.rail.deal {
+  background: linear-gradient(120deg, #ffd400, #ffb300);
+}
+
+.rail .sech h2 {
+  color: #fff;
+}
+
+.rail.deal .sech h2 {
+  color: #222;
+}
+
+.rail .hrow {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 4px 12px 12px 0;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+}
+
+.rail .hrow .card {
+  flex: 0 0 150px;
+  scroll-snap-align: start;
+}
+
+.rail .sech .more {
+  color: inherit;
+  opacity: .9;
+}
+
+/* Page boutique */
+.shophead {
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--surface, #fff);
+  border: 1px solid var(--line, #e5e5e5);
+  margin-bottom: 12px;
+}
+
+.sh-cover {
+  height: 92px;
+}
+
+.sh-body {
+  padding: 0 14px 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.sh-av {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  margin-top: -36px;
+  border: 4px solid var(--surface, #fff);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  font-size: 1.6rem;
+  color: #fff;
+}
+
+.sh-av img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sh-id h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.sh-id p {
+  margin: 4px 0 0;
+  color: var(--muted, #777);
+  font-size: .88rem;
+}
+
+.sh-stats {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: .9rem;
+  color: var(--muted, #777);
+}
+
+.sh-stats b {
+  color: var(--ink, #111);
+}
+
+/* Avis clients */
+.reviews {
+  border: 1px solid var(--line, #e5e5e5);
+  border-radius: 14px;
+  background: var(--surface, #fff);
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.rv-t {
+  margin: 0 0 8px;
+  font-size: 1.1rem;
+}
+
+.rv-sum {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.rv-avg {
+  font-size: 1.8rem;
+  font-weight: 900;
+}
+
+.rv-st {
+  color: #ffb300;
+  letter-spacing: 1px;
+}
+
+.rv {
+  border-top: 1px solid var(--line, #eee);
+  padding: 10px 0;
+}
+
+.rv p {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.rv-h {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.rv-h small {
+  color: var(--muted, #777);
+  margin-left: auto;
+}
+
+.rv-pick {
+  display: flex;
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.rv-pick button {
+  font-size: 2rem;
+  line-height: 1;
+  background: none;
+  border: 0;
+  color: #c9c9c9;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.rv-pick button.on {
+  color: #ffb300;
+}

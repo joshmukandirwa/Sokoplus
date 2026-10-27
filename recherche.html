@@ -6,26 +6,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Recherche - SokoPlus</title>
   <!-- SEO -->
-  <meta name="description" content="Cherche un produit ou une boutique sur SokoPlus, le marché en ligne de la RDC.">
+  <meta name="description" content="Cherche un produit ou une boutique sur SokoPlus, le marché en ligne d'Afrique.">
   <meta name="robots" content="noindex,follow">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="SokoPlus">
   <meta property="og:locale" content="fr_FR">
   <meta property="og:title" content="Recherche - SokoPlus">
   <meta property="og:description"
-    content="Cherche un produit ou une boutique sur SokoPlus, le marché en ligne de la RDC.">
+    content="Cherche un produit ou une boutique sur SokoPlus, le marché en ligne d'Afrique.">
   <meta property="og:url" content="https://sokoplus-rdc.vercel.app/recherche.html">
   <meta property="og:image" content="https://sokoplus-rdc.vercel.app/icons/og-image.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="SokoPlus, le marché en ligne de la RDC">
+  <meta property="og:image:alt" content="SokoPlus, le marché en ligne d'Afrique">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Recherche - SokoPlus">
   <meta name="twitter:description"
-    content="Cherche un produit ou une boutique sur SokoPlus, le marché en ligne de la RDC.">
+    content="Cherche un produit ou une boutique sur SokoPlus, le marché en ligne d'Afrique.">
   <meta name="twitter:image" content="https://sokoplus-rdc.vercel.app/icons/og-image.png">
   <!-- /SEO -->
-  <meta name="theme-color" content="#03060d">
+  <meta name="theme-color" content="#1b1b1f">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -33,6 +33,7 @@
   <link rel="stylesheet"
     href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,700;0,800;0,900;1,900&family=Figtree:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/alibaba.css">
   <script src="js/boot.js"></script>
 </head>
 
@@ -63,7 +64,15 @@
       </section>
     </div>
     <div id="found" hidden>
+      <section class="shophead" id="shopHead" hidden></section>
+      <section class="reviews" id="shopRev" hidden></section>
       <div class="filters"><select id="cat" aria-label="Catégorie"></select>
+        <select id="kind" aria-label="Type d'annonce">
+          <option value="">Toutes les annonces</option>
+          <option value="promo">Promotions</option>
+          <option value="offre">Offres du jour</option>
+          <option value="cert">Boutiques certifiées</option>
+        </select>
         <select id="sort" aria-label="Trier">
           <option value="recent">Pertinence et récents</option>
           <option value="low">Prix croissant</option>

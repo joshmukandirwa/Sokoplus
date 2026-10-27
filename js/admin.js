@@ -1,5 +1,5 @@
 import {
-  auth, db, onAuthStateChanged, signInWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp,
+  auth, db, onAuthStateChanged, signInWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField, serverTimestamp,
   collection, query, orderBy, limit, where, getDocs, onSnapshot, Timestamp
 } from "./fb.js";
 import { SITE, configured, configBanner, $, $$, esc, safeUrl, money, prettyPhone, waLink, ago, toast, thumb, tileColor, isNetErr, failText, NET_MSG } from "./common.js";
@@ -10,7 +10,7 @@ import { bindLogout } from "./logout.js";
 
 configBanner();
 const DAY = 864e5;
-let maint = null, tab = "pending", users = [], items = [], reports = [], subs = [], reqs = [], unsubs = [], firstSubs = true, firstReqs = true;
+let revs = [], maint = null, tab = "pending", users = [], items = [], reports = [], subs = [], reqs = [], unsubs = [], firstSubs = true, firstReqs = true, firstRevs = true;
 
 const say = (t, kind = "") => { const m = $("#aMsg"); m.hidden = !t; m.className = "msg " + kind; m.textContent = t || ""; };
 
@@ -38,7 +38,7 @@ else onAuthStateChanged(auth, async u => {
     return;
   }
   $("#login").hidden = true; $("#panel").hidden = false; $("#logout").hidden = false; say("");
-  firstSubs = true; firstReqs = true;
+  firstSubs = true; firstReqs = true; firstRevs = true;
   unsubs.push(
     onSnapshot(query(collection(db, "submissions"), orderBy("createdAt", "desc"), limit(100)), s => {
       if (!firstSubs) s.docChanges().forEach(ch => {
@@ -53,6 +53,12 @@ else onAuthStateChanged(auth, async u => {
       });
       firstReqs = false;
       reqs = s.docs.map(d => ({ id: d.id, ...d.data() })); render();
+    }),
+    onSnapshot(query(collection(db, "reviews"), orderBy("createdAt", "desc"), limit(200)), s => {
+      if (!firstRevs) s.docChanges().forEach(ch => {
+        if (ch.type === "added" && !ch.doc.metadata.hasPendingWrites && ch.doc.data().status === "pending") toast("Nouvel avis à valider", { onClick: () => { tab = "pending"; render(); } });
+      });
+      firstRevs = false; revs = s.docs.map(d => ({ id: d.id, ...d.data() })).filter(r => r.status !== "approved"); render();
     }),
     onSnapshot(doc(db, "config", "maintenance"), s => { maint = s.exists() ? s.data() : null; paintMaint(); }),
     onSnapshot(collection(db, "users"), s => { users = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }),
@@ -74,6 +80,10 @@ const fmtD = m => {
 };
 const userState = u => u.status === "blocked" ? "blocked" : left(u) <= 0 ? "expired" : u.plan === "pro" ? "pro" : "trial";
 const when = x => x?.toMillis?.() ?? Date.now();
+const LATE = 24 * 3600e3;
+const late = x => x.status === "pending" && Date.now() - when(x.createdAt) > LATE;   // en attente depuis plus de 24 h
+const lateTag = x => late(x) ? `<span class="pill bad">En attente depuis ${fmtLate(Date.now() - when(x.createdAt))}</span> ` : "";
+const fmtLate = ms => ms < 48 * 3600e3 ? Math.floor(ms / 3600e3) + " h" : Math.floor(ms / 864e5) + " jours";
 const empty = (ic, t) => `<div class="a-empty">${icon(ic)}<p>${esc(t)}</p></div>`;
 const chips = { pending: "wait", users: "all", items: "all" };
 let fxNext = true;
@@ -88,12 +98,13 @@ function userCard(u) {
   const pct = st === "blocked" || ms <= 0 ? 0 : Math.min(100, Math.round(ms / (30 * DAY) * 100));
   const meter = st === "blocked" ? "Compte suspendu" : ms <= 0 ? `Terminé le ${dateFr(until(u))}` : `${fmtD(ms)} restants, jusqu'au ${dateFr(until(u))}`;
   return `<article class="a-card" data-row data-uid="${esc(u.id)}">
-    <div class="a-head">${av(u.shopName)}<div class="a-id"><b>${esc(u.shopName)}</b><small>${esc(prettyPhone(u.phone))} · ${esc(u.email)}</small></div>${pill}</div>
+    <div class="a-head">${av(u.shopName)}<div class="a-id"><b>${esc(u.shopName)}${u.certified ? ' <span class="cert" title="Certifiée">✔ Certifiée</span>' : ""}</b><small>${esc(prettyPhone(u.phone))} · ${esc(u.email)}</small></div>${pill}</div>
     <div class="a-meter ${st}"><div class="a-bar"><i style="width:${pct}%"></i></div><span${st === "trial" || st === "pro" ? ` data-until="${until(u)}"` : ""}>${esc(meter)}</span></div>
     <div class="a-stats"><span><b>${mine.filter(i => i.status !== "sold").length}</b> en ligne</span><span><b>${mine.filter(i => i.status === "sold").length}</b> vendus</span>${u.createdAt?.toMillis ? `<span>Inscrite ${esc(ago(u.createdAt.toMillis()))}</span>` : ""}</div>
     <div class="a-actions">
       <a class="btn small ghost" href="${esc(waLink(u.phone, "Bonjour " + u.shopName + ", ici SokoPlus."))}" target="_blank" rel="noopener">WhatsApp</a>
       <button class="btn small" data-a="sub">Abonner</button>
+      <button class="btn small ${u.certified ? "warn" : "ok"}" data-a="cert">${u.certified ? "Retirer la certification" : "Certifier"}</button>
       <button class="btn small ${u.status === "blocked" ? "ok" : "warn"}" data-a="block">${u.status === "blocked" ? "Débloquer" : "Bloquer"}</button>
     </div></article>`;
 }
@@ -112,7 +123,7 @@ function reqCard(r) {
   const chg = (label, now, next) => next ? `<div class="a-chg"><small>${label}</small><span>${esc(now || "—")}</span><i>devient</i><b>${esc(next)}</b></div>` : "";
   return `<article class="a-card a-sub" data-row data-rid="${esc(r.id)}">
     <div class="a-top"><b>Modification de la boutique ${esc(u.shopName || "")}</b></div>
-    <div class="a-meta">${r.status === "rejected" ? '<span class="pill bad">Refusée</span>' : '<span class="pill warn">À valider</span>'} <span>${esc(u.email || "")}</span> · <span>${ago(when(r.createdAt))}</span></div>
+    <div class="a-meta">${lateTag(r)}${r.status === "rejected" ? '<span class="pill bad">Refusée</span>' : '<span class="pill warn">À valider</span>'} <span>${esc(u.email || "")}</span> · <span>${ago(when(r.createdAt))}</span></div>
     ${chg("Nom", u.shopName, r.shopName && r.shopName !== u.shopName ? r.shopName : "")}
     ${chg("Numéro", u.phone ? prettyPhone(u.phone) : "", r.phone && r.phone !== u.phone ? prettyPhone(r.phone) : "")}
     ${r.logo ? `<div class="a-chg"><small>Photo de profil</small>${u.logo ? `<img src="${esc(thumb(u.logo, 120))}" alt="">` : "<span>aucune</span>"}<i>devient</i><a href="${esc(r.logo)}" target="_blank" rel="noopener"><img src="${esc(thumb(r.logo, 160))}" alt=""></a></div>` : ""}
@@ -144,18 +155,30 @@ function subCard(s) {
   return `<article class="a-card a-sub" data-row data-sid="${esc(s.id)}">
     <div class="a-gal">${imgs}</div>
     <div class="a-top"><b>${esc(s.title)}</b><span class="a-price">${money(s.price, s.currency)}</span></div>
-    <div class="a-meta">${s.status === "rejected" ? '<span class="pill bad">Refusé</span>' : '<span class="pill warn">À valider</span>'}${s.replaces ? ' <span class="pill ok">Modification d\'un article en ligne</span>' : ""} <span>${esc(s.shopName)}</span> · <span>${esc(s.category)}</span> · <span>${esc(s.city ? s.city + ", " + s.address : s.address)}</span> · <span>${ago(when(s.createdAt))}</span></div>
+    <div class="a-meta">${lateTag(s)}${s.status === "rejected" ? '<span class="pill bad">Refusé</span>' : '<span class="pill warn">À valider</span>'}${s.replaces ? ' <span class="pill ok">Modification d\'un article en ligne</span>' : ""} <span>${esc(s.shopName)}</span> · <span>${esc(s.category)}</span> · <span>${esc(s.city ? s.city + ", " + s.address : s.address)}</span> · <span>${ago(when(s.createdAt))}</span></div>
     ${s.description ? `<p class="a-desc">${esc(s.description)}</p>` : ""}
     ${s.status === "rejected" && s.reason ? `<p class="a-desc">Motif : ${esc(s.reason)}</p>` : ""}
     <div class="a-actions">${s.status === "pending" ? '<button class="btn ok" data-a="ok">Valider et publier</button><button class="btn ghost" data-a="no">Refuser</button>' : '<button class="btn small ghost" data-a="delsub">Supprimer</button>'}</div>
   </article>`;
 }
+function reviewCard(r) {
+  const shop = users.find(x => x.id === r.shopId);
+  return `<article class="a-card" data-row data-rid="${esc(r.id)}">
+    <div class="a-top"><b>${"★".repeat(r.stars)}${"☆".repeat(5 - r.stars)} · ${esc(shop?.shopName || "Boutique")}</b></div>
+    <div class="a-meta">${lateTag(r)}${r.status === "rejected" ? '<span class="pill bad">Refusé</span>' : '<span class="pill warn">Avis à valider</span>'} <span>${esc(r.buyerName || "Client")}</span> · <span>${ago(when(r.createdAt))}</span></div>
+    ${r.text ? `<p class="a-desc">${esc(r.text)}</p>` : '<p class="a-desc">(sans commentaire)</p>'}
+    <div class="a-actions">${r.status === "pending" ? '<button class="btn ok" data-a="rvok">Valider</button><button class="btn ghost" data-a="rvno">Refuser</button>' : '<button class="btn small ghost" data-a="rvdel">Supprimer</button>'}</div>
+  </article>`;
+}
 function pendingView(q) {
   const base = subs.filter(s => s.status !== "approved");
-  chipsHTML([["wait", "En attente"], ["rej", "Refusés"]], { wait: base.filter(s => s.status === "pending").length + reqs.filter(r => r.status === "pending").length, rej: base.filter(s => s.status === "rejected").length + reqs.filter(r => r.status === "rejected").length });
+  chipsHTML([["wait", "En attente"], ["rej", "Refusés"]], { wait: base.filter(s => s.status === "pending").length + reqs.filter(r => r.status === "pending").length + revs.filter(r => r.status === "pending").length, rej: base.filter(s => s.status === "rejected").length + reqs.filter(r => r.status === "rejected").length + revs.filter(r => r.status === "rejected").length });
   const list = base.filter(s => (chips.pending === "wait" ? s.status === "pending" : s.status === "rejected") && (!q || norm(`${s.title} ${s.shopName} ${s.category}`).includes(q)));
   const rl = reqs.filter(r => (chips.pending === "wait" ? r.status === "pending" : r.status === "rejected") && (!q || norm(`${users.find(x => x.id === r.id)?.shopName || ""} ${r.shopName || ""}`).includes(q)));
-  return (rl.map(reqCard).join("") + list.map(subCard).join("")) || empty("clock", chips.pending === "wait" ? "Rien à valider pour le moment. Tout est à jour." : "Aucun article refusé.");
+  const rv = revs.filter(r => (chips.pending === "wait" ? r.status === "pending" : r.status === "rejected") && (!q || norm(`${r.buyerName} ${r.text} ${users.find(x => x.id === r.shopId)?.shopName || ""}`).includes(q)));
+  const nLate = chips.pending === "wait" ? [...subs, ...reqs, ...revs].filter(late).length : 0;
+  const warn = nLate ? `<div class="a-late" role="status"><b>${nLate} en attente depuis plus de 24 h.</b> Les vendeurs attendent ta réponse.</div>` : "";
+  return (warn + rl.map(reqCard).join("") + rv.map(reviewCard).join("") + list.map(subCard).join("")) || empty("clock", chips.pending === "wait" ? "Rien à valider pour le moment. Tout est à jour." : "Aucun article refusé.");
 }
 
 function itemCard(i) {
@@ -190,7 +213,7 @@ function reportsView(q) {
 }
 
 function render() {
-  const now = Date.now(), waiting = subs.filter(s => s.status === "pending").length + reqs.filter(r => r.status === "pending").length;
+  const now = Date.now(), waiting = subs.filter(s => s.status === "pending").length + reqs.filter(r => r.status === "pending").length + revs.filter(r => r.status === "pending").length;
   const live = items.filter(i => i.status !== "sold").length, pro = users.filter(u => userState(u) === "pro").length;
   $("#aWho").textContent = auth.currentUser?.email || "";
   $("#aDate").textContent = new Date(now).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
@@ -357,15 +380,16 @@ $("#list").addEventListener("click", async e => {
           if (s.replaces) {   // modification d'un article déjà en ligne : on vérifie que l'article appartient bien à ce vendeur
             const cur = await getDoc(doc(db, "items", s.replaces));
             if (!cur.exists() || cur.data().ownerId !== s.ownerId) throw { message: "L'article à modifier n'existe plus ou n'appartient pas à ce vendeur." };
-            await updateDoc(cur.ref, { title: s.title, description: s.description, price: s.price, category: s.category, address: s.address, city: s.city || "", currency: s.currency || "USD", images: s.images });
+            await updateDoc(cur.ref, { title: s.title, description: s.description, price: s.price, category: s.category, address: s.address, city: s.city || "", country: s.country || "CD", currency: s.currency || "USD", images: s.images, oldPrice: s.oldPrice || deleteField(), tag: s.tag || deleteField() });
             await deleteDoc(doc(db, "submissions", s.id));
             if (owner?.email) notify("approved", { to: owner.email, title: s.title, shopName: s.shopName });
             return;
           }
           if ((await getDoc(doc(db, "items", s.id))).exists()) throw { message: "Un article avec cet identifiant existe déjà : proposition suspecte, refuse-la." };   // empêche d'écraser l'article d'un autre vendeur
           await setDoc(doc(db, "items", s.id), {
-            title: s.title, description: s.description, price: s.price, category: s.category, address: s.address, city: s.city || "", currency: s.currency || "USD", images: s.images,
-            ownerId: s.ownerId, shopName: owner?.shopName || s.shopName, phone: owner?.phone || s.phone, shopLogo: owner?.logo || "", status: "available", featured: false, createdAt: serverTimestamp()
+            title: s.title, description: s.description, price: s.price, category: s.category, address: s.address, city: s.city || "", country: s.country || "CD", currency: s.currency || "USD", images: s.images,
+            ownerId: s.ownerId, shopName: owner?.shopName || s.shopName, phone: owner?.phone || s.phone, shopLogo: owner?.logo || "", status: "available", featured: false, createdAt: serverTimestamp(),
+            ...(owner?.certified ? { certified: true } : {}), ...(s.oldPrice ? { oldPrice: s.oldPrice } : {}), ...(s.tag ? { tag: s.tag } : {})
           });
           await updateDoc(doc(db, "submissions", s.id), { status: "approved" });
           if (owner?.email) notify("approved", { to: owner.email, title: s.title, shopName: s.shopName });
@@ -389,6 +413,24 @@ $("#list").addEventListener("click", async e => {
       const u = users.find(x => x.id === row.dataset.uid);
       await updateDoc(doc(db, "users", u.id), { status: u.status === "blocked" ? "active" : "blocked" });
       toast(`${u.shopName} : boutique ${u.status === "blocked" ? "débloquée" : "bloquée"}.`);
+    }
+    if (a === "rvok" || a === "rvno" || a === "rvdel") {
+      const r = revs.find(x => x.id === row.dataset.rid); if (!r) return;
+      if (a === "rvdel") { await deleteDoc(doc(db, "reviews", r.id)); return; }
+      await run(b, () => updateDoc(doc(db, "reviews", r.id), { status: a === "rvok" ? "approved" : "rejected" }), { busy: a === "rvok" ? "Validation…" : "Refus…", done: a === "rvok" ? "Validé" : "Refusé", hold: 600 });
+      toast(a === "rvok" ? "Avis validé : il est maintenant visible." : "Avis refusé.");
+      return;
+    }
+    if (a === "cert") {
+      const u = users.find(x => x.id === row.dataset.uid); if (!u) return;
+      const on = !u.certified;
+      if (!window.confirm(on ? `Certifier la boutique « ${u.shopName} » ? Ses nouveaux articles seront publiés sans validation.` : `Retirer la certification de « ${u.shopName} » ? Ses articles devront à nouveau être validés.`)) return;
+      await run(b, async () => {
+        await updateDoc(doc(db, "users", u.id), { certified: on });
+        for (const i of items.filter(x => x.ownerId === u.id)) await updateDoc(doc(db, "items", i.id), { certified: on });   // le badge suit tous ses articles
+      }, { busy: "Mise à jour…", done: on ? "Certifiée" : "Retirée", hold: 700 });
+      toast(on ? `${u.shopName} est maintenant certifiée.` : `${u.shopName} n'est plus certifiée.`);
+      return;
     }
     if (a === "feat") { const i = items.find(x => x.id === row.dataset.iid); await updateDoc(doc(db, "items", i.id), { featured: !i.featured }); }
     if (a === "del" || a === "delitem") {

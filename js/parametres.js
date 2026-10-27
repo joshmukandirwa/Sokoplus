@@ -62,7 +62,7 @@ showInstall(); document.addEventListener("installable", showInstall);
 $("#inst").onclick = async () => { if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice; showInstall(); };
 $("#share").onclick = async () => {
   const url = new URL("index.html", location.href).href;
-  try { if (navigator.share) await navigator.share({ title: "SokoPlus", text: "Tous vos achats, un seul endroit, en RDC.", url }); else { await navigator.clipboard.writeText(url); toast("Lien copié"); } } catch { /* annulé */ }
+  try { if (navigator.share) await navigator.share({ title: "SokoPlus", text: "Tous vos achats, un seul endroit, en Afrique.", url }); else { await navigator.clipboard.writeText(url); toast("Lien copié"); } } catch { /* annulé */ }
 };
 $("#reset").onclick = e => {
   const b = e.currentTarget;

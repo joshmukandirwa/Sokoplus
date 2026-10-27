@@ -1,4 +1,4 @@
-import { load, items, filter, paint, bind, counts, shops, catIcon, openFromUrl, notice, suggest, hasTaste } from "./market.js";
+import { load, items, filter, paint, bind, counts, shops, catIcon, openFromUrl, notice, suggest, hasTaste, isPromo, isDeal, certMark } from "./market.js";
 import { SITE, $, $$, esc, tileColor, thumb } from "./common.js";
 import { countUp } from "./ui.js";
 
@@ -11,6 +11,11 @@ function render() {
   paint(grid, list.slice(0, LIMIT), empty);
   notice(grid, empty, list.length);
   $("#moreBtn").hidden = list.length <= LIMIT;
+  /* Rayons choisis par les vendeurs (promotion, offre du jour) : rien ne s'affiche s'il n'y en a pas */
+  const avail = filter({ sort: "recent", avail: true });
+  const pr = avail.filter(isPromo).slice(0, 10), dl = avail.filter(isDeal).slice(0, 10);
+  $("#promoSec").hidden = !pr.length; if (pr.length) paint($("#promoRow"), pr);
+  $("#dealSec").hidden = !dl.length; if (dl.length) paint($("#dealRow"), dl);
   const sg = hasTaste() ? suggest(4) : [];
   $("#sugsec").hidden = !sg.length;
   if (sg.length) paint($("#sugGrid"), sg);
@@ -18,6 +23,9 @@ function render() {
 
   const c = counts();
   $("#cats").innerHTML = SITE.categories.map(k => `<a class="chipc" href="categories.html?c=${encodeURIComponent(k)}">${catIcon(k)}<span>${esc(k)}</span><small>${c[k] || 0}</small></a>`).join("");
+  const ce = shops().filter(s => s.cert).slice(0, 10);
+  $("#certSec").hidden = !ce.length;
+  $("#certShops").innerHTML = ce.map(s => `<a class="shopav" href="recherche.html?shop=${encodeURIComponent(s.id)}"><span style="background:${tileColor(s.name)}">${s.img ? `<img src="${esc(thumb(s.img, 160))}" alt="" draggable="false">` : esc((s.name || "?")[0])}</span><b>${esc(s.name)}${certMark({ certified: true })}</b></a>`).join("");
   const sh = shops().slice(0, 10);
   $("#shopsec").hidden = !sh.length;
   $("#shops").innerHTML = sh.map(s => `<a class="shopav" href="recherche.html?shop=${encodeURIComponent(s.id)}"><span style="background:${tileColor(s.name)}">${s.img ? `<img src="${esc(thumb(s.img, 160))}" alt="" draggable="false"${s.fb ? ` data-fb="${esc(s.fb)}"` : ""}>` : esc((s.name || "?")[0])}</span><b>${esc(s.name)}</b></a>`).join("");
@@ -26,7 +34,7 @@ function render() {
 }
 load(render);
 bind($("#grid"));
-bind($("#sugGrid"));
+bind($("#sugGrid")); bind($("#promoRow")); bind($("#dealRow"));
 $("#sort").addEventListener("change", e => { sort = e.target.value; render(); });
 document.addEventListener("cur", render);
 

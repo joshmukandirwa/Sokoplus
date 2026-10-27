@@ -1,3 +1,4 @@
+import { decimalsOf } from "./pays.js";
 import { firebaseConfig, VAPID_KEY, CLOUDINARY, SITE } from "./firebase-config.js";
 
 export { SITE };
@@ -16,10 +17,10 @@ export const store = {
 };
 
 /* ---------- Prix ---------- */
-export function money(price, cur = "USD") {   // chaque article garde sa monnaie (USD ou FC), aucune conversion
-  const n = Number(price) || 0;
-  if (cur === "FC") return Math.round(n).toLocaleString("fr-FR") + " FC";
-  return Number(n.toFixed(2)).toLocaleString("fr-FR") + " $";
+const SYM = { USD: "$", EUR: "€", FC: "FC", XOF: "F CFA", XAF: "F CFA" };
+export function money(price, cur = "USD") {   // chaque article garde sa monnaie, aucune conversion
+  const n = Number(price) || 0, d = decimalsOf(cur);
+  return Number(n.toFixed(d)).toLocaleString("fr-FR", { maximumFractionDigits: d }) + " " + (SYM[cur] || cur);
 }
 
 /* ---------- Téléphone : "0990 000 001", "+243 990 000 001" -> "243990000001" ---------- */

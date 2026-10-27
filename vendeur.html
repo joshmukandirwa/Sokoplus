@@ -4,36 +4,37 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Vendre sur SokoPlus : crée ta boutique gratuitement en RDC</title>
+  <title>Vendre sur SokoPlus : crée ta boutique gratuitement en Afrique</title>
   <!-- SEO -->
   <meta name="description"
-    content="Crée ta boutique en 2 minutes et vends partout en RDC. 30 jours d'essai gratuit. Tes clients te contactent directement sur WhatsApp.">
+    content="Crée ta boutique en 2 minutes et vends partout en Afrique. 30 jours d'essai gratuit. Tes clients te contactent directement sur WhatsApp.">
   <meta name="robots" content="index,follow,max-image-preview:large">
   <link rel="canonical" href="https://sokoplus-rdc.vercel.app/vendeur.html">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="SokoPlus">
   <meta property="og:locale" content="fr_FR">
-  <meta property="og:title" content="Vendre sur SokoPlus : crée ta boutique gratuitement en RDC">
+  <meta property="og:title" content="Vendre sur SokoPlus : crée ta boutique gratuitement en Afrique">
   <meta property="og:description"
-    content="Crée ta boutique en 2 minutes et vends partout en RDC. 30 jours d'essai gratuit. Tes clients te contactent directement sur WhatsApp.">
+    content="Crée ta boutique en 2 minutes et vends partout en Afrique. 30 jours d'essai gratuit. Tes clients te contactent directement sur WhatsApp.">
   <meta property="og:url" content="https://sokoplus-rdc.vercel.app/vendeur.html">
   <meta property="og:image" content="https://sokoplus-rdc.vercel.app/icons/og-image.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="SokoPlus, le marché en ligne de la RDC">
+  <meta property="og:image:alt" content="SokoPlus, le marché en ligne d'Afrique">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Vendre sur SokoPlus : crée ta boutique gratuitement en RDC">
+  <meta name="twitter:title" content="Vendre sur SokoPlus : crée ta boutique gratuitement en Afrique">
   <meta name="twitter:description"
-    content="Crée ta boutique en 2 minutes et vends partout en RDC. 30 jours d'essai gratuit. Tes clients te contactent directement sur WhatsApp.">
+    content="Crée ta boutique en 2 minutes et vends partout en Afrique. 30 jours d'essai gratuit. Tes clients te contactent directement sur WhatsApp.">
   <meta name="twitter:image" content="https://sokoplus-rdc.vercel.app/icons/og-image.png">
   <!-- /SEO -->
-  <meta name="theme-color" content="#03060d">
+  <meta name="theme-color" content="#1b1b1f">
   <link rel="manifest" href="manifest.json">
   <script src="js/boot.js"></script>
   <link rel="icon" href="icons/icon-192.png">
   <link rel="stylesheet"
     href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,700;0,800;0,900;1,900&family=Figtree:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/alibaba.css">
 </head>
 
 <body data-page="vendeur">
@@ -44,7 +45,7 @@
     <section id="auth" hidden>
       <div class="msg warn" id="gateMsg" hidden>Pour publier un article, connecte-toi ou crée ta boutique. C'est gratuit
         pendant 30 jours.</div>
-      <h1 style="font-size:clamp(1.7rem,4vw,2.3rem);margin-bottom:6px">Vendez partout en RDC.</h1>
+      <h1 style="font-size:clamp(1.7rem,4vw,2.3rem);margin-bottom:6px">Vendez partout en Afrique.</h1>
       <p class="note" style="margin:0 0 16px">Crée ta boutique en 2 minutes. 30 jours d'essai gratuit, ensuite <span
           id="subTxt"></span>.</p>
       <div class="panel">
@@ -75,17 +76,13 @@
         <form id="fSignup" class="panel" style="border:0;padding:0" hidden>
           <label class="field">Nom de ta boutique ou entreprise<input id="shopName" required minlength="2"
               maxlength="60" autocomplete="organization"></label>
-          <div class="cols">
-            <label class="field">Numéro de téléphone (WhatsApp)<input id="phone" type="tel" required autocomplete="tel"
-                placeholder="0990 000 001"></label>
-            <label class="field">Adresse email<input id="email" type="email" required autocomplete="email"></label>
-          </div>
-          <div class="cols">
-            <label class="field">Mot de passe (6 caractères minimum)<input id="pw" type="password" minlength="6"
-                required autocomplete="new-password"></label>
-            <label class="field">Confirme le mot de passe<input id="pw2" type="password" minlength="6" required
-                autocomplete="new-password"></label>
-          </div>
+          <label class="field">Numéro de téléphone (WhatsApp)<input id="phone" type="tel" required autocomplete="tel"
+              inputmode="tel" placeholder="0990 000 001 ou +250 788 000 000"></label>
+          <label class="field">Mot de passe (6 caractères minimum)
+            <span class="pwrap"><input id="pw" type="password" minlength="6" required autocomplete="new-password">
+              <button class="btn small ghost" type="button" id="pwToggle" aria-controls="pw">Afficher</button></span></label>
+          <label class="field">Adresse email (facultatif, pour retrouver ton mot de passe)<input id="email" type="email"
+              autocomplete="email"></label>
           <button class="btn" type="submit">Créer ma boutique</button>
           <p class="note">Ton numéro sera affiché sur tes articles. Les clients te contactent sur WhatsApp. En créant ta
             boutique, tu acceptes la <a href="confidentialite.html">politique de confidentialité</a>.</p>
@@ -103,7 +100,7 @@
         <label class="field">Nom de ta boutique ou entreprise<input id="cShop" required minlength="2" maxlength="60"
             autocomplete="organization"></label>
         <label class="field">Numéro de téléphone (WhatsApp)<input id="cPhone" type="tel" required autocomplete="tel"
-            placeholder="0990 000 001"></label>
+            placeholder="0990 000 001 ou +250 788 000 000"></label>
         <button class="btn" type="submit">Créer ma boutique</button>
         <button class="btn ghost" type="button" id="cCancel">Annuler</button>
         <p class="note">Ton numéro sera affiché sur tes articles. 30 jours d'essai gratuit. <a
@@ -132,7 +129,7 @@
       </div>
       <div class="msg" id="reqBox" hidden></div>
       <div class="msg warn" id="verifyBox" hidden>
-        <b>Vérifie ton adresse email</b> pour pouvoir publier. Nous avons envoyé un lien à <span
+        <b>Confirme ton adresse email</b> (facultatif, tu peux publier sans). Nous avons envoyé un lien à <span
           id="verifyMail"></span>.
         <div class="row" style="margin-top:8px"><button class="btn small" id="resend">Renvoyer le lien</button><button
             class="btn small ghost" id="refresh">J'ai cliqué sur le lien</button></div>
@@ -163,15 +160,24 @@
           <fieldset class="step" data-step="2" hidden>
             <legend>Combien et où ?</legend>
             <div class="cols">
-              <label class="field">Monnaie<select id="iCur">
-                  <option value="USD">Dollars (USD)</option>
-                  <option value="FC">Francs congolais (FC)</option>
-                </select></label>
+              <label class="field">Monnaie<select id="iCur"></select></label>
               <label class="field">Prix<input id="iPrice" type="number" min="1" step="any" required inputmode="decimal"
                   placeholder="Ex. 25 ou 70000"></label>
             </div>
             <div class="cols">
+              <label class="field">Type d'annonce<select id="iTag">
+                  <option value="">Normal</option>
+                  <option value="promo">Promotion</option>
+                  <option value="offre">Offre du jour</option>
+                </select></label>
+              <label class="field">Ancien prix (facultatif)<input id="iOld" type="number" min="1" step="any" inputmode="decimal"
+                  placeholder="Prix barré, plus haut"></label>
+            </div>
+            <div class="cols">
+              <label class="field">Pays<select id="iCountry" required></select></label>
               <label class="field">Ville<select id="iCity" required></select></label>
+            </div>
+            <div class="cols">
               <label class="field">Quartier ou adresse<input id="iAddr" required maxlength="120"
                   placeholder="Ex. kyeshero, avenue de la Paix"></label>
             </div>

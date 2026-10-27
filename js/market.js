@@ -2,6 +2,7 @@
 import { db, collection, query, orderBy, limit, onSnapshot, addDoc, serverTimestamp } from "./fb.js";
 import { SITE, configured, configBanner, $, $$, esc, store, money, waLink, prettyPhone, toast, ago, thumb, tileColor, isNetErr, needNet, NET_MSG } from "./common.js";
 import { svg, favBadge } from "./ui.js";
+import { countryOf, countryName, toUsd } from "./pays.js";
 
 export const items = new Map();
 export const favs = new Set(store.get("favs", []));
@@ -9,9 +10,14 @@ const fresh = new Set(), seen = new Set();
 let first = true, unseen = 0, current = null, listeners = [];
 export const ms = it => it.createdAt?.toMillis?.() ?? it.createdAt ?? Date.now();
 export const norm = s => String(s ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-/* Ville choisie dans l'en-tête : « Toute la RDC » (vide) montre tout. Les anciens articles sans ville sont reconnus par leur adresse. */
-export const cityOk = it => { const c = store.get("city", ""); return !c || it.city === c || (!it.city && norm(it.address).includes(norm(c))); };
-const usd = it => it.currency === "FC" ? it.price / SITE.rate : it.price;   // seulement pour classer
+/* Ville choisie dans l'en-tête : « Toute l'Afrique » (vide) montre tout. Les anciens articles sans ville sont reconnus par leur adresse. */
+export const cityOk = it => {
+  const k = store.get("country", ""), c = store.get("city", "");
+  if (k && countryOf(it) !== k) return false;
+  return !c || it.city === c || (!it.city && norm(it.address).includes(norm(c)));
+};
+export const placeLabel = () => store.get("city", "") || (store.get("country", "") ? countryName(store.get("country", "")) : "Toute l'Afrique");
+const usd = it => toUsd(it.price, it.currency);   // seulement pour classer
 const where = it => it.city ? `${it.city}, ${it.address}` : it.address;
 const shareUrl = id => new URL("/p/" + encodeURIComponent(id), location.origin).href;   // page d'aperçu (photo, nom, description) pour WhatsApp
 
@@ -61,20 +67,20 @@ export let loadError = "";
    Renvoie true si un message est affiché (la page cache alors son « Rien à voir ici »). */
 export function notice(grid, emptyEl, shown = 0) {
   let box = document.getElementById("netbox");
-  const city = store.get("city", "");
+  const city = placeLabel(), hasPlace = !!(store.get("city", "") || store.get("country", ""));
   let kind = "";
   if (!items.size && loadError === "perm") kind = "perm";
   else if (!items.size && (loadError === "net" || navigator.onLine === false)) kind = navigator.onLine === false ? "off" : "back";
-  else if (!shown && items.size && city && [...items.values()].every(i => !cityOk(i))) kind = "city";
+  else if (!shown && items.size && hasPlace && [...items.values()].every(i => !cityOk(i))) kind = "city";
   if (!kind) { if (box) box.hidden = true; return false; }
   if (!box) { box = document.createElement("div"); box.id = "netbox"; box.className = "netbox"; box.setAttribute("role", "status"); grid.before(box); }
   const T = {
     off: ["Pas de connexion internet", "Les articles s'afficheront dès que ton réseau reviendra. Vérifie ton Wi-Fi ou tes données mobiles."],
     back: ["Connexion retrouvée", "On charge les articles… Si ça tarde, touche « Réessayer »."],
     perm: ["Le marché est en cours de mise à jour", "Réessaie dans quelques minutes."],
-    city: [`Aucun article à ${esc(city)} pour l'instant`, "Tu peux voir les articles de toute la RDC en attendant."]
+    city: [`Aucun article à ${esc(city)} pour l'instant`, "Tu peux voir les articles de toute l'Afrique en attendant."]
   }[kind];
-  box.innerHTML = `<b>${T[0]}</b><p>${T[1]}</p>` + (kind === "city" ? '<button class="btn small" type="button" data-allcity>Voir toute la RDC</button>' : '<button class="btn small" type="button" data-reload>Réessayer</button>');
+  box.innerHTML = `<b>${T[0]}</b><p>${T[1]}</p>` + (kind === "city" ? '<button class="btn small" type="button" data-allcity>Voir toute l\'Afrique</button>' : '<button class="btn small" type="button" data-reload>Réessayer</button>');
   box.hidden = false;
   if (kind !== "city") grid.innerHTML = "";
   if (emptyEl) emptyEl.hidden = true;
@@ -82,9 +88,9 @@ export function notice(grid, emptyEl, shown = 0) {
 }
 document.addEventListener("click", e => {
   if (!e.target.closest("[data-allcity]")) return;
-  store.set("city", "");
+  store.set("city", ""); store.set("country", "");
   const dot = $("#cityDot"); if (dot) dot.hidden = true;
-  const lbl = $("#regionLbl"); if (lbl) lbl.textContent = "Toute la RDC";
+  const lbl = $("#regionLbl"); if (lbl) lbl.textContent = "Toute l'Afrique";
   document.dispatchEvent(new CustomEvent("cur"));   // les pages réaffichent leurs listes
 });
 
@@ -140,7 +146,7 @@ export function suggest(n = 6) {
 }
 
 /* ---------- Recherche et filtres ---------- */
-export function filter({ cat = "Tous", shop = "tous", q = "", fav = false, sort = "recent", avail = false } = {}) {
+export function filter({ cat = "Tous", shop = "tous", q = "", fav = false, sort = "recent", avail = false, kind = "" } = {}) {
   const toks = norm(q).split(/\s+/).filter(Boolean);
   const score = it => {
     if (!toks.length) return 0;
@@ -151,15 +157,24 @@ export function filter({ cat = "Tous", shop = "tous", q = "", fav = false, sort 
   const by = { recent: (a, b) => ms(b) - ms(a), low: (a, b) => usd(a) - usd(b), high: (a, b) => usd(b) - usd(a) }[sort] || (() => 0);
   return [...items.values()].map(it => [it, score(it)]).filter(([it, s]) =>
     s >= 0 && (cat === "Tous" || it.category === cat) && (shop === "tous" || it.ownerId === shop) &&
-    (!fav || favs.has(it.id)) && (fav || cityOk(it)) && (!avail || it.status !== "sold"))
+    (!fav || favs.has(it.id)) && (fav || cityOk(it)) && (!avail || it.status !== "sold") &&
+    (!kind || (kind === "promo" ? isPromo(it) : kind === "offre" ? isDeal(it) : !!it.certified)))
     .sort(([a, sa], [b, sb]) => (Number(a.status === "sold") - Number(b.status === "sold")) || (toks.length ? sb - sa : 0) ||
       (sort === "recent" ? Number(!!b.featured) - Number(!!a.featured) : 0) || by(a, b)).map(([it]) => it);
 }
 export function shops() {
-  const m = new Map(); items.forEach(i => { if (!cityOk(i)) return; const s = m.get(i.ownerId) || { id: i.ownerId, name: i.shopName, n: 0 }; s.n++; if (!s.img) { s.img = i.shopLogo || i.images?.[0] || ""; s.fb = i.shopFb || i.fb?.[0] || ""; } m.set(i.ownerId, s); });
+  const m = new Map(); items.forEach(i => { if (!cityOk(i)) return; const s = m.get(i.ownerId) || { id: i.ownerId, name: i.shopName, n: 0 }; s.n++; if (i.certified) s.cert = true; if (!s.img) { s.img = i.shopLogo || i.images?.[0] || ""; s.fb = i.shopFb || i.fb?.[0] || ""; } m.set(i.ownerId, s); });
   return [...m.values()].sort((a, b) => b.n - a.n);
 }
 export const counts = () => { const c = {}; items.forEach(i => { if (cityOk(i)) c[i.category] = (c[i.category] || 0) + 1; }); return c; };
+
+/* ---------- Promotions choisies par le vendeur, certification donnée par SokoPlus ---------- */
+export const pct = it => it.oldPrice > it.price ? Math.round((1 - it.price / it.oldPrice) * 100) : 0;
+export const isPromo = it => it.tag === "promo" || pct(it) > 0;
+export const isDeal = it => it.tag === "offre";
+const CHECK = '<svg class="ic cert-ic" viewBox="0 0 24 24" aria-label="Boutique certifiée"><path d="M12 2l2.4 2 3.1-.3 1 3 2.7 1.6-.9 3 .9 3-2.7 1.6-1 3-3.1-.3L12 22l-2.4-2-3.1.3-1-3L2.8 15.7l.9-3-.9-3L5.5 8l1-3 3.1.3z" fill="currentColor" stroke="none"/><path d="m8.5 12 2.5 2.5 4.5-5" fill="none" stroke="#fff" stroke-width="2"/></svg>';
+export const certMark = it => it.certified ? CHECK : "";
+export const priceHTML = it => `<span class="now">${money(it.price, it.currency)}</span>${it.oldPrice > it.price ? `<s class="old">${money(it.oldPrice, it.currency)}</s><b class="off">-${pct(it)}%</b>` : ""}`;
 
 /* ---------- Cartes ---------- */
 export function shopAv(it, size = 20) {
@@ -171,9 +186,9 @@ export function cardHTML(it, i = 0) {
   return `<article class="card${fresh.has(it.id) ? " new" : ""}${pop}" style="--i:${Math.min(i, 14)}" data-id="${esc(it.id)}" tabindex="0" role="button" aria-label="${esc(it.title)}">
     <button class="fav" data-fav="${esc(it.id)}" aria-pressed="${isFav}" aria-label="Favori">${svg("heart")}</button>
     <div class="thumb" style="background:${tileColor(it.shopName)}"><span>${esc((it.title || "?")[0])}</span>${img ? `<img src="${esc(img)}" alt="" loading="lazy" draggable="false"${it.fb ? ` data-fb="${esc(it.fb[0])}"` : ""}>` : ""}
-      ${it.status === "sold" ? '<em class="badge sold">Vendu</em>' : it.featured ? '<em class="badge">À la une</em>' : ""}</div>
-    <div class="in"><h3>${esc(it.title)}</h3><div class="price">${money(it.price, it.currency)}</div>
-    <div class="vend sh">${shopAv(it, 20)}<span>${esc(it.shopName)} · ${esc(where(it))}</span></div><div class="vend">${ago(ms(it))}</div></div></article>`;
+      ${it.status === "sold" ? '<em class="badge sold">Vendu</em>' : isDeal(it) ? '<em class="badge deal">Offre du jour</em>' : isPromo(it) ? `<em class="badge promo">${pct(it) ? "-" + pct(it) + "%" : "Promo"}</em>` : it.featured ? '<em class="badge">À la une</em>' : ""}</div>
+    <div class="in"><h3>${esc(it.title)}</h3><div class="price">${priceHTML(it)}</div>
+    <div class="vend sh">${shopAv(it, 20)}<span>${esc(it.shopName)}${certMark(it)} · ${esc(where(it))}</span></div><div class="vend">${ago(ms(it))}</div></div></article>`;
 }
 export function paint(el, list, emptyEl) {
   el.innerHTML = list.map((it, i) => cardHTML(it, i)).join("");
@@ -230,11 +245,11 @@ export function openDetail(id) {
   $("#dBody").innerHTML = `
     <div class="dlg-head"><h2>${esc(it.title)}</h2><button class="x" data-close aria-label="Fermer">×</button></div>
     <div class="gal">${imgs.length ? imgs.map((u, n) => `<img src="${esc(u)}" alt="${esc(it.title)}" draggable="false"${it.fb ? ` data-fb="${esc(it.fb[n] || it.fb[0])}"` : ""}>`).join("") : `<div class="ph" style="background:${tileColor(it.shopName)}">${esc((it.title || "?")[0])}</div>`}</div>
-    <div class="row between"><div class="dprice">${money(it.price, it.currency)} ${it.status === "sold" ? '<span class="pill bad">Vendu</span>' : ""}</div>
+    <div class="row between"><div class="dprice">${priceHTML(it)} ${it.status === "sold" ? '<span class="pill bad">Vendu</span>' : ""}</div>
       <button class="fav inl" data-dfav aria-pressed="${favs.has(id)}" aria-label="Favori">${svg("heart")}</button></div>
     ${it.description ? `<div class="desc">${esc(it.description)}</div>` : ""}
     <div class="meta">
-      <span class="shl">${shopAv(it, 26)}<span>Boutique : <b>${esc(it.shopName)}</b></span></span><span>Adresse : <b>${esc(where(it))}</b></span>
+      <span class="shl">${shopAv(it, 26)}<span>Boutique : <b>${esc(it.shopName)}</b>${certMark(it)}${it.certified ? ' <span class="pill ok">Certifiée SokoPlus</span>' : ""}</span></span><span>Adresse : <b>${esc(where(it))}</b></span>
       <span>Catégorie : <b>${esc(it.category)}</b> · publié ${ago(ms(it))}</span><span>Téléphone : <b>${esc(prettyPhone(it.phone))}</b></span>
     </div>
     <div class="actions">

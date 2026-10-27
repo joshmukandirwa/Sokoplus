@@ -17,10 +17,9 @@ service cloud.firestore {
     function profile() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
-    // Un vendeur peut publier s'il a vérifié son email, n'est pas bloqué et son abonnement court encore.
+    // Un vendeur peut publier s'il n'est pas bloqué (l'email n'est plus exigé : chaque article est validé par l'admin) et son abonnement court encore.
     function canPost() {
       return signedIn() && siteOpen()
-        && request.auth.token.email_verified == true
         && exists(/databases/$(database)/documents/users/$(request.auth.uid))
         && profile().status == 'active'
         && profile().activeUntil > request.time;
@@ -54,9 +53,80 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/items/$(r)).data.ownerId == request.auth.uid;
     }
 
+    // Monnaies acceptées : celles des pays d'Afrique, le dollar et l'euro (FC = franc congolais)
+    function currencies() {
+      return ['USD', 'EUR', 'FC', 'RWF', 'BIF', 'UGX', 'KES', 'TZS', 'XAF', 'XOF', 'AOA', 'ZMW', 'ZWL', 'MZN', 'MWK', 'ZAR', 'NAD', 'BWP', 'SZL', 'LSL', 'MGA', 'MUR', 'SCR', 'KMF', 'ETB', 'ERN', 'DJF', 'SOS', 'SSP', 'SDG', 'EGP', 'LYD', 'TND', 'DZD', 'MAD', 'MRU', 'GMD', 'GNF', 'SLE', 'LRD', 'GHS', 'NGN', 'STN', 'CVE'];
+    }
+    function countryOk(d) { return !('country' in d) || (d.country is string && d.country.size() == 2); }
+    // Promotion choisie par le vendeur : ancien prix (facultatif, plus haut que le prix) et type d'annonce (facultatif)
+    function promoOk(d) {
+      return (!('oldPrice' in d) || (d.oldPrice is number && d.oldPrice > d.price && d.oldPrice < 100000000))
+        && (!('tag' in d) || d.tag in ['promo', 'offre']);
+    }
+    function isCertified() {
+      return ('certified' in profile()) && profile().certified == true;
+    }
+    // Forme d'un article en ligne (admin, ou boutique certifiée qui publie directement)
+    function itemShape() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['title', 'description', 'price', 'category', 'address', 'city', 'currency', 'images', 'ownerId', 'shopName', 'phone', 'shopLogo', 'status', 'featured', 'createdAt', 'certified', 'oldPrice', 'tag', 'country'])
+        && d.ownerId is string
+        && d.status == 'available'
+        && d.featured == false
+        && d.createdAt == request.time
+        && d.title is string && d.title.size() >= 2 && d.title.size() <= 100
+        && d.description is string && d.description.size() <= 1500
+        && d.price is number && d.price > 0 && d.price < 100000000
+        && (!('city' in d) || (d.city is string && d.city.size() <= 40))
+        && (!('currency' in d) || d.currency in currencies())
+        && promoOk(d) && countryOk(d)
+        && imgsOk(d.images);
+    }
+
     // Administrateurs : documents créés à la main dans la console (README, étape 7)
     match /admins/{uid} {
       allow read: if signedIn() && request.auth.uid == uid;
+    }
+
+    // Compte acheteur : prénom affiché avec les avis. Chacun lit et modifie seulement le sien.
+    match /buyers/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow create: if signedIn() && siteOpen() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['name', 'createdAt'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 2 && request.resource.data.name.size() <= 40
+        && request.resource.data.createdAt == request.time;
+      allow update: if signedIn() && siteOpen() && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 2 && request.resource.data.name.size() <= 40;
+      allow delete: if isAdmin();
+    }
+
+    // Avis clients : un par personne et par boutique (identifiant = uid_boutique). Visibles seulement après validation par l'admin.
+    function reviewShape(d) {
+      return d.keys().hasOnly(['shopId', 'buyerId', 'buyerName', 'stars', 'text', 'status', 'createdAt'])
+        && d.stars is int && d.stars >= 1 && d.stars <= 5
+        && d.text is string && d.text.size() <= 300
+        && d.buyerName is string && d.buyerName.size() >= 2 && d.buyerName.size() <= 40
+        && d.status == 'pending';
+    }
+    match /reviews/{id} {
+      allow read: if resource.data.status == 'approved' || isAdmin() || (signedIn() && resource.data.buyerId == request.auth.uid);
+      allow create: if signedIn() && siteOpen() && reviewShape(request.resource.data)
+        && request.resource.data.buyerId == request.auth.uid
+        && request.resource.data.shopId is string && request.resource.data.shopId != request.auth.uid
+        && id == request.auth.uid + '_' + request.resource.data.shopId
+        && exists(/databases/$(database)/documents/users/$(request.resource.data.shopId))
+        && exists(/databases/$(database)/documents/buyers/$(request.auth.uid))
+        && get(/databases/$(database)/documents/buyers/$(request.auth.uid)).data.name == request.resource.data.buyerName
+        && request.resource.data.createdAt == request.time;
+      // l'acheteur peut modifier son avis : il repasse en « à valider »
+      allow update: if isAdmin()
+        || (signedIn() && siteOpen() && resource.data.buyerId == request.auth.uid && reviewShape(request.resource.data)
+            && request.resource.data.buyerId == resource.data.buyerId && request.resource.data.shopId == resource.data.shopId
+            && request.resource.data.createdAt == resource.data.createdAt);
+      allow delete: if isAdmin() || (signedIn() && resource.data.buyerId == request.auth.uid);
     }
 
     // Profil vendeur
@@ -82,7 +152,7 @@ service cloud.firestore {
     // Demandes de modification de boutique (nom, numéro, photo de profil) : une par boutique, validée ou refusée par l'admin
     match /profileRequests/{uid} {
       allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
-      allow create: if signedIn() && siteOpen() && request.auth.uid == uid && request.auth.token.email_verified == true
+      allow create: if signedIn() && siteOpen() && request.auth.uid == uid
         && exists(/databases/$(database)/documents/users/$(request.auth.uid))
         && request.resource.data.keys().hasOnly(['shopName', 'phone', 'logo', 'status', 'createdAt'])
         && request.resource.data.keys().hasAny(['shopName', 'phone', 'logo'])
@@ -113,7 +183,7 @@ service cloud.firestore {
       allow read: if isAdmin() || (signedIn() && resource.data.ownerId == request.auth.uid);
 
       allow create: if canPost()
-        && request.resource.data.keys().hasOnly(['title', 'description', 'price', 'category', 'address', 'city', 'currency', 'images', 'ownerId', 'shopName', 'phone', 'status', 'createdAt', 'replaces'])
+        && request.resource.data.keys().hasOnly(['title', 'description', 'price', 'category', 'address', 'city', 'currency', 'images', 'ownerId', 'shopName', 'phone', 'status', 'createdAt', 'replaces', 'oldPrice', 'tag', 'country'])
         && request.resource.data.ownerId == request.auth.uid
         && request.resource.data.shopName == profile().shopName
         && request.resource.data.phone == profile().phone
@@ -127,9 +197,10 @@ service cloud.firestore {
         && request.resource.data.category is string && request.resource.data.category.size() <= 40
         && request.resource.data.address is string && request.resource.data.address.size() <= 150
         && (!('city' in request.resource.data) || (request.resource.data.city is string && request.resource.data.city.size() <= 40))
-        && (!('currency' in request.resource.data) || request.resource.data.currency in ['USD', 'FC'])
+        && (!('currency' in request.resource.data) || request.resource.data.currency in currencies())
         && request.resource.data.price is number
         && request.resource.data.price > 0 && request.resource.data.price < 100000000
+        && promoOk(request.resource.data) && countryOk(request.resource.data)
         && imgsOk(request.resource.data.images);
 
       allow update: if isAdmin();
@@ -137,21 +208,21 @@ service cloud.firestore {
       allow delete: if isAdmin() || (signedIn() && siteOpen() && resource.data.ownerId == request.auth.uid && resource.data.status == 'rejected');
     }
 
-    // Articles : lisibles par tous. Seul l'admin en crée (après validation d'une proposition).
+    // Articles : lisibles par tous. L'admin en crée (après validation d'une proposition) ; une boutique certifiée peut publier directement.
     match /items/{id} {
       allow read: if true;
 
-      allow create: if isAdmin()
-        && request.resource.data.keys().hasOnly(['title', 'description', 'price', 'category', 'address', 'city', 'currency', 'images', 'ownerId', 'shopName', 'phone', 'shopLogo', 'status', 'featured', 'createdAt'])
-        && request.resource.data.ownerId is string
-        && request.resource.data.status == 'available'
-        && request.resource.data.featured == false
-        && request.resource.data.createdAt == request.time
-        && request.resource.data.title is string && request.resource.data.title.size() <= 100
-        && request.resource.data.price is number && request.resource.data.price > 0
-        && (!('city' in request.resource.data) || (request.resource.data.city is string && request.resource.data.city.size() <= 40))
-        && (!('currency' in request.resource.data) || request.resource.data.currency in ['USD', 'FC'])
-        && imgsOk(request.resource.data.images);
+      // Admin : après validation d'une proposition. Boutique certifiée par l'admin : publie directement, sans validation.
+      allow create: if (isAdmin() && itemShape()
+            && (!('certified' in request.resource.data) || request.resource.data.certified is bool))
+        || (canPost() && isCertified() && itemShape()
+            && id.matches(request.auth.uid + '_.*')
+            && request.resource.data.ownerId == request.auth.uid
+            && request.resource.data.certified == true
+            && request.resource.data.shopName == profile().shopName
+            && request.resource.data.phone == profile().phone
+            && request.resource.data.shopLogo == (('logo' in profile()) ? profile().logo : '')
+            && request.resource.data.address is string && request.resource.data.address.size() <= 150);
 
       allow update: if isAdmin()
         || (signedIn() && siteOpen() && resource.data.ownerId == request.auth.uid

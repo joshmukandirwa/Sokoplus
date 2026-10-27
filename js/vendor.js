@@ -5,19 +5,31 @@ import {
 } from "./fb.js";
 import { bindLogout } from "./logout.js";
 import {
-  SITE, configured, configBanner, $, $$, esc, safeUrl, money, normPhone, prettyPhone, waLink,
+  SITE, store, configured, configBanner, $, $$, esc, safeUrl, money, normPhone, prettyPhone, waLink,
   compress, uploadImage, thumb, tileColor, toast, ago, isNetErr, NET_MSG, needNet
 } from "./common.js";
 import { notify } from "./notify.js";
+import { COUNTRIES, DEFAULT_COUNTRY, citiesOf, currenciesOf, curName, ALL_CURRENCIES, decimalsOf } from "./pays.js";
 import { run, btnOf } from "./feedback.js";
 
 configBanner();
 $("#subTxt").textContent = SITE.subscriptionText;
 $("#iCat").innerHTML = SITE.categories.map(c => `<option>${esc(c)}</option>`).join("");
-$("#iCity").innerHTML = '<option value="">Choisis ta ville</option>' + SITE.cities.map(c => `<option>${esc(c)}</option>`).join("");
+$("#iCountry").innerHTML = COUNTRIES.map(c => `<option value="${c[0]}">${esc(c[1])}</option>`).join("");
+function fillPlace(country, city, cur) {   // villes et monnaies du pays choisi
+  $("#iCountry").value = country;
+  $("#iCity").innerHTML = '<option value="">Choisis ta ville</option>' + citiesOf(country).map(c => `<option>${esc(c)}</option>`).join("");
+  if (city) $("#iCity").value = city;
+  $("#iCur").innerHTML = currenciesOf(country).map(c => `<option value="${c}">${esc(curName(c))}</option>`).join("");
+  if (cur) $("#iCur").value = cur;
+}
+fillPlace(DEFAULT_COUNTRY);
+$("#iCountry").addEventListener("change", e => fillPlace(e.target.value));
 
 let user = null, pending = null, profile = null, editing = null, unsub = null, signingUp = false;
 const DAY = 864e5;
+const fakeMail = phone => `${phone}@tel.sokoplus.app`;            // compte créé avec le téléphone seul : adresse technique, pas une vraie boîte mail
+const isFake = m => /@tel\.sokoplus\.app$/i.test(m || "");
 
 const say = (el, text, kind = "") => { el.hidden = !text; el.className = "msg " + kind; el.textContent = text || ""; };
 const nice = e => isNetErr(e) ? NET_MSG : ({
@@ -32,8 +44,10 @@ const nice = e => isNetErr(e) ? NET_MSG : ({
   "auth/operation-not-allowed": "La connexion Google n'est pas encore activée dans Firebase.",
   "auth/popup-blocked": "Le navigateur a bloqué la fenêtre Google. Autorise les fenêtres pop-up et réessaie.",
   "auth/network-request-failed": "Pas de connexion internet. Vérifie ton réseau et réessaie.",
-  "permission-denied": "Cette action n'est pas possible pour le moment. Vérifie que ton email est confirmé et que ton compte est actif, puis recharge la page."
+  "permission-denied": "Cette action n'est pas possible pour le moment. Vérifie que ton compte est actif, puis recharge la page."
 }[e.code] || e.message || "Oups, quelque chose n'a pas marché. Réessaie dans un instant.");
+
+$("#pwToggle").onclick = e => { const i = $("#pw"), show = i.type === "password"; i.type = show ? "text" : "password"; e.currentTarget.textContent = show ? "Masquer" : "Afficher"; };
 
 /* ---------------- Onglets ---------------- */
 function tab(login) {
@@ -62,11 +76,20 @@ $("#fLogin").addEventListener("submit", e => {
   }, { busy: "Connexion…", done: "Connecté" }).then(() => say(m, "")).catch(err => { welcome = false; say(m, nice(err), "err"); });
 });
 $("#forgot").onclick = async () => {
-  const m = $("#authMsg"), id = $("#loginId").value.trim();
-  if (!id.includes("@")) return say(m, "Écris ton adresse email dans le premier champ, puis touche « Mot de passe oublié ».", "warn");
-  run($("#forgot"), () => sendPasswordResetEmail(auth, id.toLowerCase()), { busy: "Envoi…", done: "Envoyé", hold: 900 })
-    .then(() => say(m, "C'est envoyé. Regarde ta boîte mail (et les spams) pour changer ton mot de passe.", "good"))
-    .catch(err => say(m, nice(err), "err"));
+  const m = $("#authMsg"); let id = $("#loginId").value.trim();
+  if (!id) return say(m, "Écris ton email ou ton numéro dans le premier champ, puis touche « Mot de passe oublié ».", "warn");
+  const wa = `<a href="${esc(waLink(SITE.adminWhatsapp, "Bonjour SokoPlus, j'ai oublié le mot de passe de ma boutique (" + id + ")."))}" target="_blank" rel="noopener">Écris-nous sur WhatsApp</a>`;
+  try {
+    if (!id.includes("@")) {
+      const p = normPhone(id); if (!p) return say(m, "Numéro invalide. Exemple : 0990 000 001", "warn");
+      const snap = await getDoc(doc(db, "phoneIndex", p));
+      if (!snap.exists()) return say(m, "On ne trouve pas de boutique avec ce numéro.", "err");
+      id = snap.data().email;
+      if (isFake(id)) { m.hidden = false; m.className = "msg warn"; m.innerHTML = `Ton compte n'a pas d'email. ${wa} et on t'aide à récupérer ta boutique.`; return; }
+    }
+    await run($("#forgot"), () => sendPasswordResetEmail(auth, id.toLowerCase()), { busy: "Envoi…", done: "Envoyé", hold: 900 });
+    say(m, "C'est envoyé. Regarde ta boîte mail (et les spams) pour changer ton mot de passe.", "good");
+  } catch (err) { say(m, nice(err), "err"); }
 };
 
 /* ---------------- Continuer avec Google ---------------- */
@@ -106,9 +129,9 @@ $("#fSignup").addEventListener("submit", e => {
   const m = $("#authMsg");
   run(btnOf(e), async () => {
     welcome = true;
-    const shopName = $("#shopName").value.trim(), email = $("#email").value.trim().toLowerCase(), phone = normPhone($("#phone").value);
+    const shopName = $("#shopName").value.trim(), phone = normPhone($("#phone").value);
     if (!phone) throw { message: "Numéro de téléphone invalide. Exemple : 0990 000 001" };
-    if ($("#pw").value !== $("#pw2").value) throw { message: "Les deux mots de passe sont différents." };
+    const email = $("#email").value.trim().toLowerCase() || fakeMail(phone);
     say(m, "On prépare ta boutique…");
     if ((await getDoc(doc(db, "phoneIndex", phone))).exists()) throw { message: "Ce numéro est déjà utilisé par une boutique." };
     signingUp = true;
@@ -119,7 +142,7 @@ $("#fSignup").addEventListener("submit", e => {
       createdAt: serverTimestamp()
     });
     await setDoc(doc(db, "phoneIndex", phone), { uid: cred.user.uid, email });
-    try { await sendEmailVerification(cred.user); } catch { /* il pourra le renvoyer */ }
+    if (!isFake(email)) { try { await sendEmailVerification(cred.user); } catch { /* il pourra le renvoyer */ } }
     signingUp = false;
     await enter(cred.user);
   }, { busy: "Création…", done: "Boutique créée" }).then(() => say(m, "")).catch(err => { signingUp = false; welcome = false; say(m, nice(err), "err"); });
@@ -137,6 +160,7 @@ function hashTab() {
 function leave() {
   hashTab();
   user = null; profile = null; unsub && unsub(); unsub = null;
+  store.set("me", null);
   $("#dash").hidden = true; $("#complete").hidden = true; $("#auth").hidden = false; $("#logout").hidden = true;
 }
 bindLogout($("#logout"), () => signOut(auth), () => ($("#dShop")?.textContent || "").trim());
@@ -183,19 +207,20 @@ function state() {
                : `${shop}, ton abonnement est arrivé à échéance. Renouvelle-le pour continuer à publier (${SITE.subscriptionText}).`,
     wa: trial ? "Je voudrais passer à la version complète de SokoPlus." : "Je voudrais renouveler mon abonnement SokoPlus.",
     cta: trial ? "Passer à la version complète sur WhatsApp" : "Renouveler sur WhatsApp" };
-  return { ok: user.emailVerified, label: `${trial ? "Essai" : "Abonnement"} · ${fmtLeft(ms)}`, kind: ms <= 5 * DAY ? "warn" : "ok" };
+  return { ok: true, label: `${trial ? "Essai" : "Abonnement"} · ${fmtLeft(ms)}`, kind: ms <= 5 * DAY ? "warn" : "ok" };
 }
 
 function renderStatus() {
+  store.set("me", { n: profile.shopName || "", l: profile.logo || "" });   // la barre du bas affiche ta photo sur toutes les pages
   const s = state();
   const hr = new Date().getHours();
   $("#dHello").textContent = `${hr < 12 ? "Bonjour" : hr < 18 ? "Bon après-midi" : "Bonsoir"}, content de te revoir.`;
   $("#dShop").textContent = profile.shopName;
   const av = $("#dAvatar"); av.style.background = tileColor(profile.shopName);
   av.innerHTML = profile.logo ? `<img src="${esc(thumb(profile.logo, 160))}" alt="">` : esc((profile.shopName || "?")[0].toUpperCase());
-  $("#dContact").textContent = `${prettyPhone(profile.phone)} · ${profile.email}`;
+  $("#dContact").textContent = isFake(profile.email) ? prettyPhone(profile.phone) : `${prettyPhone(profile.phone)} · ${profile.email}`;
   const pill = $("#dStatus"); pill.textContent = s.label || ""; pill.className = "pill " + (s.kind || "");
-  $("#verifyBox").hidden = user.emailVerified; $("#verifyMail").textContent = profile.email;
+  $("#verifyBox").hidden = user.emailVerified || isFake(profile.email); $("#verifyMail").textContent = profile.email;
   const bb = $("#blockBox");
   bb.hidden = !s.why;
   if (s.why) bb.innerHTML = `${esc(s.why)} <a href="${esc(waLink(SITE.adminWhatsapp, `Bonjour SokoPlus, je suis ${profile.shopName} (${prettyPhone(profile.phone)}). ${s.wa || "Je voudrais activer mon abonnement."}`))}" target="_blank" rel="noopener">${s.cta || "Écrire sur WhatsApp"}</a>`;
@@ -246,7 +271,7 @@ $("#iImgs").addEventListener("change", e => {
 function resetForm() {
   editing = null; $("#fItem").reset(); $("#previews").innerHTML = "";
   $("#fTitle").textContent = "Publier un article"; $("#iSubmit").textContent = "Publier"; $("#iCancel").hidden = true;
-  showStep(1); renderStatus();
+  fillPlace(DEFAULT_COUNTRY); showStep(1); renderStatus();
 }
 $("#iCancel").onclick = resetForm;
 
@@ -273,15 +298,16 @@ function showStep(n, scroll = true) {
   if (scroll) $("#fItem").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 function recap() {
-  const cur = $("#iCur").value === "FC" ? "FC" : "USD", price = Number($("#iPrice").value), desc = $("#iDesc").value.trim();
+  const cur = ALL_CURRENCIES.includes($("#iCur").value) ? $("#iCur").value : "USD", price = Number($("#iPrice").value), desc = $("#iDesc").value.trim();
   const after = isTrial() && !editing ? Math.max(0, 1 - usedToday()) : null;   // publications restantes après cet envoi
   $("#recap").innerHTML = `<div class="rprev">${$("#previews").innerHTML}</div>
     <h3>${esc($("#iTitle").value.trim())}</h3>
-    <div class="rprice">${money(cur === "FC" ? Math.round(price) : price, cur)}</div>
+    <div class="rprice">${money(price, cur)}</div>
     <dl class="rlist"><div><dt>Catégorie</dt><dd>${esc($("#iCat").value)}</dd></div>
       <div><dt>Lieu</dt><dd>${esc($("#iCity").value)}, ${esc($("#iAddr").value.trim())}</dd></div>
       ${desc ? `<div><dt>Description</dt><dd>${esc(desc)}</dd></div>` : ""}</dl>
     <p class="note">${editing ? "SokoPlus vérifie tes modifications avant de les mettre en ligne."
+      : profile.certified ? "Boutique certifiée : ton article sera en ligne tout de suite."
       : `SokoPlus vérifie ton article avant de le mettre en ligne, puis te prévient.${after === null ? "" : ` Après cet envoi, il te restera ${after} publication${after > 1 ? "s" : ""} aujourd'hui.`}`}</p>`;
 }
 $("#iNext").onclick = () => { if (validStep(step)) showStep(step + 1); };
@@ -299,7 +325,7 @@ $("#fItem").addEventListener("submit", e => {
     const big = files.find(f => f.size > MAX_MB * 1048576);
     if (big) throw { message: `La photo « ${big.name} » fait ${(big.size / 1048576).toFixed(1).replace(".", ",")} Mo. Maximum ${MAX_MB} Mo par photo : choisis-en une plus légère.` };
     let slot = null;                                   // essai : 2 publications par jour, chaque place ne sert qu'une fois
-    if (!editing && isTrial()) {
+    if (!editing && isTrial() && !profile.certified) {
       const taken = new Set(waiting.map(x => x.id)), p = `${user.uid}_${dayKey()}_`;
       slot = [1, 2].map(n => p + n).find(id => !taken.has(id));
       if (!slot) throw { message: quotaText() };
@@ -309,13 +335,17 @@ $("#fItem").addEventListener("submit", e => {
       say(m, `Envoi de la photo ${i + 1} sur ${files.length}…`);
       urls.push(await uploadImage(await compress(files[i])));
     }
-    const cur = $("#iCur").value === "FC" ? "FC" : "USD", raw = Number($("#iPrice").value);
-    const usd = cur === "FC" ? Math.round(raw) : Math.round(raw * 100) / 100;   // le prix reste dans la monnaie choisie
+    const cur = ALL_CURRENCIES.includes($("#iCur").value) ? $("#iCur").value : "USD", raw = Number($("#iPrice").value);
+    const dec = 10 ** decimalsOf(cur), usd = Math.round(raw * dec) / dec;   // le prix reste dans la monnaie choisie
     if (!(usd > 0)) throw { message: "Prix invalide." };
     const data = {
       title: $("#iTitle").value.trim(), category: $("#iCat").value, price: usd, currency: cur,
-      description: $("#iDesc").value.trim(), address: $("#iAddr").value.trim(), city: $("#iCity").value
+      description: $("#iDesc").value.trim(), address: $("#iAddr").value.trim(), city: $("#iCity").value, country: $("#iCountry").value
     };
+    const oldRaw = Number($("#iOld").value), tag = $("#iTag").value;
+    if ($("#iOld").value && !(oldRaw > usd)) throw { message: "L'ancien prix doit être plus haut que le nouveau prix." };
+    if ($("#iOld").value) data.oldPrice = Math.round(oldRaw * dec) / dec;
+    if (tag === "promo" || tag === "offre") data.tag = tag;
     say(m, editing ? "Enregistrement…" : "Envoi pour validation…");
     if (editing) {
       // une modification n'est plus appliquée directement : SokoPlus la vérifie avant de la mettre en ligne
@@ -328,6 +358,14 @@ $("#fItem").addEventListener("submit", e => {
       });
       notify("new_submission", { title: data.title, shopName: profile.shopName });
       toast("Modification envoyée. Elle sera en ligne dès que SokoPlus l'aura vérifiée."); 
+    } else if (profile.certified) {
+      // boutique certifiée par SokoPlus : l'article est en ligne tout de suite, sans validation
+      const iid = `${user.uid}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+      await setDoc(doc(db, "items", iid), {
+        ...data, images: urls, ownerId: user.uid, shopName: profile.shopName, phone: profile.phone, shopLogo: profile.logo || "",
+        certified: true, status: "available", featured: false, createdAt: serverTimestamp()
+      });
+      toast("Ton article est en ligne tout de suite. Boutique certifiée.");
     } else {
       const sub = {
         ...data, images: urls, ownerId: user.uid, shopName: profile.shopName, phone: profile.phone,
@@ -435,8 +473,8 @@ $("#mine").addEventListener("click", async e => {
     }
     if (b.dataset.a === "edit") {
       editing = it;
-      $("#iTitle").value = it.title; $("#iCat").value = it.category; $("#iPrice").value = it.price; $("#iCur").value = it.currency || "USD";
-      $("#iDesc").value = it.description || ""; $("#iAddr").value = it.address; $("#iCity").value = it.city || "";
+      $("#iTitle").value = it.title; $("#iCat").value = it.category; $("#iPrice").value = it.price; $("#iCur").value = it.currency || "USD"; $("#iTag").value = it.tag || ""; $("#iOld").value = it.oldPrice || "";
+      $("#iDesc").value = it.description || ""; $("#iAddr").value = it.address; fillPlace(it.country || DEFAULT_COUNTRY, it.city || "", it.currency || "USD");
       $("#previews").innerHTML = (it.images || []).map(u => `<img src="${esc(thumb(u, 160))}" alt="">`).join("");
       $("#fTitle").textContent = "Modifier l'article"; $("#iSubmit").textContent = "Enregistrer"; $("#iCancel").hidden = false;
       renderStatus(); $("#iSubmit").disabled = false; showStep(1);
@@ -486,7 +524,7 @@ $("#fShop").addEventListener("submit", e => {
   run($("#sSend"), async () => {
     const name = $("#sName").value.trim(), phone = normPhone($("#sPhone").value), data = {};
     if (name.length < 2) throw { message: "Le nom de la boutique doit avoir au moins 2 caractères." };
-    if (!phone) throw { message: "Numéro invalide. Exemple : 0990 000 001 ou +243 990 000 001." };
+    if (!phone) throw { message: "Numéro invalide. Exemple : 0990 000 001 (RDC) ou +250 788 000 000 (autre pays, avec +)." };
     if (name !== profile.shopName) data.shopName = name;
     if (phone !== profile.phone) {
       if ((await getDoc(doc(db, "phoneIndex", phone))).exists()) throw { message: "Ce numéro est déjà utilisé par une boutique." };
