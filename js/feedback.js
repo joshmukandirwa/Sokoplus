@@ -12,7 +12,7 @@ export async function run(btn, task, { busy = "", done = "", hold = 1000 } = {})
     if (plain) btn.textContent = label;
   };
   let out;
-  try { out = await task(); }
+  try { if (navigator.onLine === false) throw Object.assign(new Error("Pas de connexion internet. Vérifie ton réseau puis réessaie."), { code: "auth/network-request-failed" }); out = await task(); }
   catch (err) {
     btn.classList.replace("is-busy", "is-fail"); if (plain) btn.textContent = label;
     setTimeout(reset, 600);

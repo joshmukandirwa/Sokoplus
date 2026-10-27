@@ -54,6 +54,14 @@ export function thumb(url, w = 480) {
   return u.includes("res.cloudinary.com") ? u.replace("/upload/", `/upload/w_${w},c_limit,q_auto,f_auto/`) : u;
 }
 
+/* ---------- Connexion internet ---------- */
+export const NET_MSG = "Pas de connexion internet. Vérifie ton réseau puis réessaie.";
+export const isOffline = () => navigator.onLine === false;
+export const isNetErr = e => isOffline() || ["auth/network-request-failed", "unavailable", "deadline-exceeded"].includes(e?.code) || /network|failed to fetch|offline|load failed/i.test(e?.message || "");
+export const failText = e => isNetErr(e) ? NET_MSG : (e?.code || e?.message || "erreur inconnue");
+/* À appeler avant une action qui a besoin d'internet : prévient et renvoie false si la connexion est coupée. */
+export function needNet(msg = NET_MSG) { if (!isOffline()) return true; toast(msg); return false; }
+
 export function toast(msg, { onClick, ms = 6000 } = {}) {
   let box = $("#toasts");
   if (!box) { box = document.createElement("div"); box.id = "toasts"; box.setAttribute("aria-live", "polite"); document.body.append(box); }
@@ -86,8 +94,9 @@ export async function uploadImage(blob) {
   const fd = new FormData();
   fd.append("file", blob);
   fd.append("upload_preset", CLOUDINARY.uploadPreset);
-  const r = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY.cloudName}/image/upload`, { method: "POST", body: fd });
-  const j = await r.json();
+  let r, j;
+  try { r = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY.cloudName}/image/upload`, { method: "POST", body: fd }); j = await r.json(); }
+  catch { throw Object.assign(new Error("La photo n'a pas pu partir : la connexion est coupée ou trop faible. Réessaie quand le réseau revient."), { code: "auth/network-request-failed" }); }
   if (!r.ok || !j.secure_url) throw new Error(j.error?.message || "Échec de l'envoi de la photo.");
   return j.secure_url;
 }

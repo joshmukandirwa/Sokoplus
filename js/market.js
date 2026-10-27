@@ -1,6 +1,6 @@
 /* Données du marché (temps réel ou démo), cartes, favoris, recherche et fiche article : partagés par toutes les pages. */
 import { db, collection, query, orderBy, limit, onSnapshot, addDoc, serverTimestamp } from "./fb.js";
-import { SITE, configured, configBanner, $, $$, esc, store, money, waLink, prettyPhone, toast, ago, thumb, tileColor } from "./common.js";
+import { SITE, configured, configBanner, $, $$, esc, store, money, waLink, prettyPhone, toast, ago, thumb, tileColor, isNetErr, needNet, NET_MSG } from "./common.js";
 import { svg, favBadge } from "./ui.js";
 
 export const items = new Map();
@@ -36,21 +36,57 @@ export function load(onChange) {
   if (listeners.length > 1) { onChange(); return; }
   configBanner();
   const fire = () => { listeners.forEach(f => f()); document.dispatchEvent(new CustomEvent("items")); };   // la cloche de notifications écoute cet événement
+  addEventListener("offline", fire); addEventListener("online", fire);   // les pages réaffichent leur message quand le réseau part ou revient
   if (configured) {
+    if (navigator.onLine === false) { loadError = "net"; fire(); }       // pas besoin d'attendre 10 s pour le savoir
     try {
       onSnapshot(query(collection(db, "items"), orderBy("createdAt", "desc"), limit(150)), snap => {
+        // Sans réseau, Firestore renvoie une liste vide « du cache » sans erreur : ce n'est pas « aucun article », c'est « pas de connexion ».
+        if (snap.metadata.fromCache && snap.empty && !items.size) { loadError = "net"; fire(); return; }
         snap.docChanges().forEach(ch => {
           const it = { id: ch.doc.id, ...ch.doc.data() };
           if (ch.type === "removed") { items.delete(it.id); return; }
           const isNew = ch.type === "added" && !first && !ch.doc.metadata.hasPendingWrites;
           items.set(it.id, it); if (isNew) announce(it);
         });
-        first = false; fire();
+        if (!snap.metadata.fromCache) { first = false; loadError = ""; }   // la vraie liste du serveur est arrivée
+        fire();
       }, err => { loadError = err.code === "permission-denied" ? "perm" : "net"; fire(); });
     } catch { loadError = "net"; fire(); }
   } else demo(fire);
 }
 export let loadError = "";
+
+/* Message adapté quand la liste est vide : pas de connexion, marché en mise à jour, ou ville sans article.
+   Renvoie true si un message est affiché (la page cache alors son « Rien à voir ici »). */
+export function notice(grid, emptyEl, shown = 0) {
+  let box = document.getElementById("netbox");
+  const city = store.get("city", "");
+  let kind = "";
+  if (!items.size && loadError === "perm") kind = "perm";
+  else if (!items.size && (loadError === "net" || navigator.onLine === false)) kind = navigator.onLine === false ? "off" : "back";
+  else if (!shown && items.size && city && [...items.values()].every(i => !cityOk(i))) kind = "city";
+  if (!kind) { if (box) box.hidden = true; return false; }
+  if (!box) { box = document.createElement("div"); box.id = "netbox"; box.className = "netbox"; box.setAttribute("role", "status"); grid.before(box); }
+  const T = {
+    off: ["Pas de connexion internet", "Les articles s'afficheront dès que ton réseau reviendra. Vérifie ton Wi-Fi ou tes données mobiles."],
+    back: ["Connexion retrouvée", "On charge les articles… Si ça tarde, touche « Réessayer »."],
+    perm: ["Le marché est en cours de mise à jour", "Réessaie dans quelques minutes."],
+    city: [`Aucun article à ${esc(city)} pour l'instant`, "Tu peux voir les articles de toute la RDC en attendant."]
+  }[kind];
+  box.innerHTML = `<b>${T[0]}</b><p>${T[1]}</p>` + (kind === "city" ? '<button class="btn small" type="button" data-allcity>Voir toute la RDC</button>' : '<button class="btn small" type="button" data-reload>Réessayer</button>');
+  box.hidden = false;
+  if (kind !== "city") grid.innerHTML = "";
+  if (emptyEl) emptyEl.hidden = true;
+  return true;
+}
+document.addEventListener("click", e => {
+  if (!e.target.closest("[data-allcity]")) return;
+  store.set("city", "");
+  const dot = $("#cityDot"); if (dot) dot.hidden = true;
+  const lbl = $("#regionLbl"); if (lbl) lbl.textContent = "Toute la RDC";
+  document.dispatchEvent(new CustomEvent("cur"));   // les pages réaffichent leurs listes
+});
 
 /* Liens d'images de démonstration (photos libres par mot-clé). Remplace-les par tes propres liens si tu veux.
    Si un lien ne charge pas, la tuile colorée avec la lettre reste affichée. */
@@ -178,8 +214,9 @@ function dialog() {
     if (e.target.id === "shopBtn") { d.close(); location.href = `recherche.html?shop=${encodeURIComponent(current.ownerId)}`; }
     if (e.target.id === "rSend") {
       if (!configured) return toast("Mode démo : signalement non envoyé.");
+      if (!needNet("Pas de connexion : ton signalement n'est pas parti. Réessaie quand le réseau revient.")) return;
       try { await addDoc(collection(db, "reports"), { itemId: current.id, reason: $("#rReason").value, createdAt: serverTimestamp() }); toast("Merci, ton signalement est envoyé."); d.close(); }
-      catch { toast("Oups, l'envoi n'a pas marché. Réessaie dans un instant."); }
+      catch (err) { toast(isNetErr(err) ? NET_MSG : "Oups, l'envoi n'a pas marché. Réessaie dans un instant."); }
     }
   });
   return d;

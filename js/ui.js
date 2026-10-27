@@ -8,6 +8,7 @@ const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /* ---------- Langue (interface) ---------- */
 const EN = {
+  "net.off": "No internet connection. Some actions won't work until the network is back.", "net.on": "Back online",
   "nav.home": "Home", "nav.cats": "Categories", "nav.sell": "Sell", "nav.favs": "Favorites", "nav.shop": "My shop", "nav.settings": "Settings",
   "strip.1": "Order on WhatsApp", "strip.2": "Pay with Mobile Money", "strip.3": "Live listings from across the DRC", "strip.4": "Free 30-day trial for sellers",
   "home.h1a": "All your shopping,", "home.h1b": "one place.", "search.ph": "Search a product or a shop",
@@ -226,6 +227,20 @@ export const applyUpdate = () => { sessionStorage.setItem("soko-reload", "1"); r
 /* Installation (PWA) */
 export let installEvt = null;
 addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; document.dispatchEvent(new CustomEvent("installable")); });
+
+/* ---------- Bannière « pas de connexion » (toutes les pages) ---------- */
+(function netBar() {
+  let bar, timer;
+  const show = (txt, ok) => {
+    if (!bar) { bar = document.createElement("div"); bar.className = "offbar"; bar.setAttribute("role", "status"); bar.setAttribute("aria-live", "polite"); document.body.prepend(bar); }
+    clearTimeout(timer); bar.textContent = txt; bar.classList.toggle("ok", !!ok); bar.hidden = false;
+    if (ok) timer = setTimeout(() => { bar.hidden = true; }, 2500);
+  };
+  const off = () => show(t("net.off", "Pas de connexion internet. Certaines actions ne marcheront pas tant que le réseau n'est pas revenu."), false);
+  addEventListener("offline", off);
+  addEventListener("online", () => show(t("net.on", "Connexion retrouvée"), true));
+  if (navigator.onLine === false) off();
+})();
 
 window.__uiOk = true;
 mount(); translate(); reveal();

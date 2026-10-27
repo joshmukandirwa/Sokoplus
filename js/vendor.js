@@ -6,7 +6,7 @@ import {
 import { bindLogout } from "./logout.js";
 import {
   SITE, configured, configBanner, $, $$, esc, safeUrl, money, normPhone, prettyPhone, waLink,
-  compress, uploadImage, thumb, tileColor, toast, ago
+  compress, uploadImage, thumb, tileColor, toast, ago, isNetErr, NET_MSG, needNet
 } from "./common.js";
 import { notify } from "./notify.js";
 import { run, btnOf } from "./feedback.js";
@@ -20,7 +20,7 @@ let user = null, pending = null, profile = null, editing = null, unsub = null, s
 const DAY = 864e5;
 
 const say = (el, text, kind = "") => { el.hidden = !text; el.className = "msg " + kind; el.textContent = text || ""; };
-const nice = e => ({
+const nice = e => isNetErr(e) ? NET_MSG : ({
   "auth/email-already-in-use": "Tu as déjà un compte avec cet email. Connecte-toi, c'est plus simple.",
   "auth/invalid-credential": "On n'a pas reconnu ces infos. Vérifie ton email (ou ton numéro) et ton mot de passe.",
   "auth/wrong-password": "On n'a pas reconnu ces infos. Vérifie ton email (ou ton numéro) et ton mot de passe.",
@@ -231,8 +231,8 @@ setInterval(() => {
   pill.textContent = s.label; pill.className = "pill " + (s.kind || "");
   if (s.why) renderStatus();
 }, 1000);
-$("#resend").onclick = async () => { try { await sendEmailVerification(user); toast("Lien renvoyé. Regarde aussi dans les spams."); } catch (e) { toast(nice(e)); } };
-$("#refresh").onclick = async () => { await user.reload(); await user.getIdToken(true); renderStatus(); if (!user.emailVerified) toast("Email pas encore vérifié."); };
+$("#resend").onclick = async () => { if (!needNet()) return; try { await sendEmailVerification(user); toast("Lien renvoyé. Regarde aussi dans les spams."); } catch (e) { toast(nice(e)); } };
+$("#refresh").onclick = async () => { if (!needNet()) return; try { await user.reload(); await user.getIdToken(true); renderStatus(); if (!user.emailVerified) toast("Email pas encore vérifié."); } catch (e) { toast(nice(e)); } };
 
 /* ---------------- Formulaire article ---------------- */
 $("#iImgs").addEventListener("change", e => {
@@ -421,10 +421,12 @@ $("#mine").addEventListener("click", async e => {
   if (b.dataset.a === "delsub") {
     if (!b.dataset.sure) { b.dataset.sure = "1"; b.textContent = "Confirmer ?"; setTimeout(() => { delete b.dataset.sure; b.textContent = "Supprimer"; }, 3000); return; }
     const sid = b.closest("[data-sid]").dataset.sid;
+    if (!needNet("Pas de connexion : l'article ne peut pas être supprimé pour l'instant. Réessaie quand le réseau revient.")) return;
     try { await deleteDoc(doc(db, "submissions", sid)); toast("Article supprimé."); } catch (err) { toast(nice(err)); }
     return;
   }
   const it = mine.find(x => x.id === b.closest("[data-id]").dataset.id); if (!it) return;
+  if ((b.dataset.a === "sold" || (b.dataset.a === "del" && b.dataset.sure)) && !needNet("Pas de connexion : ton changement n'a pas pu être enregistré. Réessaie quand le réseau revient.")) return;
   try {
     if (b.dataset.a === "sold") await updateDoc(doc(db, "items", it.id), { status: it.status === "sold" ? "available" : "sold" });
     if (b.dataset.a === "del") {
@@ -465,6 +467,7 @@ function paintLogo(src) {
   a.innerHTML = src ? `<img src="${esc(src)}" alt="">` : esc((profile.shopName || "?")[0].toUpperCase());
 }
 async function openShop() {
+  if (!needNet("Pas de connexion : tu ne peux pas modifier ta boutique pour l'instant.")) return;
   try { if (req?.status === "rejected") await deleteDoc(doc(db, "profileRequests", user.uid)); } catch (err) { return toast(nice(err)); }
   newLogo = null; $("#sLogo").value = ""; say($("#sMsg"), "");
   $("#sName").value = profile.shopName; $("#sPhone").value = prettyPhone(profile.phone);

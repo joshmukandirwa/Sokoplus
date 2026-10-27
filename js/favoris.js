@@ -1,4 +1,4 @@
-import { load, items, favs, paint, bind, ms } from "./market.js";
+import { load, items, favs, paint, bind, ms, notice } from "./market.js";
 import { $, store } from "./common.js";
 
 let loaded = false;
@@ -8,6 +8,7 @@ function render() {
   $("#empty").hidden = !none; $("#clear").hidden = !list.length;
   if (!loaded) { $("#grid").innerHTML = '<div class="skeleton"></div><div class="skeleton"></div>'; return; }
   paint($("#grid"), list);
+  if (favs.size) notice($("#grid"), $("#empty"), 1);   // favoris enregistrés mais articles pas chargés : on explique pourquoi
   window.SOKO?.reveal();
 }
 load(() => { loaded = true; render(); });

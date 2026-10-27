@@ -1,4 +1,4 @@
-import { load, items, filter, paint, bind, counts, catIcon } from "./market.js";
+import { load, items, filter, paint, bind, counts, catIcon, notice } from "./market.js";
 import { SITE, $, $$, esc } from "./common.js";
 
 const p = new URLSearchParams(location.search);
@@ -15,6 +15,7 @@ function results() {
   $("#resT").textContent = cat === "Tous" ? "Tous les articles" : cat;
   $("#resN").textContent = `${list.length} article${list.length > 1 ? "s" : ""}`;
   paint($("#grid"), list, $("#empty"));
+  notice($("#grid"), $("#empty"), list.length);
 }
 function render() { if (!built || items.size) tiles(); built = true; results(); window.SOKO?.reveal(); }
 load(render);

@@ -2,7 +2,7 @@ import {
   auth, db, onAuthStateChanged, signInWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp,
   collection, query, orderBy, limit, where, getDocs, onSnapshot, Timestamp
 } from "./fb.js";
-import { SITE, configured, configBanner, $, $$, esc, safeUrl, money, prettyPhone, waLink, ago, toast, thumb, tileColor } from "./common.js";
+import { SITE, configured, configBanner, $, $$, esc, safeUrl, money, prettyPhone, waLink, ago, toast, thumb, tileColor, isNetErr, failText, NET_MSG } from "./common.js";
 import { icon } from "./icons.js";
 import { notify } from "./notify.js";
 import { run, btnOf } from "./feedback.js";
@@ -17,13 +17,13 @@ const say = (t, kind = "") => { const m = $("#aMsg"); m.hidden = !t; m.className
 $("#fLogin").addEventListener("submit", e => {
   e.preventDefault(); say("On vérifie tes infos…");
   run(btnOf(e), () => signInWithEmailAndPassword(auth, $("#aMail").value.trim().toLowerCase(), $("#aPw").value), { busy: "Connexion…", done: "Bienvenue", hold: 600 })
-    .catch(() => say("Email ou mot de passe incorrect.", "err"));
+    .catch(err => say(isNetErr(err) ? NET_MSG : "Email ou mot de passe incorrect.", "err"));
 });
 $("#aGoogle").onclick = () => {
   say("Ouverture de Google…");
   run($("#aGoogle"), () => signInWithPopup(auth, new GoogleAuthProvider()), { hold: 500 })
     .then(() => say(""))
-    .catch(err => { say(["auth/popup-closed-by-user", "auth/cancelled-popup-request"].includes(err.code) ? "" : "Connexion Google impossible : " + (err.code || err.message), "err"); });
+    .catch(err => { say(["auth/popup-closed-by-user", "auth/cancelled-popup-request"].includes(err.code) ? "" : (isNetErr(err) ? NET_MSG : "Connexion Google impossible : " + (err.code || err.message)), "err"); });
 };
 bindLogout($("#logout"), () => signOut(auth));
 
@@ -267,7 +267,7 @@ $("#subOk").onclick = async e => {
   try {
     await run(e.currentTarget, () => updateDoc(doc(db, "users", u.id), { activeUntil: Timestamp.fromMillis(end), status: "active", plan: "pro" }), { busy: "Activation…", done: "Activé", hold: 700 });
     sd.close(); toast(`${u.shopName} : abonnement actif jusqu'au ${dateFr(end)}.`);
-  } catch (err) { toast("Échec : " + (err.code || err.message)); }
+  } catch (err) { toast("Échec : " + failText(err)); }
 };
 
 /* Mode maintenance : bloque tout le site (sauf l'admin) avec message et minuteur jusqu'à l'heure de fin */
@@ -308,7 +308,7 @@ md.addEventListener("click", async e => {
   if (pre || st) { resetGo(); paintMaint(); }
   if (ext) {
     try { await run(ext, () => setDoc(doc(db, "config", "maintenance"), { on: true, until: Timestamp.fromMillis(Math.max(mEnd(), Date.now()) + Number(ext.dataset.ext) * 6e4), message: maint?.message || "", startedAt: maint?.startedAt || serverTimestamp() }), { hold: 500 }); toast("Maintenance prolongée."); }
-    catch (err) { toast("Échec : " + (err.code || err.message)); }
+    catch (err) { toast("Échec : " + failText(err)); }
   }
 });
 md.addEventListener("input", e => {
@@ -325,13 +325,13 @@ $("#mGo").onclick = async e => {
   try {
     await run(b, () => setDoc(doc(db, "config", "maintenance"), { on: true, until: Timestamp.fromMillis(Date.now() + mDur()), message: $("#mMsg").value.trim().slice(0, 200) || DEF_MSG, startedAt: serverTimestamp() }), { busy: "Blocage…", done: "Site bloqué", hold: 700 });
     toast("Le site est en maintenance. Il rouvrira tout seul à l'heure de fin.");
-  } catch (err) { resetGo(); toast("Échec : " + (err.code || err.message)); }
+  } catch (err) { resetGo(); toast("Échec : " + failText(err)); }
 };
 $("#mStop").onclick = async e => {
   try {
     await run(e.currentTarget, () => setDoc(doc(db, "config", "maintenance"), { on: false, until: Timestamp.fromMillis(Date.now()), message: maint?.message || "", startedAt: maint?.startedAt || serverTimestamp() }), { busy: "Réouverture…", done: "Site rouvert", hold: 700 });
     md.close(); toast("Le site est de nouveau ouvert à tout le monde.");
-  } catch (err) { toast("Échec : " + (err.code || err.message)); }
+  } catch (err) { toast("Échec : " + failText(err)); }
 };
 
 $("#list").addEventListener("click", async e => {
@@ -397,5 +397,5 @@ $("#list").addEventListener("click", async e => {
       if (row.dataset.rid) await deleteDoc(doc(db, "reports", row.dataset.rid));
     }
     if (a === "dismiss") await deleteDoc(doc(db, "reports", row.dataset.rid));
-  } catch (err) { toast("Échec : " + (err.code || err.message)); }
+  } catch (err) { toast("Échec : " + failText(err)); }
 });

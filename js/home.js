@@ -1,4 +1,4 @@
-import { load, items, filter, paint, bind, counts, shops, catIcon, openFromUrl, loadError, suggest, hasTaste } from "./market.js";
+import { load, items, filter, paint, bind, counts, shops, catIcon, openFromUrl, notice, suggest, hasTaste } from "./market.js";
 import { SITE, $, $$, esc, tileColor, thumb } from "./common.js";
 import { countUp } from "./ui.js";
 
@@ -7,14 +7,9 @@ const LIMIT = 12;
 
 function render() {
   const grid = $("#grid"), empty = $("#empty");
-  if (loadError && !items.size) {
-    grid.innerHTML = ""; empty.hidden = false;
-    if (loadError === "perm") console.warn("Règles Firestore : colle le contenu de firestore.rules dans la console Firebase, puis publie.");
-    empty.textContent = loadError === "perm" ? "Le marché est en cours de mise à jour. Réessaie dans quelques minutes." : "Oups, on n'arrive pas à charger les articles. Vérifie ta connexion et réessaie dans un instant.";
-    return;
-  }
   const list = filter({ sort });
   paint(grid, list.slice(0, LIMIT), empty);
+  notice(grid, empty, list.length);
   $("#moreBtn").hidden = list.length <= LIMIT;
   const sg = hasTaste() ? suggest(4) : [];
   $("#sugsec").hidden = !sg.length;

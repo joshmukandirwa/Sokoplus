@@ -1,4 +1,4 @@
-import { load, items, filter, paint, bind, shops, counts, catIcon } from "./market.js";
+import { load, items, filter, paint, bind, shops, counts, catIcon, notice } from "./market.js";
 import { SITE, $, $$, esc, store } from "./common.js";
 
 const p = new URLSearchParams(location.search);
@@ -30,6 +30,7 @@ function render() {
   const list = filter({ q, cat, shop, sort, avail });
   paint($("#grid"), list, null);
   $("#empty").hidden = list.length > 0;
+  if (notice($("#grid"), $("#empty"), list.length)) $("#count").textContent = "";
   $("#count").textContent = list.length ? `${list.length} résultat${list.length > 1 ? "s" : ""}${q.trim() ? ` pour « ${q.trim()} »` : ""}` : "";
   const tags = [];
   if (shop !== "tous") tags.push(["shop", "Boutique : " + (shops().find(s => s.id === shop)?.name || "")]);
