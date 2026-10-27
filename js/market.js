@@ -13,8 +13,7 @@ export const norm = s => String(s ?? "").toLowerCase().normalize("NFD").replace(
 export const cityOk = it => { const c = store.get("city", ""); return !c || it.city === c || (!it.city && norm(it.address).includes(norm(c))); };
 const usd = it => it.currency === "FC" ? it.price / SITE.rate : it.price;   // seulement pour classer
 const where = it => it.city ? `${it.city}, ${it.address}` : it.address;
-const baseUrl = () => new URL("index.html", location.href);
-const shareUrl = id => { const u = baseUrl(); u.searchParams.set("item", id); return u.href; };
+const shareUrl = id => new URL("/p/" + encodeURIComponent(id), location.origin).href;   // page d'aperçu (photo, nom, description) pour WhatsApp
 
 /* ---------- Icônes de catégories ---------- */
 export const CAT_ICON = {

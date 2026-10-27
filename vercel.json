@@ -64,5 +64,11 @@
       "destination": "/introuvable",
       "permanent": false
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/p/:id",
+      "destination": "/api/share?id=:id"
+    }
   ]
 }
