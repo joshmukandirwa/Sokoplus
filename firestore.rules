@@ -69,7 +69,7 @@ service cloud.firestore {
     // Forme d'un article en ligne (admin, ou boutique certifiée qui publie directement)
     function itemShape() {
       let d = request.resource.data;
-      return d.keys().hasOnly(['title', 'description', 'price', 'category', 'address', 'city', 'currency', 'images', 'ownerId', 'shopName', 'phone', 'shopLogo', 'status', 'featured', 'createdAt', 'certified', 'oldPrice', 'tag', 'country'])
+      return d.keys().hasOnly(['title', 'description', 'price', 'category', 'address', 'city', 'currency', 'images', 'ownerId', 'shopName', 'phone', 'shopLogo', 'shopPay', 'status', 'featured', 'createdAt', 'certified', 'oldPrice', 'tag', 'country'])
         && d.ownerId is string
         && d.status == 'available'
         && d.featured == false
@@ -78,6 +78,7 @@ service cloud.firestore {
         && d.description is string && d.description.size() <= 1500
         && d.price is number && d.price > 0 && d.price < 100000000
         && (!('city' in d) || (d.city is string && d.city.size() <= 40))
+        && (!('shopPay' in d) || (d.shopPay is string && d.shopPay.size() <= 120))
         && (!('currency' in d) || d.currency in currencies())
         && promoOk(d) && countryOk(d)
         && imgsOk(d.images);
@@ -103,10 +104,11 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Avis clients : un par personne et par boutique (identifiant = uid_boutique). Visibles seulement après validation par l'admin.
+    // Avis clients : un par personne et par article (identifiant = uid_article). Visibles seulement après validation par l'admin.
     function reviewShape(d) {
-      return d.keys().hasOnly(['shopId', 'buyerId', 'buyerName', 'stars', 'text', 'status', 'createdAt'])
-        && d.stars is int && d.stars >= 1 && d.stars <= 5
+      return d.keys().hasOnly(['itemId', 'shopId', 'buyerId', 'buyerName', 'buyerLogo', 'stars', 'text', 'status', 'createdAt'])
+        && (!('buyerLogo' in d) || (d.buyerLogo is string && d.buyerLogo.size() <= 300 && d.buyerLogo.matches('https://.*')))
+        && d.itemId is string && d.stars is int && d.stars >= 1 && d.stars <= 5
         && d.text is string && d.text.size() <= 300
         && d.buyerName is string && d.buyerName.size() >= 2 && d.buyerName.size() <= 40
         && d.status == 'pending';
@@ -116,17 +118,34 @@ service cloud.firestore {
       allow create: if signedIn() && siteOpen() && reviewShape(request.resource.data)
         && request.resource.data.buyerId == request.auth.uid
         && request.resource.data.shopId is string && request.resource.data.shopId != request.auth.uid
-        && id == request.auth.uid + '_' + request.resource.data.shopId
-        && exists(/databases/$(database)/documents/users/$(request.resource.data.shopId))
+        && id == request.auth.uid + '_' + request.resource.data.itemId
+        && exists(/databases/$(database)/documents/items/$(request.resource.data.itemId))
+        && get(/databases/$(database)/documents/items/$(request.resource.data.itemId)).data.ownerId == request.resource.data.shopId
         && exists(/databases/$(database)/documents/buyers/$(request.auth.uid))
         && get(/databases/$(database)/documents/buyers/$(request.auth.uid)).data.name == request.resource.data.buyerName
         && request.resource.data.createdAt == request.time;
       // l'acheteur peut modifier son avis : il repasse en « à valider »
       allow update: if isAdmin()
         || (signedIn() && siteOpen() && resource.data.buyerId == request.auth.uid && reviewShape(request.resource.data)
-            && request.resource.data.buyerId == resource.data.buyerId && request.resource.data.shopId == resource.data.shopId
+            && request.resource.data.buyerId == resource.data.buyerId && request.resource.data.shopId == resource.data.shopId && request.resource.data.itemId == resource.data.itemId
             && request.resource.data.createdAt == resource.data.createdAt);
       allow delete: if isAdmin() || (signedIn() && resource.data.buyerId == request.auth.uid);
+    }
+
+    // « Avis utile » : un vote par personne et par avis (identifiant = uid_avis). Lisibles par tous pour afficher le total ; chacun ne retire que le sien.
+    match /reviewVotes/{id} {
+      allow read: if true;
+      allow create: if signedIn() && siteOpen()
+        && request.resource.data.keys().hasOnly(['reviewId', 'shopId', 'uid', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.reviewId is string && request.resource.data.shopId is string
+        && id == request.auth.uid + '_' + request.resource.data.reviewId
+        && request.resource.data.createdAt == request.time
+        && exists(/databases/$(database)/documents/reviews/$(request.resource.data.reviewId))
+        && get(/databases/$(database)/documents/reviews/$(request.resource.data.reviewId)).data.status == 'approved'
+        && get(/databases/$(database)/documents/reviews/$(request.resource.data.reviewId)).data.shopId == request.resource.data.shopId
+        && get(/databases/$(database)/documents/reviews/$(request.resource.data.reviewId)).data.buyerId != request.auth.uid;
+      allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
     }
 
     // Profil vendeur
@@ -145,8 +164,36 @@ service cloud.firestore {
         // essai gratuit : environ 30 jours, pas plus
         && request.resource.data.activeUntil > request.time + duration.value(28, 'd')
         && request.resource.data.activeUntil < request.time + duration.value(32, 'd');
-      // nom, numéro et photo ne changent plus directement : le vendeur envoie une demande (profileRequests), l'admin la valide
-      allow update: if isAdmin();
+      // Nom, numéro, photo de profil et modes de paiement : le vendeur les modifie lui-même, sans validation de l'admin
+      allow update: if isAdmin()
+        || (signedIn() && siteOpen() && request.auth.uid == uid
+            && resource.data.status == 'active'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['shopName', 'phone', 'logo', 'payments'])
+            && request.resource.data.shopName is string
+            && request.resource.data.shopName.size() >= 2 && request.resource.data.shopName.size() <= 60
+            && request.resource.data.phone is string
+            && request.resource.data.phone.size() >= 10 && request.resource.data.phone.size() <= 15
+            && (!('logo' in request.resource.data) || imgUrl(request.resource.data.logo))
+            && (!('payments' in request.resource.data) || (request.resource.data.payments is string && request.resource.data.payments.size() <= 120)));
+    }
+
+    // Profil public de la boutique (couverture, à propos, coordonnées, liens) : lisible par tous, modifié par le vendeur lui-même, sans validation
+    function linkOk(u) { return u is string && u.size() <= 200 && u.matches('https?://.*'); }
+    match /shops/{uid} {
+      allow read: if true;
+      allow create, update: if signedIn() && siteOpen() && request.auth.uid == uid
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && profile().status == 'active'
+        && request.resource.data.keys().hasOnly(['cover', 'about', 'address', 'email', 'website', 'facebook', 'instagram', 'updatedAt'])
+        && request.resource.data.updatedAt == request.time
+        && (!('cover' in request.resource.data) || imgUrl(request.resource.data.cover))
+        && (!('about' in request.resource.data) || (request.resource.data.about is string && request.resource.data.about.size() <= 300))
+        && (!('address' in request.resource.data) || (request.resource.data.address is string && request.resource.data.address.size() <= 150))
+        && (!('email' in request.resource.data) || (request.resource.data.email is string && request.resource.data.email.size() <= 100 && request.resource.data.email.matches('[^@ ]+@[^@ ]+[.][^@ ]+')))
+        && (!('website' in request.resource.data) || linkOk(request.resource.data.website))
+        && (!('facebook' in request.resource.data) || linkOk(request.resource.data.facebook))
+        && (!('instagram' in request.resource.data) || linkOk(request.resource.data.instagram));
+      allow delete: if isAdmin();
     }
 
     // Demandes de modification de boutique (nom, numéro, photo de profil) : une par boutique, validée ou refusée par l'admin
@@ -154,15 +201,38 @@ service cloud.firestore {
       allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
       allow create: if signedIn() && siteOpen() && request.auth.uid == uid
         && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        && request.resource.data.keys().hasOnly(['shopName', 'phone', 'logo', 'status', 'createdAt'])
-        && request.resource.data.keys().hasAny(['shopName', 'phone', 'logo'])
+        && request.resource.data.keys().hasOnly(['shopName', 'phone', 'logo', 'payments', 'status', 'createdAt'])
+        && request.resource.data.keys().hasAny(['shopName', 'phone', 'logo', 'payments'])
         && request.resource.data.status == 'pending'
         && request.resource.data.createdAt == request.time
         && (!('shopName' in request.resource.data) || (request.resource.data.shopName is string && request.resource.data.shopName.size() >= 2 && request.resource.data.shopName.size() <= 60))
         && (!('phone' in request.resource.data) || (request.resource.data.phone is string && request.resource.data.phone.size() >= 10 && request.resource.data.phone.size() <= 15))
+        && (!('payments' in request.resource.data) || (request.resource.data.payments is string && request.resource.data.payments.size() <= 120))
         && (!('logo' in request.resource.data) || (request.resource.data.logo is string && request.resource.data.logo.matches('https://.*') && request.resource.data.logo.size() <= 300));
       allow update: if isAdmin();
       allow delete: if isAdmin() || (signedIn() && request.auth.uid == uid && resource.data.status == 'rejected');
+    }
+
+    // Demandes de certification : une par boutique. Le vendeur la crée (en attente), l'admin l'approuve (la demande disparaît) ou la refuse (avec motif)
+    match /certRequests/{uid} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow create: if signedIn() && siteOpen() && request.auth.uid == uid
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('certified', false) != true
+        && request.resource.data.keys().hasOnly(['status', 'createdAt'])
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt == request.time;
+      allow update: if isAdmin();
+      allow delete: if isAdmin() || (signedIn() && request.auth.uid == uid && resource.data.status == 'rejected');
+    }
+
+    // Messages de SokoPlus à un vendeur (certification approuvée ou refusée...). Écrits par l'admin ; le vendeur les lit et les marque comme lus.
+    match /userNotifs/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if isAdmin();
+      allow update: if signedIn() && resource.data.uid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
     }
 
     // Numéro -> email, pour se connecter avec le téléphone (lecture d'un seul document à la fois, pas de liste)
@@ -174,7 +244,9 @@ service cloud.firestore {
         && ((request.resource.data.uid == request.auth.uid && request.resource.data.email == request.auth.token.email
             && exists(/databases/$(database)/documents/users/$(request.auth.uid))
             && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.phone == phone) || isAdmin());
-      allow update, delete: if isAdmin();
+      allow update: if isAdmin();
+      // le vendeur retire l'ancien numéro quand il change le sien
+      allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
     }
 
     // Propositions d'articles : envoyées par un vendeur actif, visibles seulement par lui et par l'admin.
@@ -222,15 +294,21 @@ service cloud.firestore {
             && request.resource.data.shopName == profile().shopName
             && request.resource.data.phone == profile().phone
             && request.resource.data.shopLogo == (('logo' in profile()) ? profile().logo : '')
+            && request.resource.data.get('shopPay', '') == (('payments' in profile()) ? profile().payments : '')
             && request.resource.data.address is string && request.resource.data.address.size() <= 150);
 
       allow update: if isAdmin()
         || (signedIn() && siteOpen() && resource.data.ownerId == request.auth.uid
             && exists(/databases/$(database)/documents/users/$(request.auth.uid))
             && profile().status == 'active'
-            // le vendeur ne change que « disponible / vendu » ; tout autre changement passe par une proposition validée par l'admin
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
-            && request.resource.data.status in ['available', 'sold']);
+            // le vendeur change « disponible / vendu », et recopie sur ses articles les infos de sa boutique (nom, numéro, photo, paiements) ;
+            // tout autre changement d'article passe par une proposition validée par l'admin
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'shopName', 'phone', 'shopLogo', 'shopPay'])
+            && request.resource.data.status in ['available', 'sold']
+            && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['shopName']) || request.resource.data.shopName == profile().shopName)
+            && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['phone']) || request.resource.data.phone == profile().phone)
+            && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['shopLogo']) || request.resource.data.shopLogo == (('logo' in profile()) ? profile().logo : ''))
+            && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['shopPay']) || request.resource.data.shopPay == (('payments' in profile()) ? profile().payments : '')));
 
       allow delete: if isAdmin() || (signedIn() && siteOpen() && resource.data.ownerId == request.auth.uid);
     }

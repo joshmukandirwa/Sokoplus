@@ -1,6 +1,6 @@
 # SokoPlus – guide de mise en ligne
 
-Marché en ligne pour Goma : chaque vendeur crée son compte (email + téléphone + nom de boutique), publie ses articles (photos, nom, description, adresse, prix), et **tous les visiteurs voient le nouvel article apparaître en direct**. Les clients commandent sur WhatsApp et paient en Mobile Money directement au vendeur.
+Marché en ligne pour Goma : chaque vendeur crée son compte (email + téléphone + nom de boutique), publie ses articles (photos, nom, description, adresse, prix), et **tous les visiteurs voient le nouvel article apparaître en direct**. Les clients commandent sur WhatsApp et règlent le vendeur directement, selon les règles de sa boutique.
 
 ## Ce qui est inclus
 
@@ -18,7 +18,7 @@ Sans configuration, `index.html` s'ouvre en **mode démo** avec des articles d'e
 ## Comment tu gagnes de l'argent
 
 - Chaque nouveau vendeur a **30 jours gratuits** (automatique).
-- Ensuite il te paie (ex. 5 $/mois) en Mobile Money, tu ouvres `admin.html` > Vendeurs > **+30 j**.
+- Ensuite il te paie (ex. 5 $/mois) par le moyen que vous avez convenu, tu ouvres `admin.html` > Vendeurs > **+30 j**.
 - Un vendeur expiré ne peut plus publier (ses anciens articles restent visibles tant que tu ne les retires pas).
 - **Mise à la une** : tu peux faire payer les vendeurs pour que leur article apparaisse en premier (Admin > Articles > Mettre à la une).
 
@@ -105,7 +105,7 @@ Crée un 2ᵉ compte vendeur (autre email, autre téléphone), publie un article
 
 ## Modifier sa boutique (nom, numéro, photo)
 
-- Dans « Ma boutique », **Modifier ma boutique** envoie une demande (collection `profileRequests`). Rien ne change tant que l'admin n'a pas validé.
+- Dans « Ma boutique », **Modifier ma boutique** s'applique tout de suite, sans validation de l'admin : nom, numéro WhatsApp, photo de profil, photo de couverture, à propos, paiements, adresse, email et liens (collection publique `shops`). Pense à republier `firestore.rules`.
 - Dans `admin.html`, onglet **À valider**, la demande montre l'ancien et le nouveau côte à côte. **Valider** met à jour la boutique, l'index de connexion par numéro et tous ses articles en ligne ; **Refuser** envoie un motif que la boutique voit.
 - Republie `firestore.rules` : le nom ne peut plus être changé directement par le vendeur.
 
@@ -141,7 +141,7 @@ Sans cette option, les visiteurs voient les nouveaux articles **en direct tant q
 
 ## Sécurité et limites à connaître
 
-- **Pas de paiement dans le site** : le client paie le vendeur directement en Mobile Money, après accord sur WhatsApp. SokoPlus ne touche pas l'argent des ventes, seulement les abonnements.
+- **Pas de paiement dans le site** : le client règle le vendeur directement, selon les règles de sa boutique. SokoPlus ne touche pas l'argent des ventes, seulement les abonnements.
 - **Modération** : chaque article a un bouton « Signaler ». Tu traites les signalements dans `admin.html` et tu peux bloquer un vendeur en un clic.
 - **Email vérifié obligatoire** pour publier (anti-spam). Le vendeur reçoit un lien à la création du compte et peut le renvoyer.
 - **Connexion par téléphone** : le numéro sert d'identifiant, un petit index `numéro > email` est lisible une adresse à la fois. Seule une personne connaissant déjà le numéro peut en déduire l'email. Si tu ne veux pas de ça, supprime la connexion par téléphone dans `js/vendor.js`.

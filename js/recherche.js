@@ -1,6 +1,6 @@
 import { load, items, filter, paint, bind, shops, counts, catIcon, notice, certMark, isPromo, ms } from "./market.js";
-import { renderReviews } from "./avis.js";
-import { SITE, $, $$, esc, store, tileColor, thumb, waLink, prettyPhone, ago } from "./common.js";
+import { SITE, $, $$, esc, store, tileColor, thumb, waLink, prettyPhone, ago, shopInfoHtml, coverCss, configured } from "./common.js";
+import { db, doc, getDoc } from "./fb.js";
 
 const p = new URLSearchParams(location.search);
 let q = p.get("q") || "", cat = p.get("c") || "Tous", shop = p.get("shop") || "tous", sort = "recent", avail = false, timer, saveT, kind = ["promo", "offre", "cert"].includes(p.get("t")) ? p.get("t") : "";
@@ -27,23 +27,32 @@ function sync() {
 }
 /* En-tête de boutique (quand on ouvre une boutique) : tout vient des articles en ligne, rien d'inventé */
 let revShop = "";
+/* Profil public de la boutique (couverture, à propos, coordonnées) : lu une seule fois par boutique */
+const extras = new Map();
+function loadExtra(id) {
+  if (extras.has(id) || !configured || !db) return;
+  extras.set(id, {});
+  getDoc(doc(db, "shops", id)).then(s => { extras.set(id, s.exists() ? s.data() : {}); if (shop === id) shopHead(); }).catch(() => extras.delete(id));
+}
 function shopHead() {
   const box = $("#shopHead"), mine = shop === "tous" ? [] : [...items.values()].filter(i => i.ownerId === shop);
-  box.hidden = !mine.length; $("#shopRev").hidden = !mine.length; if (!mine.length) return;
+  box.hidden = !mine.length; if (!mine.length) return;
   const f = mine[0], live = mine.filter(i => i.status !== "sold").length, sold = mine.length - live;
   const since = Math.min(...mine.map(ms)), promos = mine.filter(i => i.status !== "sold" && isPromo(i)).length;
   const logo = thumb(f.shopLogo || "", 160);
   const msg = `Bonjour ${f.shopName}, je vous écris depuis votre boutique sur SokoPlus.`;
-  box.innerHTML = `<div class="sh-cover"></div>
+  loadExtra(shop);
+  const x = extras.get(shop) || {}, info = shopInfoHtml(x);
+  box.innerHTML = `<div class="sh-cover" style="${coverCss(x.cover, f.shopName)}"></div>
     <div class="sh-body">
       <span class="sh-av" style="background:${tileColor(f.shopName)}">${logo ? `<img src="${esc(logo)}" alt="" draggable="false">` : esc((f.shopName || "?")[0].toUpperCase())}</span>
       <div class="sh-id"><h2>${esc(f.shopName)}${certMark(f)}</h2>
         <p>${f.certified ? '<span class="pill ok">Boutique certifiée SokoPlus</span> ' : ""}${esc(f.city || "")}${f.city ? " · " : ""}premier article ${esc(ago(since))}</p></div>
       <div class="sh-stats"><span><b>${live}</b> en ligne</span><span><b>${sold}</b> vendus</span>${promos ? `<span><b>${promos}</b> en promo</span>` : ""}</div>
+      ${x.about ? `<p class="sh-about">${esc(x.about)}</p>` : ""}
+      ${info ? `<ul class="sh-info">${info}</ul>` : ""}
       <a class="btn ok" href="${esc(waLink(f.phone, msg))}" target="_blank" rel="noopener">Écrire sur WhatsApp</a>
     </div>`;
-  if (revShop !== shop) { revShop = shop; renderReviews($("#shopRev"), shop, f.shopName); }
-  box.querySelector(".sh-cover").style.background = `linear-gradient(120deg, ${tileColor(f.shopName)}, #ff6a00)`;
 }
 function render() {
   const browsing = q.trim() || cat !== "Tous" || shop !== "tous" || kind;

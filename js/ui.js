@@ -11,7 +11,7 @@ const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const EN = {
   "net.off": "No internet connection. Some actions won't work until the network is back.", "net.on": "Back online",
   "nav.home": "Home", "nav.cats": "Categories", "nav.sell": "Sell", "nav.favs": "Favorites", "nav.shop": "My shop", "nav.settings": "Settings",
-  "strip.1": "Order on WhatsApp", "strip.2": "Pay with Mobile Money", "strip.3": "Live listings from across the DRC", "strip.4": "Free 30-day trial for sellers",
+  "strip.1": "Order on WhatsApp", "strip.2": "Deal directly with the seller", "strip.3": "Live listings from across the DRC", "strip.4": "Free 30-day trial for sellers",
   "home.h1a": "All your shopping,", "home.h1b": "one place.", "search.ph": "Search a product or a shop",
   "home.cats": "Categories", "home.latest": "New arrivals", "home.shops": "Shops", "home.live": "Live", "home.all": "See all",
   "cats.title": "Categories", "cats.sub": "Pick a category to see what the DRC is selling.",

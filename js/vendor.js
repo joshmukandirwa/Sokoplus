@@ -1,14 +1,16 @@
 import {
   auth, db, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
   sendEmailVerification, sendPasswordResetEmail, GoogleAuthProvider, signInWithPopup, signInWithRedirect, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc,
-  collection, query, where, onSnapshot, serverTimestamp, Timestamp
+  collection, query, where, onSnapshot, serverTimestamp, Timestamp, getDocs
 } from "./fb.js";
 import { bindLogout } from "./logout.js";
 import {
   SITE, store, configured, configBanner, $, $$, esc, safeUrl, money, normPhone, prettyPhone, waLink,
-  compress, uploadImage, thumb, tileColor, toast, ago, isNetErr, NET_MSG, needNet
+  compress, uploadImage, thumb, tileColor, toast, ago, isNetErr, NET_MSG, needNet, normLink, shopInfoHtml, coverCss
 } from "./common.js";
+import { injectIcons } from "./icons.js";
 import { notify } from "./notify.js";
+import { onMyNotifs, myNotifs, unread, markRead, ms as nms } from "./mesnotifs.js";
 import { COUNTRIES, DEFAULT_COUNTRY, citiesOf, currenciesOf, curName, ALL_CURRENCIES, decimalsOf } from "./pays.js";
 import { run, btnOf } from "./feedback.js";
 
@@ -210,16 +212,69 @@ function state() {
   return { ok: true, label: `${trial ? "Essai" : "Abonnement"} · ${fmtLeft(ms)}`, kind: ms <= 5 * DAY ? "warn" : "ok" };
 }
 
+const CERT_BADGE = '<img class="ic cert-ic" src="icons/certifie.png" width="16" height="16" alt="Boutique certifiée" title="Boutique certifiée SokoPlus" draggable="false">';
+
+/* ---------------- Certification SokoPlus : guide, demande et messages de SokoPlus ---------------- */
+function renderCert() {
+  const b = $("#certBox"); if (!b || !profile) return;
+  b.hidden = false;
+  const msgs = myNotifs().slice(0, 3), nu = unread().length;
+  const inbox = msgs.length ? `<div class="cmsgs"><h3>Messages de SokoPlus${nu ? ` <em>${nu} nouveau${nu > 1 ? "x" : ""}</em>` : ""}</h3>${msgs.map(n => `<div class="cmsg ${n.kind === "cert_rejected" ? "bad" : "ok"}${n.read ? "" : " new"}"><b>${esc(n.title || "Message de SokoPlus")}</b><span>${esc(n.text || "")}</span><small>${ago(nms(n))}</small></div>`).join("")}${nu ? '<button class="btn small ghost" type="button" id="cRead">Marquer comme lu</button>' : ""}</div>` : "";
+  let body;
+  if (profile.certified) {
+    body = `<div class="cstate ok"><b>Ta boutique est certifiée SokoPlus.</b> Le badge s'affiche à côté de son nom, et tes nouveaux articles sont publiés tout de suite.</div>`;
+  } else {
+    const st = creq?.status;
+    const guide = `<details class="cguide"${st ? "" : " open"}><summary>Comment ça marche</summary>
+      <div class="cg"><h4>C'est quoi ?</h4><p>Un badge bleu à côté du nom de ta boutique, accordé par SokoPlus après vérification.</p>
+      <h4>Pourquoi le demander ?</h4><p>Les acheteurs te font plus confiance, donc ils te contactent plus facilement.</p>
+      <h4>Comment ça se passe ?</h4><ol><li>Tu cliques sur « Demander la certification ».</li><li>SokoPlus vérifie ta boutique : nom, numéro WhatsApp, articles et avis.</li><li>Tu reçois la réponse ici et dans la cloche de notifications.</li></ol>
+      <h4>Ce que tu gagnes</h4><ul><li>Le badge sur ta boutique et sur tous tes articles</li><li>Ta boutique dans la rangée « boutiques certifiées » de l'accueil</li><li>Tes articles publiés sans attendre de validation</li></ul>
+      <p class="note">Conseil : une photo de profil et quelques articles bien décrits aident beaucoup.</p></div></details>`;
+    let state;
+    if (st === "pending") state = `<div class="cstate warn"><b>Demande envoyée.</b> SokoPlus la vérifie. Réponse généralement sous 24 à 48 h.${creq.createdAt?.toMillis ? ` Envoyée ${esc(ago(creq.createdAt.toMillis()))}.` : ""}</div><button class="btn" type="button" disabled>Demande en attente</button>`;
+    else if (st === "rejected") state = `<div class="cstate bad"><b>Ta demande n'a pas été acceptée pour le moment.</b>${creq.reason ? ` Motif : ${esc(creq.reason)}.` : ""} Tu peux corriger puis refaire une demande.</div><button class="btn" type="button" id="cAsk">Refaire une demande</button>`;
+    else state = `<p class="note">Réponse généralement sous 24 à 48 h.</p><button class="btn" type="button" id="cAsk"${creqSeen ? "" : " disabled"}>Demander la certification</button>`;
+    body = guide + state;
+  }
+  b.innerHTML = `<h2>Certification SokoPlus</h2>${body}${inbox}`;
+  const ask = $("#cAsk"); if (ask) ask.onclick = () => askCert(ask);
+  const rd = $("#cRead"); if (rd) rd.onclick = () => markRead(unread().map(n => n.id));
+}
+async function askCert(btn) {
+  if (!needNet("Pas de connexion : tu ne peux pas envoyer ta demande pour l'instant.")) return;
+  try {
+    await run(btn, async () => {
+      if (creq?.status === "rejected") await deleteDoc(doc(db, "certRequests", user.uid));
+      await setDoc(doc(db, "certRequests", user.uid), { status: "pending", createdAt: serverTimestamp() });
+    }, { busy: "Envoi…", done: "Envoyée", hold: 700 });
+    notify("new_submission", { title: "Demande de certification", shopName: profile.shopName });
+    toast("Demande envoyée. SokoPlus te répond sous 24 à 48 h.");
+  } catch (err) { toast(nice(err)); }
+}
+
+/* Carte de la boutique (couverture, à propos, coordonnées) : même rendu que ce que voient les acheteurs */
+let pub = {};
+function paintCard() {
+  $("#dCover").style.cssText = coverCss(pub.cover, profile.shopName);
+  $("#seeShop").href = `recherche.html?shop=${encodeURIComponent(user.uid)}`;
+  const about = $("#dAbout"), info = $("#dInfo");
+  about.hidden = false;
+  about.classList.toggle("empty", !pub.about);
+  about.textContent = pub.about || "Ajoute une photo de couverture, une présentation et tes coordonnées : les acheteurs te font plus confiance.";
+  info.innerHTML = shopInfoHtml(pub, profile.phone); info.hidden = !info.innerHTML;
+}
 function renderStatus() {
   store.set("me", { n: profile.shopName || "", l: profile.logo || "" });   // la barre du bas affiche ta photo sur toutes les pages
   const s = state();
   const hr = new Date().getHours();
   $("#dHello").textContent = `${hr < 12 ? "Bonjour" : hr < 18 ? "Bon après-midi" : "Bonsoir"}, content de te revoir.`;
-  $("#dShop").textContent = profile.shopName;
+  $("#dShop").innerHTML = esc(profile.shopName) + (profile.certified ? CERT_BADGE : "");   // la certification s'affiche juste après le nom
   const av = $("#dAvatar"); av.style.background = tileColor(profile.shopName);
   av.innerHTML = profile.logo ? `<img src="${esc(thumb(profile.logo, 160))}" alt="">` : esc((profile.shopName || "?")[0].toUpperCase());
-  $("#dContact").textContent = isFake(profile.email) ? prettyPhone(profile.phone) : `${prettyPhone(profile.phone)} · ${profile.email}`;
+  paintCard();
   const pill = $("#dStatus"); pill.textContent = s.label || ""; pill.className = "pill " + (s.kind || "");
+  renderCert();
   $("#verifyBox").hidden = user.emailVerified || isFake(profile.email); $("#verifyMail").textContent = profile.email;
   const bb = $("#blockBox");
   bb.hidden = !s.why;
@@ -362,7 +417,7 @@ $("#fItem").addEventListener("submit", e => {
       // boutique certifiée par SokoPlus : l'article est en ligne tout de suite, sans validation
       const iid = `${user.uid}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
       await setDoc(doc(db, "items", iid), {
-        ...data, images: urls, ownerId: user.uid, shopName: profile.shopName, phone: profile.phone, shopLogo: profile.logo || "",
+        ...data, images: urls, ownerId: user.uid, shopName: profile.shopName, phone: profile.phone, shopLogo: profile.logo || "", ...(profile.payments ? { shopPay: profile.payments } : {}),
         certified: true, status: "available", featured: false, createdAt: serverTimestamp()
       });
       toast("Ton article est en ligne tout de suite. Boutique certifiée.");
@@ -382,12 +437,12 @@ $("#fItem").addEventListener("submit", e => {
 });
 
 /* ---------------- Mes articles ---------------- */
-let mine = [], waiting = [], req = null, reqSeen = false;
+let mine = [], waiting = [], creq = null, creqSeen = false, offMsgs = null;
 const when = it => it.createdAt?.toMillis?.() ?? Date.now();
 function watchMine() {
   unsub && unsub();
   let firstItems = true, firstSubs = true;
-  req = null; reqSeen = false;
+  pub = {}; creq = null; creqSeen = false;
   const u1 = onSnapshot(query(collection(db, "items"), where("ownerId", "==", user.uid)), snap => {
     if (!firstItems) snap.docChanges().forEach(ch => {
       if (ch.type === "added" && !ch.doc.metadata.hasPendingWrites) toast(`Ton article « ${ch.doc.data().title} » a été validé. Il est en ligne.`);
@@ -406,15 +461,14 @@ function watchMine() {
     waiting.sort((a, b) => when(b) - when(a));
     renderMine(); renderStatus();
   });
-  const u3 = onSnapshot(doc(db, "profileRequests", user.uid), async snap => {   // demande de modification de la boutique
-    const was = req; req = snap.exists() ? snap.data() : null;
-    if (reqSeen && was?.status === "pending" && !req) {   // la demande a disparu : elle a été validée
-      const p = await getDoc(doc(db, "users", user.uid)); if (p.exists()) profile = p.data();
-      toast("SokoPlus a validé les modifications de ta boutique."); renderStatus();
-    }
-    if (reqSeen && was?.status === "pending" && req?.status === "rejected") toast("SokoPlus n'a pas pu valider tes modifications. Le motif est dans Ma boutique.");
-    reqSeen = true; renderReq();
-  });
+  const u3 = onSnapshot(doc(db, "shops", user.uid), snap => {   // profil public : couverture, à propos, coordonnées
+    pub = snap.exists() ? snap.data() : {};
+    if (profile) paintCard();
+  }, () => { });
+  const u5 = onSnapshot(doc(db, "certRequests", user.uid), snap => {   // demande de certification
+    creq = snap.exists() ? snap.data() : null; creqSeen = true; renderCert();
+  }, () => { creqSeen = true; renderCert(); });
+  offMsgs && offMsgs(); offMsgs = onMyNotifs(() => renderCert());
   let seenPlan = false;
   const u4 = onSnapshot(doc(db, "users", user.uid), snap => {   // l'abonnement change en direct quand SokoPlus le met à jour
     if (!snap.exists()) return;
@@ -424,7 +478,7 @@ function watchMine() {
     if (seenPlan && st !== profile.status) toast(profile.status === "blocked" ? "Ton compte a été suspendu." : "Ton compte est de nouveau actif.");
     seenPlan = true;
   });
-  unsub = () => { u1(); u2(); u3(); u4(); };
+  unsub = () => { u1(); u2(); u3(); u4(); u5(); offMsgs && offMsgs(); offMsgs = null; };
 }
 function renderMine() {
   const shown = waiting.filter(it => it.status !== "approved");   // les validées sont déjà dans « mine »
@@ -484,57 +538,85 @@ $("#mine").addEventListener("click", async e => {
 });
 
 
-/* ---------------- Modifier ma boutique : nom, numéro, photo (validés par SokoPlus) ---------------- */
-const shopDlg = $("#shopDlg"); let newLogo = null;
-function renderReq() {
-  const b = $("#reqBox"); $("#editShop").disabled = req?.status === "pending";
-  if (!req) { b.hidden = true; return; }
-  const what = [req.shopName && `nom : ${esc(req.shopName)}`, req.phone && `numéro : ${esc(prettyPhone(req.phone))}`, req.logo && "nouvelle photo de profil"].filter(Boolean).join(", ");
-  b.hidden = false;
-  if (req.status === "pending") {
-    b.className = "msg warn";
-    b.innerHTML = `<b>Ta demande est en cours de vérification par SokoPlus.</b> On te prévient dès qu'elle est traitée. Demandé : ${what}.`;
-  } else {
-    b.className = "msg err";
-    b.innerHTML = `<b>SokoPlus n'a pas pu valider ta demande.</b>${req.reason ? ` Motif : ${esc(req.reason)}.` : ""} <button class="btn small" id="reqRetry" type="button">Refaire une demande</button>`;
-    $("#reqRetry").onclick = openShop;
-  }
-}
+/* ---------------- Modifier ma boutique : tout s'applique tout de suite, sans validation ---------------- */
+const shopDlg = $("#shopDlg"); let newLogo = null, newCover = null, coverGone = false;
 function paintLogo(src) {
   const a = $("#sAvatar"); a.style.background = tileColor(profile.shopName);
   a.innerHTML = src ? `<img src="${esc(src)}" alt="">` : esc((profile.shopName || "?")[0].toUpperCase());
 }
-async function openShop() {
+function paintCover(src) {
+  $("#sCover").style.cssText = src ? `background-image:url(${esc(src)})` : coverCss("", $("#sName").value || profile.shopName);
+  $("#sCoverDel").hidden = !src;
+}
+function openShop() {
   if (!needNet("Pas de connexion : tu ne peux pas modifier ta boutique pour l'instant.")) return;
-  try { if (req?.status === "rejected") await deleteDoc(doc(db, "profileRequests", user.uid)); } catch (err) { return toast(nice(err)); }
-  newLogo = null; $("#sLogo").value = ""; say($("#sMsg"), "");
-  $("#sName").value = profile.shopName; $("#sPhone").value = prettyPhone(profile.phone);
-  paintLogo(profile.logo ? thumb(profile.logo, 160) : ""); shopDlg.showModal();
+  newLogo = newCover = null; coverGone = false; $("#sLogo").value = ""; $("#sCoverFile").value = ""; say($("#sMsg"), "");
+  $("#sName").value = profile.shopName; $("#sPhone").value = prettyPhone(profile.phone); $("#sPay").value = profile.payments || "";
+  $("#sAbout").value = pub.about || ""; $("#sAddr").value = pub.address || ""; $("#sMail").value = pub.email || "";
+  $("#sWeb").value = pub.website || ""; $("#sFb").value = pub.facebook || ""; $("#sIg").value = pub.instagram || "";
+  paintLogo(profile.logo ? thumb(profile.logo, 160) : ""); paintCover(pub.cover ? thumb(pub.cover, 900) : "");
+  injectIcons(shopDlg); shopDlg.showModal();
 }
 $("#editShop").onclick = openShop;
-shopDlg.addEventListener("click", e => { if (e.target === shopDlg || e.target.closest("[data-close]")) shopDlg.close(); });
-$("#sLogo").addEventListener("change", e => {
+shopDlg.addEventListener("click", e => { if (e.target.closest("[data-close]")) shopDlg.close(); });
+function pickPhoto(e, set) {
   const f = e.target.files[0]; if (!f) return;
   if (f.size > MAX_MB * 1048576) { e.target.value = ""; return toast(`Cette photo fait ${(f.size / 1048576).toFixed(1).replace(".", ",")} Mo. Maximum ${MAX_MB} Mo.`); }
-  newLogo = f; paintLogo(URL.createObjectURL(f));
-});
+  set(f);
+}
+$("#sLogo").addEventListener("change", e => pickPhoto(e, f => { newLogo = f; paintLogo(URL.createObjectURL(f)); }));
+$("#sCoverFile").addEventListener("change", e => pickPhoto(e, f => { newCover = f; coverGone = false; paintCover(URL.createObjectURL(f)); }));
+$("#sCoverDel").onclick = () => { newCover = null; coverGone = true; $("#sCoverFile").value = ""; paintCover(""); };
+
 $("#fShop").addEventListener("submit", e => {
   e.preventDefault();
   const m = $("#sMsg");
-  run($("#sSend"), async () => {
-    const name = $("#sName").value.trim(), phone = normPhone($("#sPhone").value), data = {};
+  run(btnOf(e), async () => {
+    const name = $("#sName").value.trim().replace(/\s+/g, " "), phone = normPhone($("#sPhone").value);
     if (name.length < 2) throw { message: "Le nom de la boutique doit avoir au moins 2 caractères." };
     if (!phone) throw { message: "Numéro invalide. Exemple : 0990 000 001 (RDC) ou +250 788 000 000 (autre pays, avec +)." };
-    if (name !== profile.shopName) data.shopName = name;
-    if (phone !== profile.phone) {
-      if ((await getDoc(doc(db, "phoneIndex", phone))).exists()) throw { message: "Ce numéro est déjà utilisé par une boutique." };
-      data.phone = phone;
+    const mail = $("#sMail").value.trim();
+    if (mail && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail)) throw { message: "Cette adresse email n'a pas l'air correcte." };
+    const website = normLink($("#sWeb").value), facebook = normLink($("#sFb").value, "https://facebook.com/"), instagram = normLink($("#sIg").value, "https://instagram.com/");
+    if (website === null) throw { message: "Le lien du site web n'est pas valide. Exemple : https://monsite.com" };
+    if (facebook === null) throw { message: "Le lien Facebook n'est pas valide. Colle le lien de ta page ou écris ton nom d'utilisateur." };
+    if (instagram === null) throw { message: "Le lien Instagram n'est pas valide. Écris @ton_compte ou colle le lien de ton profil." };
+    const pay = $("#sPay").value.trim().replace(/\s+/g, " ").slice(0, 120);
+    const phoneChanged = phone !== profile.phone;
+    if (phoneChanged && (await getDoc(doc(db, "phoneIndex", phone))).exists()) throw { message: "Ce numéro est déjà utilisé par une boutique." };
+
+    let logo = profile.logo || "", cover = coverGone ? "" : (pub.cover || "");
+    if (newLogo) { say(m, "Envoi de la photo de profil…"); logo = await uploadImage(await compress(newLogo, 600)); }
+    if (newCover) { say(m, "Envoi de la photo de couverture…"); cover = await uploadImage(await compress(newCover, 1600)); }
+    say(m, "Enregistrement…");
+
+    // 1. identité de la boutique (nom, numéro, photo, paiements)
+    const patch = {};
+    if (name !== profile.shopName) patch.shopName = name;
+    if (phoneChanged) patch.phone = phone;
+    if (logo !== (profile.logo || "")) patch.logo = logo;
+    if (pay !== (profile.payments || "")) patch.payments = pay;
+    const changed = Object.keys(patch).length > 0;
+    if (changed) await updateDoc(doc(db, "users", user.uid), patch);
+    if (phoneChanged) {   // l'index « numéro -> email » suit le nouveau numéro (sert à se connecter avec le téléphone)
+      try { await setDoc(doc(db, "phoneIndex", phone), { uid: user.uid, email: profile.email }); }
+      catch { await updateDoc(doc(db, "users", user.uid), { phone: profile.phone }).catch(() => { }); throw { message: "Ce numéro est déjà utilisé par une boutique." }; }
+      if (profile.phone) await deleteDoc(doc(db, "phoneIndex", profile.phone)).catch(() => { });
     }
-    if (newLogo) { say(m, "Envoi de la photo…"); data.logo = await uploadImage(await compress(newLogo)); }
-    if (!Object.keys(data).length) throw { message: "Rien n'a changé : modifie le nom, le numéro ou la photo." };
-    await setDoc(doc(db, "profileRequests", user.uid), { ...data, status: "pending", createdAt: serverTimestamp() });
-    notify("new_submission", { title: "Modification de la boutique", shopName: profile.shopName });
-  }, { busy: "Envoi…", done: "Envoyé", hold: 900 })
-    .then(() => { say(m, ""); shopDlg.close(); toast("Demande envoyée. SokoPlus la vérifie et te prévient."); })
+
+    // 2. profil public : couverture, à propos, coordonnées, liens
+    const sd = { updatedAt: serverTimestamp() };
+    for (const [k, v] of Object.entries({ cover, about: $("#sAbout").value.trim(), address: $("#sAddr").value.trim(), email: mail, website, facebook, instagram })) if (v) sd[k] = v;
+    await setDoc(doc(db, "shops", user.uid), sd);
+
+    // 3. les articles déjà en ligne affichent tout de suite le nouveau nom, numéro et logo
+    if (changed) {
+      const mineSnap = await getDocs(query(collection(db, "items"), where("ownerId", "==", user.uid)));
+      await Promise.all(mineSnap.docs.map(d => updateDoc(d.ref, { shopName: name, phone, shopLogo: logo, shopPay: pay })));
+    }
+    profile = { ...profile, ...patch }; pub = { ...sd }; delete pub.updatedAt;
+    renderStatus();
+  }, { busy: "Enregistrement…", done: "Enregistré", hold: 700 })
+    .then(() => { say(m, ""); shopDlg.close(); toast("Ta boutique est à jour. Les changements sont déjà visibles."); })
     .catch(err => say(m, nice(err), "err"));
 });

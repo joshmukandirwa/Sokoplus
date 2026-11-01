@@ -8,11 +8,12 @@
   <!-- SEO -->
   <meta name="robots" content="noindex,nofollow">
   <!-- /SEO -->
-  <link rel="icon" href="icons/icon-192.png">
+  <link rel="icon" type="image/png" href="icons/logo-mark.png">
   <link rel="stylesheet"
     href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,700;0,800;0,900;1,900&family=Figtree:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/admin.css">
+  <link rel="stylesheet" href="css/admin-pro.css">
 </head>
 
 <body>
@@ -47,50 +48,68 @@
     </section>
 
     <section id="panel" hidden>
-      <div class="a-hero">
-        <div><small id="aDate"></small>
-          <h1>Tableau de bord</h1>
-          <p id="aWho"></p>
+      <div class="ad">
+        <div class="ad-scrim" id="adScrim"></div>
+        <aside class="ad-side" id="adSide" aria-label="Menu de l'administration">
+          <a class="ad-brand" href="./" aria-label="SokoPlus, accueil"><img src="icons/logo-mark.png"
+              alt=""><span>Soko<b>Plus</b><small>Administration</small></span></a>
+          <nav class="ad-nav">
+            <button type="button" data-t="home" aria-selected="true"><span data-ic="home"></span>Tableau de
+              bord</button>
+            <button type="button" data-t="pending" aria-selected="false"><span data-ic="shield"></span>À valider <em
+                id="pCount">0</em></button>
+            <button type="button" data-t="users" aria-selected="false"><span data-ic="shop"></span>Boutiques <em
+                id="uCount" class="soft">0</em></button>
+            <button type="button" data-t="items" aria-selected="false"><span data-ic="box"></span>Articles <em
+                id="iCount" class="soft">0</em></button>
+            <button type="button" data-t="reports" aria-selected="false"><span data-ic="bell"></span>Signalements <em
+                id="rCount">0</em></button>
+            <button type="button" id="maintBtn" class="ad-maint"><span data-ic="tools"></span><span
+                class="mtx">Maintenance<small id="maintS">Site en ligne</small></span></button>
+          </nav>
+          <div class="ad-promo"><span data-ic="shop"></span><b>SokoPlus</b><small>Ensemble, faisons grandir le commerce
+              à Goma.</small></div>
+          <button type="button" class="ad-out" id="logout2"><span data-ic="logout"></span>Déconnexion</button>
+        </aside>
+
+        <div class="ad-main">
+          <header class="ad-top">
+            <button type="button" class="ad-burger" id="adMenu" aria-label="Ouvrir le menu" data-ic="menu"></button>
+            <label class="ad-search"><span data-ic="search"></span><input id="aSearch" type="search"
+                placeholder="Rechercher une boutique, un article…" autocomplete="off" aria-label="Rechercher"></label>
+            <button type="button" class="ad-bell" id="adBell" aria-label="Voir ce qui attend"><span
+                data-ic="bell"></span><em id="bellN" hidden>0</em></button>
+            <div class="ad-me"><img src="icons/logo-mark.png" alt="">
+              <div><b>Admin SokoPlus</b><small id="aWho"></small></div>
+            </div>
+          </header>
+
+          <div class="ad-content">
+            <div class="ad-title">
+              <div>
+                <h1 id="adTitle">Tableau de bord</h1>
+                <p id="adSub">Vue d'ensemble de votre plateforme</p>
+              </div>
+              <span class="a-live"><i></i>En direct</span>
+            </div>
+            <div id="homeView"></div>
+            <div id="listView" hidden>
+              <div class="a-tools" id="aTools">
+                <div class="a-chips" id="aChips"></div>
+              </div>
+              <div class="list a-list" id="list"></div>
+            </div>
+          </div>
         </div>
-        <span class="a-live"><i></i>En direct</span>
+
+        <nav class="ad-bottom" aria-label="Navigation">
+          <button type="button" data-t="home" aria-selected="true"><span data-ic="home"></span>Accueil</button>
+          <button type="button" data-t="pending" aria-selected="false"><span data-ic="shield"></span>À valider</button>
+          <button type="button" data-t="users" aria-selected="false"><span data-ic="shop"></span>Boutiques</button>
+          <button type="button" data-t="items" aria-selected="false"><span data-ic="box"></span>Articles</button>
+          <button type="button" id="adMore"><span data-ic="menu"></span>Plus</button>
+        </nav>
       </div>
-      <button class="a-maint" id="maintBtn" type="button"><span class="mi" data-ic="tools"></span><span
-          class="mtx"><b>Maintenance du site</b><small id="maintS">Site en ligne</small></span><i
-          aria-hidden="true">></i></button>
-      <div class="a-kpis">
-        <div class="a-k" id="kPendBox">
-          <div class="ic-wrap" data-ic="clock"></div><b id="kPend">0</b><span>À valider</span><small
-            id="kPendSub">articles en attente</small>
-        </div>
-        <div class="a-k">
-          <div class="ic-wrap" data-ic="shop"></div><b id="kShops">0</b><span>Boutiques</span><small
-            id="kShopsSub"></small>
-        </div>
-        <div class="a-k">
-          <div class="ic-wrap" data-ic="tag"></div><b id="kItems">0</b><span>Articles en ligne</span><small
-            id="kItemsSub"></small>
-        </div>
-        <div class="a-k">
-          <div class="ic-wrap" data-ic="bell"></div><b id="kReports">0</b><span>Signalements</span><small>à
-            traiter</small>
-        </div>
-      </div>
-      <div class="a-tabs" role="tablist">
-        <button role="tab" data-t="pending" aria-selected="true"><span data-ic="clock"></span>À valider <em
-            id="pCount">0</em></button>
-        <button role="tab" data-t="users" aria-selected="false"><span data-ic="shop"></span>Boutiques <em
-            id="uCount">0</em></button>
-        <button role="tab" data-t="items" aria-selected="false"><span data-ic="tag"></span>Articles <em
-            id="iCount">0</em></button>
-        <button role="tab" data-t="reports" aria-selected="false"><span data-ic="bell"></span>Signalements <em
-            id="rCount">0</em></button>
-      </div>
-      <div class="a-tools" id="aTools">
-        <label class="a-search"><span data-ic="search"></span><input id="aSearch" type="search" placeholder="Rechercher"
-            autocomplete="off" aria-label="Rechercher"></label>
-        <div class="a-chips" id="aChips"></div>
-      </div>
-      <div class="list a-list" id="list"></div>
     </section>
   </main>
   <dialog id="maintDlg">

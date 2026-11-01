@@ -1,4 +1,5 @@
 import { decimalsOf } from "./pays.js";
+import { icon } from "./icons.js";
 import { firebaseConfig, VAPID_KEY, CLOUDINARY, SITE } from "./firebase-config.js";
 
 export { SITE };
@@ -105,3 +106,32 @@ export async function uploadImage(blob) {
 /* ---------- Notifications : état local (sans Firebase) ---------- */
 export const pushAvailable = () => !!VAPID_KEY && "Notification" in window && "serviceWorker" in navigator;
 export const pushState = () => store.get("push", null); // { token, cats }
+
+
+/* ---------- Profil public de la boutique : liens, coordonnées, couverture ---------- */
+/* Accepte un lien complet, un nom de domaine, ou (si base est donné) un simple nom d'utilisateur. Renvoie "" si vide, null si invalide. */
+export function normLink(v, base = "") {
+  v = String(v || "").trim(); if (!v) return "";
+  if (/^https?:\/\//i.test(v)) v = v.replace(/^http:\/\//i, "https://");
+  else if (base && /^@?[\w.\-]+$/.test(v)) v = base + v.replace(/^@/, "");
+  else if (/^[\w\-]+(\.[\w\-]+)+(\/\S*)?$/.test(v)) v = "https://" + v;
+  else return null;
+  return v.length <= 200 && !/\s/.test(v) ? v : null;
+}
+const niceLink = u => u.replace(/^https:\/\/(www\.)?/, "").replace(/\/$/, "");
+/* Lignes de coordonnées (adresse, email, liens) : tout est échappé, les liens doivent être en https */
+export function shopInfoHtml(x = {}, phone = "") {
+  const row = (ic, inner) => `<li>${icon(ic)}<span>${inner}</span></li>`;
+  const a = (u, label) => safeUrl(u) ? `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(label)}</a>` : "";
+  const out = [];
+  if (phone) out.push(row("phoneCall", esc(prettyPhone(phone))));
+  if (x.address) out.push(row("pin", esc(x.address)));
+  if (x.email) out.push(row("mail", `<a href="mailto:${esc(x.email)}">${esc(x.email)}</a>`));
+  if (x.website && safeUrl(x.website)) out.push(row("globe", a(x.website, niceLink(x.website))));
+  if (x.facebook && safeUrl(x.facebook)) out.push(row("link", a(x.facebook, "Facebook")));
+  if (x.instagram && safeUrl(x.instagram)) out.push(row("link", a(x.instagram, "Instagram")));
+  return out.join("");
+}
+export const coverCss = (url, name = "") => safeUrl(url)
+  ? `background-image:url(${esc(thumb(url, 900))})`
+  : `background-image:linear-gradient(120deg, ${tileColor(name)}, #ff6a00)`;

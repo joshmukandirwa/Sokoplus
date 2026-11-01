@@ -1,0 +1,9 @@
+Modeles d'e-mails SokoPlus (a coller dans Firebase)
+
+Firebase > Authentication > Modeles (onglet Templates) :
+1. Reinitialisation du mot de passe : colle emails/reset-password.html dans le champ Message.
+   Objet : Choisis ton nouveau mot de passe SokoPlus
+2. Validation de l'adresse e-mail : colle emails/verify-email.html dans le champ Message.
+   Objet : Confirme ton adresse e-mail SokoPlus
+Pour les deux : Nom de l'expediteur = SokoPlus, Repondre a = Joshmukandirwa@gmail.com.
+Les variables %LINK%, %EMAIL% et %APP_NAME% sont remplacees par Firebase a l'envoi.

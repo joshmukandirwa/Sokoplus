@@ -2,7 +2,9 @@
 import { db, collection, query, orderBy, limit, onSnapshot, addDoc, serverTimestamp } from "./fb.js";
 import { SITE, configured, configBanner, $, $$, esc, store, money, waLink, prettyPhone, toast, ago, thumb, tileColor, isNetErr, needNet, NET_MSG } from "./common.js";
 import { svg, favBadge } from "./ui.js";
+import { icon as ic } from "./icons.js";
 import { countryOf, countryName, toUsd } from "./pays.js";
+import { renderReviews } from "./avis.js";
 
 export const items = new Map();
 export const favs = new Set(store.get("favs", []));
@@ -172,7 +174,7 @@ export const counts = () => { const c = {}; items.forEach(i => { if (cityOk(i)) 
 export const pct = it => it.oldPrice > it.price ? Math.round((1 - it.price / it.oldPrice) * 100) : 0;
 export const isPromo = it => it.tag === "promo" || pct(it) > 0;
 export const isDeal = it => it.tag === "offre";
-const CHECK = '<svg class="ic cert-ic" viewBox="0 0 24 24" aria-label="Boutique certifiée"><path d="M12 2l2.4 2 3.1-.3 1 3 2.7 1.6-.9 3 .9 3-2.7 1.6-1 3-3.1-.3L12 22l-2.4-2-3.1.3-1-3L2.8 15.7l.9-3-.9-3L5.5 8l1-3 3.1.3z" fill="currentColor" stroke="none"/><path d="m8.5 12 2.5 2.5 4.5-5" fill="none" stroke="#fff" stroke-width="2"/></svg>';
+const CHECK = '<img class="ic cert-ic" src="icons/certifie.png" width="16" height="16" alt="Boutique certifiée" title="Boutique certifiée SokoPlus" draggable="false">';
 export const certMark = it => it.certified ? CHECK : "";
 export const priceHTML = it => `<span class="now">${money(it.price, it.currency)}</span>${it.oldPrice > it.price ? `<s class="old">${money(it.oldPrice, it.currency)}</s><b class="off">-${pct(it)}%</b>` : ""}`;
 
@@ -186,9 +188,9 @@ export function cardHTML(it, i = 0) {
   return `<article class="card${fresh.has(it.id) ? " new" : ""}${pop}" style="--i:${Math.min(i, 14)}" data-id="${esc(it.id)}" tabindex="0" role="button" aria-label="${esc(it.title)}">
     <button class="fav" data-fav="${esc(it.id)}" aria-pressed="${isFav}" aria-label="Favori">${svg("heart")}</button>
     <div class="thumb" style="background:${tileColor(it.shopName)}"><span>${esc((it.title || "?")[0])}</span>${img ? `<img src="${esc(img)}" alt="" loading="lazy" draggable="false"${it.fb ? ` data-fb="${esc(it.fb[0])}"` : ""}>` : ""}
-      ${it.status === "sold" ? '<em class="badge sold">Vendu</em>' : isDeal(it) ? '<em class="badge deal">Offre du jour</em>' : isPromo(it) ? `<em class="badge promo">${pct(it) ? "-" + pct(it) + "%" : "Promo"}</em>` : it.featured ? '<em class="badge">À la une</em>' : ""}</div>
+      ${it.status === "sold" ? '<em class="badge sold">Vendu</em>' : isDeal(it) ? '<em class="badge deal">Offre du jour</em>' : isPromo(it) ? `<em class="badge bpromo">${pct(it) ? "-" + pct(it) + "%" : "Promo"}</em>` : it.featured ? '<em class="badge">À la une</em>' : ""}</div>
     <div class="in"><h3>${esc(it.title)}</h3><div class="price">${priceHTML(it)}</div>
-    <div class="vend sh">${shopAv(it, 20)}<span>${esc(it.shopName)}${certMark(it)} · ${esc(where(it))}</span></div><div class="vend">${ago(ms(it))}</div></div></article>`;
+    <div class="vend sh">${shopAv(it, 16)}<span>${esc(it.shopName)}${certMark(it)}</span></div><div class="vend loc">${esc(where(it))} · ${ago(ms(it))}</div></div></article>`;
 }
 export function paint(el, list, emptyEl) {
   el.innerHTML = list.map((it, i) => cardHTML(it, i)).join("");
@@ -218,15 +220,20 @@ function dialog() {
   d.addEventListener("close", () => { const u = new URL(location.href); u.searchParams.delete("item"); history.replaceState(null, "", u.pathname + u.search + u.hash); });
   d.addEventListener("click", async e => {
     if (e.target === d || e.target.closest("[data-close]")) return d.close();
+    if (e.target.closest("[data-gorev]")) { e.preventDefault(); d.querySelector("#pdRev")?.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
     const f = e.target.closest("[data-dfav]");
     if (f) { const on = toggleFav(current.id); f.setAttribute("aria-pressed", on); return; }
-    const s = e.target.closest("[data-sim]"); if (s) return openDetail(s.dataset.sim);
-    if (e.target.id === "shareBtn") {
+    const g = d.querySelector(".gal");
+    const nav = e.target.closest("[data-gnav]"); if (nav && g) return g.scrollBy({ left: Number(nav.dataset.gnav) * g.clientWidth, behavior: "smooth" });
+    const th = e.target.closest("[data-thumb]"); if (th && g) return g.scrollTo({ left: Number(th.dataset.thumb) * g.clientWidth, behavior: "smooth" });
+    const zi = e.target.closest(".pd-main .gal img"); if (zi) return zoom(d, zi.currentSrc || zi.src);
+    if (e.target.closest("[data-simshop]")) { d.close(); location.href = `recherche.html?shop=${encodeURIComponent(current.ownerId)}`; return; }
+    if (e.target.closest("#shareBtn, [data-share]")) {
       const url = shareUrl(current.id);
       try { if (navigator.share) await navigator.share({ title: current.title, url }); else { await navigator.clipboard.writeText(url); toast("Lien copié"); } }
       catch { prompt("Copie ce lien :", url); }
     }
-    if (e.target.id === "shopBtn") { d.close(); location.href = `recherche.html?shop=${encodeURIComponent(current.ownerId)}`; }
+    if (e.target.closest("#shopBtn, [data-shop]")) { d.close(); location.href = `recherche.html?shop=${encodeURIComponent(current.ownerId)}`; }
     if (e.target.id === "rSend") {
       if (!configured) return toast("Mode démo : signalement non envoyé.");
       if (!needNet("Pas de connexion : ton signalement n'est pas parti. Réessaie quand le réseau revient.")) return;
@@ -236,33 +243,97 @@ function dialog() {
   });
   return d;
 }
+/* Produits proches : même catégorie d'abord, puis même boutique, mots du titre en commun, même ville */
+function similarTo(it, n = 12) {
+  const words = norm(it.title).split(/\s+/).filter(w => w.length > 2);
+  const score = x => (x.category === it.category ? 3 : 0) + (x.ownerId === it.ownerId ? 2 : 0) + (x.city && x.city === it.city ? 1 : 0)
+    + words.reduce((t, w) => t + (norm(x.title).includes(w) ? 1 : 0), 0);
+  return [...items.values()].filter(x => x.id !== it.id && x.status !== "sold" && (x.category === it.category || x.ownerId === it.ownerId))
+    .sort((a, b) => score(b) - score(a) || ms(b) - ms(a)).slice(0, n);
+}
+function zoom(d, src) {
+  const z = document.createElement("div"); z.className = "pd-zoom"; z.innerHTML = `<img src="${esc(src)}" alt=""><button type="button" class="x" aria-label="Fermer">×</button>`;
+  z.addEventListener("click", () => z.remove()); d.append(z);
+}
 export function openDetail(id) {
   const it = items.get(id); if (!it) return;
   current = it; fresh.delete(id);
   const d = dialog(), imgs = (it.images || []).map(u => thumb(u, 900)).filter(Boolean);
   const msg = `Bonjour ${it.shopName}, je suis intéressé(e) par « ${it.title} » (${money(it.price, it.currency)}) vu sur SokoPlus : ${shareUrl(id)}`;
-  const sim = [...items.values()].filter(x => x.id !== id && x.category === it.category && x.status !== "sold").slice(0, 4);
-  $("#dBody").innerHTML = `
-    <div class="dlg-head"><h2>${esc(it.title)}</h2><button class="x" data-close aria-label="Fermer">×</button></div>
-    <div class="gal">${imgs.length ? imgs.map((u, n) => `<img src="${esc(u)}" alt="${esc(it.title)}" draggable="false"${it.fb ? ` data-fb="${esc(it.fb[n] || it.fb[0])}"` : ""}>`).join("") : `<div class="ph" style="background:${tileColor(it.shopName)}">${esc((it.title || "?")[0])}</div>`}</div>
-    <div class="row between"><div class="dprice">${priceHTML(it)} ${it.status === "sold" ? '<span class="pill bad">Vendu</span>' : ""}</div>
-      <button class="fav inl" data-dfav aria-pressed="${favs.has(id)}" aria-label="Favori">${svg("heart")}</button></div>
-    ${it.description ? `<div class="desc">${esc(it.description)}</div>` : ""}
-    <div class="meta">
-      <span class="shl">${shopAv(it, 26)}<span>Boutique : <b>${esc(it.shopName)}</b>${certMark(it)}${it.certified ? ' <span class="pill ok">Certifiée SokoPlus</span>' : ""}</span></span><span>Adresse : <b>${esc(where(it))}</b></span>
-      <span>Catégorie : <b>${esc(it.category)}</b> · publié ${ago(ms(it))}</span><span>Téléphone : <b>${esc(prettyPhone(it.phone))}</b></span>
+  const sim = similarTo(it), many = imgs.length > 1, off = pct(it), sold = it.status === "sold";
+  const buy = sold ? '<span class="pdp-sold">Cet article est vendu</span>'
+    : `<a class="pdp-call" href="tel:+${esc(String(it.phone).replace(/\D/g, ""))}">${ic("phone")}<span>Appeler</span></a><a class="pdp-wa" href="${esc(waLink(it.phone, msg))}" target="_blank" rel="noopener">${ic("chat")}<span>Commander sur WhatsApp</span></a>`;
+  const pay = it.shopPay ? `Accepté par la boutique : ${esc(it.shopPay)}. ` : "Se règle directement avec le vendeur. ";
+  const spec = [["Catégorie", it.category], ["Boutique", it.shopName], ["Lieu", where(it)], ["Téléphone", prettyPhone(it.phone)], ["Publié", ago(ms(it))]].filter(r => r[1]);
+  $("#dBody").innerHTML = `<div class="pdp">
+    <div class="pdp-bar"><div class="pdp-bar-in">
+      <button type="button" class="pdp-b" data-close aria-label="Retour">${ic("back")}</button>
+      <button type="button" class="pdp-b" data-share aria-label="Partager">${ic("link")}</button>
+    </div></div>
+    <div class="pdp-grid">
+      <div class="pd-media${many ? " many" : ""}">
+        <div class="pd-main">
+          <div class="gal">${imgs.length ? imgs.map((u, n) => `<img src="${esc(u)}" alt="${esc(it.title)}" draggable="false"${it.fb ? ` data-fb="${esc(it.fb[n] || it.fb[0])}"` : ""}>`).join("") : `<div class="ph" style="background:${tileColor(it.shopName)}">${esc((it.title || "?")[0])}</div>`}</div>
+          ${many ? `<button class="pd-nav prev" data-gnav="-1" aria-label="Photo précédente">‹</button><button class="pd-nav next" data-gnav="1" aria-label="Photo suivante">›</button><span class="pd-count" id="gCount">1/${imgs.length}</span>` : ""}
+          ${sold ? '<em class="badge sold">Vendu</em>' : ""}
+          <button class="fav pdp-fav" data-dfav aria-pressed="${favs.has(id)}" aria-label="Favori">${svg("heart")}</button>
+        </div>
+        ${many ? `<div class="pd-thumbs">${imgs.map((u, n) => `<button type="button" data-thumb="${n}" class="${n ? "" : "on"}" aria-label="Photo ${n + 1}"><img src="${esc(thumb(it.images[n], 120))}" alt="" draggable="false"></button>`).join("")}</div>` : ""}
+      </div>
+      <div class="pdp-info">
+        <h2 class="pd-title">${esc(it.title)}</h2>
+        <div class="pdp-rate" id="pdRate"><span>Publié ${ago(ms(it))}</span></div>
+        <div class="pdp-price${off ? " promo" : ""}">
+          ${off ? `<div class="pdp-band"><b>Promo</b><span>-${off}% maintenant</span></div>` : ""}
+          <div class="pdp-pbody"><div class="dprice">${priceHTML(it)}${sold ? ' <span class="pill bad">Vendu</span>' : ""}</div>${off ? `<p class="pdp-save">Tu économises ${money(it.oldPrice - it.price, it.currency)}</p>` : ""}</div>
+        </div>
+        <ul class="pdp-svc">
+          <li>${ic("chat")}<span><b>Commande directe</b>Discute avec le vendeur sur WhatsApp ou par appel.</span></li>
+          <li>${ic("card")}<span><b>Paiement</b>${pay}Ne paie jamais avant d'avoir vérifié l'article.</span></li>
+          <li>${ic("pin")}<span><b>Lieu</b>${esc(where(it))}</span></li>
+        </ul>
+      </div>
+      <aside class="pdp-side">
+        <div class="pd-shop">
+          ${shopAv(it, 44)}
+          <div><b>${esc(it.shopName)}${certMark(it)}</b><small>${esc(where(it))}</small></div>
+          <button class="btn ghost small" id="shopBtn" type="button">Voir la boutique</button>
+        </div>
+        <div class="pdp-actions">${buy}<button class="btn ghost" id="shareBtn" type="button">Partager</button></div>
+      </aside>
     </div>
-    <div class="actions">
-      ${it.status === "sold" ? "" : `<a class="btn ok" href="${esc(waLink(it.phone, msg))}" target="_blank" rel="noopener">Commander sur WhatsApp</a>
-      <a class="btn ghost" href="tel:+${esc(String(it.phone).replace(/\D/g, ""))}">Appeler</a>`}
-      <button class="btn ghost" id="shareBtn">Partager</button><button class="btn ghost" id="shopBtn">Voir la boutique</button>
+    <div class="pdp-secs">
+      <section class="pdp-sec"><h3 class="pd-h">Description de l'article</h3>
+        ${it.description ? `<div class="desc">${esc(it.description)}</div>` : '<p class="pd-empty">Le vendeur n\'a pas ajouté de description.</p>'}
+        <dl class="pdp-spec">${spec.map(r => `<div><dt>${r[0]}</dt><dd>${esc(r[1])}</dd></div>`).join("")}</dl>
+      </section>
+      <section class="pdp-sec"><div class="reviews" id="pdRev"></div></section>
+      <section class="pdp-sec"><h3 class="pd-h">Produits similaires</h3>
+        ${sim.length ? `<div class="grid pd-sim" id="pdSim">${sim.map((x, i) => cardHTML(x, i)).join("")}</div>`
+          : `<p class="pd-empty">Aucun produit similaire pour le moment.</p><button class="btn ghost small" type="button" data-simshop>Voir les articles de ${esc(it.shopName)}</button>`}
+      </section>
+      <details class="pdp-sec"><summary class="note" style="cursor:pointer">Signaler cet article</summary>
+        <div class="row" style="margin-top:8px"><select id="rReason" aria-label="Motif"><option>Arnaque ou faux article</option><option>Article interdit</option><option>Prix faux</option><option>Déjà vendu</option><option>Autre</option></select>
+        <button class="btn ghost small" id="rSend">Envoyer</button></div></details>
     </div>
-    ${sim.length ? `<h3 class="subh">Dans la même catégorie</h3><div class="simrow">${sim.map(s => `<button class="sim" data-sim="${esc(s.id)}"><span style="background:${tileColor(s.shopName)}">${esc((s.title || "?")[0])}${thumb(s.images?.[0], 200) ? `<img src="${esc(thumb(s.images[0], 200))}" alt="" draggable="false"${s.fb ? ` data-fb="${esc(s.fb[0])}"` : ""}>` : ""}</span><b>${esc(s.title)}</b><i>${money(s.price, s.currency)}</i></button>`).join("")}</div>` : ""}
-    <p class="note">Paiement en Mobile Money (M-Pesa, Airtel Money, Orange Money) directement au vendeur, après accord sur WhatsApp. Ne paie jamais avant d'avoir vérifié l'article.</p>
-    <details><summary class="note" style="cursor:pointer">Signaler cet article</summary>
-      <div class="row" style="margin-top:8px"><select id="rReason" aria-label="Motif"><option>Arnaque ou faux article</option><option>Article interdit</option><option>Prix faux</option><option>Déjà vendu</option><option>Autre</option></select>
-      <button class="btn ghost small" id="rSend">Envoyer</button></div></details>`;
+    <div class="pdp-bottom"><button type="button" class="pdp-shopb" data-shop aria-label="Voir la boutique">${ic("shop")}</button>${buy}</div>
+  </div>`;
+  const g = d.querySelector(".gal");
+  if (many && g) g.addEventListener("scroll", () => {
+    const i = Math.round(g.scrollLeft / g.clientWidth);
+    d.querySelectorAll("[data-thumb]").forEach((b, n) => b.classList.toggle("on", n === i));
+    const c = d.querySelector("#gCount"); if (c) c.textContent = `${i + 1}/${imgs.length}`;
+  }, { passive: true });
+  const sg = d.querySelector("#pdSim"); if (sg) bind(sg);
+  const rb = d.querySelector("#pdRev");
+  rb.addEventListener("rvdone", ev => {
+    const r = d.querySelector("#pdRate"); if (!r) return;
+    const { avg, n } = ev.detail, k = Math.round(avg);
+    r.innerHTML = (n ? `<span class="st">${"★".repeat(k)}${"☆".repeat(5 - k)}</span><b>${avg.toFixed(1).replace(".", ",")}</b><a href="#pdRev" data-gorev>${n} avis</a>` : "<span>Pas encore d'avis</span>") + `<span>· publié ${ago(ms(it))}</span>`;
+  });
+  renderReviews(rb, id, it.ownerId, it.title);
   if (!d.open) d.showModal();
+  d.scrollTop = 0;
   const u = new URL(location.href); u.searchParams.set("item", id); history.replaceState(null, "", u.pathname + u.search + u.hash);
 }
 export function openFromUrl() { const id = new URLSearchParams(location.search).get("item"); if (id) openDetail(id); }

@@ -3,7 +3,7 @@
 import { db, doc, onSnapshot } from "./fb.js";
 import { icon } from "./icons.js";
 
-const KEY = "soko_maint", MSG = "SokoPlus fait un petit entretien pour mieux te servir. On revient très vite, merci de ta patience.";
+const KEY = "soko_maint";
 let ov = null, cur = null, timer = 0, frozen = [];
 const pad = n => String(n).padStart(2, "0");
 const keep = v => { try { v ? localStorage.setItem(KEY, JSON.stringify(v)) : localStorage.removeItem(KEY); } catch { /* stockage indisponible */ } };
@@ -13,25 +13,35 @@ function css() {
   if (document.getElementById("mtCss")) return;
   const s = document.createElement("style"); s.id = "mtCss";
   s.textContent = `
-#mt{position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;overflow:auto;padding:max(20px,env(safe-area-inset-top)) 18px max(20px,env(safe-area-inset-bottom));color:#fff;text-align:center;
-  background:radial-gradient(120% 90% at 85% 0%,#1470ff 0%,#0b1a3a 50%,#03060d 100%);font-family:'Figtree','Segoe UI',system-ui,sans-serif;animation:mtIn .45s ease both}
-#mt::after{content:"";position:fixed;right:-80px;bottom:-90px;width:260px;height:260px;border-radius:50%;background:#ff9a00;opacity:.18;filter:blur(14px);pointer-events:none}
-#mt .mt-in{position:relative;z-index:1;width:min(440px,100%);display:grid;gap:16px;justify-items:center}
-#mt .mt-logo{display:flex;align-items:center;gap:10px;font:900 1.5rem 'Montserrat','Segoe UI',sans-serif;letter-spacing:-.5px}
-#mt .mt-logo img{width:44px;height:44px;object-fit:contain}#mt .mt-logo b{color:#18a8ff}
-#mt .mt-gear{width:84px;height:84px;border-radius:26px;display:grid;place-items:center;background:#ff9a00;color:#03060d;border:2px solid #fff;box-shadow:0 6px 0 #03060d66;animation:mtWig 2.6s ease-in-out infinite}
-#mt .mt-gear svg{width:44px;height:44px}
-#mt h1{margin:0;font:900 clamp(1.6rem,7vw,2.1rem)/1.1 'Montserrat','Segoe UI',sans-serif}
-#mt .mt-msg{margin:0;font-size:1.02rem;line-height:1.5;opacity:.92;overflow-wrap:anywhere;white-space:pre-line}
-#mt .mt-clock{display:flex;gap:8px;justify-content:center;margin-top:4px}
-#mt .mt-clock div{min-width:70px;padding:12px 6px 9px;border-radius:16px;background:#ffffff1a;border:1.5px solid #ffffff40;display:grid;gap:2px}
-#mt .mt-clock b{font:900 1.9rem/1 'Montserrat','Segoe UI',sans-serif;font-variant-numeric:tabular-nums}
-#mt .mt-clock small{font-size:.72rem;font-weight:700;opacity:.75;text-transform:uppercase;letter-spacing:.04em}
-#mt .mt-end{margin:0;font-weight:800;color:#ffc766}
-#mt .mt-foot{margin:0;font-size:.84rem;opacity:.7}
+#mt{position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;overflow:auto;padding:max(20px,env(safe-area-inset-top)) 18px max(20px,env(safe-area-inset-bottom));text-align:center;
+  color:var(--ink,#081a3d);background:var(--bg,#f1f4fb);font-family:var(--body,'Figtree','Segoe UI',system-ui,sans-serif);animation:mtIn .4s ease both}
+#mt::before{content:"";position:fixed;inset:0;background-image:radial-gradient(var(--soft,#e4ebfa) 2px,transparent 2.5px);background-size:22px 22px;pointer-events:none}
+#mt .mt-in{position:relative;z-index:1;width:min(420px,100%);display:grid;gap:18px;justify-items:center}
+#mt .mt-logo{height:42px;width:auto;max-width:70%;object-fit:contain}
+#mt .mt-stage{position:relative;width:min(300px,86%);height:150px;margin:6px 0 2px}
+#mt .mt-stage i{position:absolute;display:grid;place-items:center;border:var(--bw,2px) solid var(--line,#081a3d);box-shadow:0 4px 0 var(--line,#081a3d);color:var(--line,#081a3d)}
+#mt .mt-stage i svg{width:55%;height:55%}
+#mt .mt-main{left:50%;top:50%;width:92px;height:92px;margin:-46px 0 0 -46px;border-radius:28px;background:var(--orange,#ff9a00);animation:mtWig 2.6s ease-in-out infinite}
+#mt .mt-main svg{width:46px!important;height:46px!important}
+#mt .mt-a,#mt .mt-b,#mt .mt-c{width:52px;height:52px;border-radius:16px}
+#mt .mt-a{left:2%;top:8%;background:var(--sky,#18a8ff);transform:rotate(-10deg);animation:mtBob 3.2s ease-in-out infinite}
+#mt .mt-b{right:2%;top:2%;background:#fff;transform:rotate(9deg);animation:mtBob 3.8s ease-in-out -1.1s infinite}
+#mt .mt-c{right:10%;bottom:0;background:var(--blue,#1470ff);color:#fff;transform:rotate(-6deg);animation:mtBob 3.5s ease-in-out -2s infinite}
+#mt .mt-c svg{color:#fff}
+#mt h1{margin:0;font:900 clamp(1.7rem,8vw,2.3rem)/1.05 var(--display,'Montserrat','Segoe UI',sans-serif);letter-spacing:-.5px}
+#mt h1 span{color:var(--blue,#1470ff);display:inline-block;background:linear-gradient(transparent 62%,#ff9a0066 62%)}
+#mt .mt-msg{margin:-4px 0 0;font-size:1rem;line-height:1.45;color:var(--muted,#5b6784);overflow-wrap:anywhere;white-space:pre-line}
+#mt .mt-clock{display:flex;gap:10px;justify-content:center}
+#mt .mt-clock div{min-width:68px;padding:12px 6px 9px;border-radius:16px;background:var(--surface,#fff);border:var(--bw,2px) solid var(--line,#081a3d);box-shadow:0 4px 0 var(--line,#081a3d);display:grid;gap:3px}
+#mt .mt-clock div:nth-child(even){transform:translateY(5px)}
+#mt .mt-clock b{font:900 1.8rem/1 var(--display,'Montserrat','Segoe UI',sans-serif);font-variant-numeric:tabular-nums}
+#mt .mt-clock small{font-size:.7rem;font-weight:800;color:var(--muted,#5b6784);text-transform:uppercase;letter-spacing:.05em}
+#mt .mt-end{margin:8px 0 0;display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;background:var(--orange,#ff9a00);color:#081a3d;border:var(--bw,2px) solid var(--line,#081a3d);box-shadow:0 3px 0 var(--line,#081a3d);font-weight:800;font-size:.92rem}
+#mt .mt-end svg{width:18px;height:18px}
 @keyframes mtIn{from{opacity:0}}
 @keyframes mtWig{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
-@media(prefers-reduced-motion:reduce){#mt,#mt .mt-gear{animation:none}}`;
+@keyframes mtBob{0%,100%{translate:0 0}50%{translate:0 -9px}}
+@media(prefers-reduced-motion:reduce){#mt,#mt .mt-stage i{animation:none}}`;
   document.head.appendChild(s);
 }
 
@@ -41,21 +51,24 @@ function show() {
   if (!ov) {
     ov = document.createElement("div"); ov.id = "mt"; ov.setAttribute("role", "alertdialog"); ov.setAttribute("aria-live", "polite");
     ov.innerHTML = `<div class="mt-in">
-      <div class="mt-logo"><img src="icons/logo-mark.png" alt=""><span>SOKO<b>PLUS</b></span></div>
-      <div class="mt-gear">${icon("tools")}</div>
-      <h1>Maintenance en cours</h1>
+      <img class="mt-logo" src="icons/logo-full.png" alt="SokoPlus">
+      <div class="mt-stage" aria-hidden="true">
+        <i class="mt-a">${icon("tag")}</i><i class="mt-b">${icon("box")}</i><i class="mt-c">${icon("shop")}</i>
+        <i class="mt-main">${icon("tools")}</i>
+      </div>
+      <h1>On range les <span>rayons</span></h1>
       <p class="mt-msg"></p>
-      <div class="mt-clock"><div data-u="d"><b>0</b><small>jours</small></div><div data-u="h"><b>00</b><small>heures</small></div><div data-u="n"><b>00</b><small>min</small></div><div data-u="s"><b>00</b><small>sec</small></div></div>
-      <p class="mt-end"></p>
-      <p class="mt-foot">Cette page se rouvrira toute seule dès que c'est terminé.</p></div>`;
+      <div class="mt-clock"><div data-u="d"><b>0</b><small>jours</small></div><div data-u="h"><b>00</b><small>h</small></div><div data-u="n"><b>00</b><small>min</small></div><div data-u="s"><b>00</b><small>sec</small></div></div>
+      <p class="mt-end">${icon("clock")}<span></span></p></div>`;
     document.body.appendChild(ov);
     frozen = [...document.body.children].filter(el => el !== ov && !el.inert);
     frozen.forEach(el => { el.inert = true; });
     document.documentElement.style.overflow = "hidden";
     timer = setInterval(tick, 1000);
   }
-  ov.querySelector(".mt-msg").textContent = cur.message || MSG;
-  ov.querySelector(".mt-end").textContent = "Retour prévu le " + new Date(cur.until).toLocaleString("fr-FR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+  const m = ov.querySelector(".mt-msg"); m.textContent = cur.message || ""; m.hidden = !cur.message;
+  const end = new Date(cur.until), hm = end.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  ov.querySelector(".mt-end span").textContent = end.toDateString() === new Date().toDateString() ? "Retour vers " + hm : "Retour " + end.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }) + " · " + hm;
   tick();
 }
 function hide() {

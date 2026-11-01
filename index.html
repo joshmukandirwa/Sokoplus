@@ -9,7 +9,7 @@
   <!-- Verification Google : ajoute ici la balise meta google-site-verification donnee par Search Console -->
   <meta name="google-site-verification" content="5caeQAVbDadATfH9jVNHR0_UapASoI7n9THtvhynlqM" />
   <meta name="description"
-    content="Le marché en ligne d'Afrique : trouve des articles près de chez toi, contacte le vendeur sur WhatsApp et paie en Mobile Money. Vends gratuitement 30 jours.">
+    content="Le marché en ligne d'Afrique : trouve des articles près de chez toi, contacte le vendeur directement sur WhatsApp. Vends gratuitement 30 jours.">
   <meta name="robots" content="index,follow,max-image-preview:large">
   <link rel="canonical" href="https://sokoplus-rdc.vercel.app/">
   <meta property="og:type" content="website">
@@ -17,7 +17,7 @@
   <meta property="og:locale" content="fr_FR">
   <meta property="og:title" content="SokoPlus - Achetez et vendez partout en Afrique">
   <meta property="og:description"
-    content="Le marché en ligne d'Afrique : trouve des articles près de chez toi, contacte le vendeur sur WhatsApp et paie en Mobile Money. Vends gratuitement 30 jours.">
+    content="Le marché en ligne d'Afrique : trouve des articles près de chez toi, contacte le vendeur directement sur WhatsApp. Vends gratuitement 30 jours.">
   <meta property="og:url" content="https://sokoplus-rdc.vercel.app/">
   <meta property="og:image" content="https://sokoplus-rdc.vercel.app/icons/og-image.png">
   <meta property="og:image:width" content="1200">
@@ -26,15 +26,15 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="SokoPlus - Achetez et vendez partout en Afrique">
   <meta name="twitter:description"
-    content="Le marché en ligne d'Afrique : trouve des articles près de chez toi, contacte le vendeur sur WhatsApp et paie en Mobile Money. Vends gratuitement 30 jours.">
+    content="Le marché en ligne d'Afrique : trouve des articles près de chez toi, contacte le vendeur directement sur WhatsApp. Vends gratuitement 30 jours.">
   <meta name="twitter:image" content="https://sokoplus-rdc.vercel.app/icons/og-image.png">
   <script
     type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Organization","@id":"https://sokoplus-rdc.vercel.app/#org","name":"SokoPlus","url":"https://sokoplus-rdc.vercel.app/","logo":"https://sokoplus-rdc.vercel.app/icons/icon-512.png","areaServed":{"@type":"Country","name":"République démocratique du Congo"}},{"@type":"WebSite","@id":"https://sokoplus-rdc.vercel.app/#site","url":"https://sokoplus-rdc.vercel.app/","name":"SokoPlus","inLanguage":"fr","publisher":{"@id":"https://sokoplus-rdc.vercel.app/#org"},"potentialAction":{"@type":"SearchAction","target":"https://sokoplus-rdc.vercel.app/recherche.html?q={search_term_string}","query-input":"required name=search_term_string"}}]}</script>
   <!-- /SEO -->
   <meta name="theme-color" content="#1b1b1f">
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="/favicon.ico" sizes="48x48">
-  <link rel="icon" type="image/png" href="/icons/icon-192.png" sizes="192x192">
+  <link rel="icon" type="image/png" href="icons/logo-mark.png">
+  <link rel="icon" type="image/png" href="icons/logo-mark.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet"
@@ -80,7 +80,7 @@
       <a class="promo p3" href="categories.html">
         <div>
           <h2>Le vendeur vous répond sur WhatsApp</h2>
-          <p>Vous vous mettez d'accord, puis vous payez en Mobile Money.</p>
+          <p>Vous vous mettez d'accord directement avec lui, sans intermédiaire.</p>
         </div><span class="btn">Découvrir</span>
       </a>
     </div>
@@ -94,25 +94,18 @@
       <div class="chiprow" id="cats"></div>
     </section>
 
-    <section data-reveal id="dealSec" class="rail deal" hidden>
+    <section data-reveal id="dealSec" class="rail rdeal" hidden>
       <div class="sech">
         <h2>Offres du jour</h2><a class="more" href="recherche.html?t=offre">Voir tout</a>
       </div>
       <div class="hrow" id="dealRow"></div>
     </section>
 
-    <section data-reveal id="promoSec" class="rail promo" hidden>
+    <section data-reveal id="promoSec" class="rail rpromo" hidden>
       <div class="sech">
         <h2>Promotions</h2><a class="more" href="recherche.html?t=promo">Voir tout</a>
       </div>
       <div class="hrow" id="promoRow"></div>
-    </section>
-
-    <section data-reveal id="certSec" hidden>
-      <div class="sech">
-        <h2>Boutiques certifiées</h2><a class="more" href="recherche.html?t=cert">Voir tout</a>
-      </div>
-      <div class="shoprow" id="certShops"></div>
     </section>
 
     <section data-reveal id="shopsec" hidden>
@@ -122,12 +115,6 @@
       <div class="shoprow" id="shops"></div>
     </section>
 
-    <section id="sugsec" data-reveal hidden>
-      <div class="sech">
-        <h2>Suggestions pour toi</h2>
-      </div>
-      <div class="grid" id="sugGrid"></div>
-    </section>
 
     <section id="latest" data-reveal>
       <div class="sech">
@@ -165,7 +152,7 @@
     <img src="icons/logo-full.png" alt="SokoPlus, tous vos achats, un seul endroit" draggable="false">
     <div class="row"><a href="vendeur.html">Espace vendeur</a><a href="parametres.html">Paramètres</a><a
         href="confidentialite.html">Confidentialité</a><span>Fondé à Goma, RD Congo</span></div>
-    <p>Le paiement se fait en Mobile Money, directement au vendeur, après accord sur WhatsApp.</p>
+    <p>Le paiement se règle directement avec le vendeur, selon les règles de sa boutique.</p>
   </footer>
 
   <script type="module" src="js/ui.js"></script>

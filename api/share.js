@@ -5,8 +5,8 @@
 const PROJECT = "sokoplus-6b1a0";
 const SITE = "https://sokoplus-rdc.vercel.app";
 const DEFAULT_IMG = SITE + "/icons/og-image.png";
-const DEFAULT_TITLE = "SokoPlus - Achetez et vendez partout en RDC";
-const DEFAULT_DESC = "Le marché en ligne de la RDC : trouve des articles près de chez toi, contacte le vendeur sur WhatsApp et paie en Mobile Money. Vends gratuitement 30 jours.";
+const DEFAULT_TITLE = "SokoPlus - Achetez et vendez partout en Afrique";
+const DEFAULT_DESC = "Le marché en ligne d'Afrique : trouve des articles près de chez toi, contacte le vendeur directement sur WhatsApp. Vends gratuitement 30 jours.";
 
 const esc = s => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
