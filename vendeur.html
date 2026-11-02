@@ -80,8 +80,7 @@
               inputmode="tel" placeholder="0990 000 001 ou +250 788 000 000"></label>
           <label class="field">Mot de passe (6 caractères minimum)
             <span class="pwrap"><input id="pw" type="password" minlength="6" required autocomplete="new-password">
-              <button class="btn small ghost" type="button" id="pwToggle"
-                aria-controls="pw">Afficher</button></span></label>
+              <button class="btn small ghost" type="button" id="pwToggle" aria-controls="pw">Afficher</button></span></label>
           <label class="field">Adresse email (facultatif, pour retrouver ton mot de passe)<input id="email" type="email"
               autocomplete="email"></label>
           <button class="btn" type="submit">Créer ma boutique</button>
@@ -177,15 +176,16 @@
                   <option value="promo">Promotion</option>
                   <option value="offre">Offre du jour</option>
                 </select></label>
-              <label class="field">Ancien prix (facultatif)<input id="iOld" type="number" min="1" step="any"
-                  inputmode="decimal" placeholder="Prix barré, plus haut"></label>
+              <label class="field">Ancien prix (facultatif)<input id="iOld" type="number" min="1" step="any" inputmode="decimal"
+                  placeholder="Prix barré, plus haut"></label>
             </div>
             <div class="cols">
               <label class="field">Pays<select id="iCountry" required></select></label>
               <label class="field">Ville<select id="iCity" required></select></label>
             </div>
             <div class="cols">
-              <label class="field">Quartier ou adresse<input id="iAddr" required maxlength="120"></label>
+              <label class="field">Quartier ou adresse<input id="iAddr" required maxlength="120"
+                  placeholder="Ex. kyeshero, avenue de la Paix"></label>
             </div>
           </fieldset>
 
@@ -195,7 +195,7 @@
                 multiple></label>
             <div class="previews" id="previews"></div>
             <p class="note">Photos nettes, bien éclairées, sur un fond simple : les articles bien photographiés se
-              vendent plus vite</p>
+              vendent plus vite.</p>
           </fieldset>
 
           <fieldset class="step" data-step="4" hidden>
@@ -232,8 +232,8 @@
       <div class="pe-scroll">
         <div class="pe-hero">
           <div class="pe-cover" id="sCover">
-            <label class="pe-cam pe-cam-cover" aria-label="Changer la photo de couverture"><span
-                data-ic="camera"></span><input id="sCoverFile" type="file" accept="image/*" hidden></label>
+            <label class="pe-cam pe-cam-cover" aria-label="Changer la photo de couverture"><span data-ic="camera"></span><input
+                id="sCoverFile" type="file" accept="image/*" hidden></label>
           </div>
           <div class="pe-avwrap">
             <div class="avatar big" id="sAvatar"></div>
@@ -264,16 +264,14 @@
 
         <section class="pe-sec">
           <h3>Liens</h3>
-          <label class="field">Site web<input id="sWeb" maxlength="200" inputmode="url"
-              placeholder="https://monsite.com"></label>
+          <label class="field">Site web<input id="sWeb" maxlength="200" inputmode="url" placeholder="https://monsite.com"></label>
           <label class="field">Facebook<input id="sFb" maxlength="200" inputmode="url"
               placeholder="Lien de ta page, ou ton nom d'utilisateur"></label>
           <label class="field">Instagram<input id="sIg" maxlength="200" inputmode="url"
               placeholder="@ton_compte, ou le lien de ton profil"></label>
         </section>
 
-        <p class="note">Tout ce que tu changes ici est visible tout de suite sur ta boutique, sans attendre de
-          validation.</p>
+        <p class="note">Tout ce que tu changes ici est visible tout de suite sur ta boutique, sans attendre de validation.</p>
         <p class="msg" id="sMsg" hidden></p>
         <div class="wnav"><button class="btn" type="submit" id="sSend2">Enregistrer</button><button class="btn ghost"
             type="button" data-close>Annuler</button></div>
