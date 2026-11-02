@@ -1,5 +1,5 @@
 import { firebaseConfig, VAPID_KEY } from "./firebase-config.js";
-import { app, db, doc, setDoc, deleteDoc, serverTimestamp, ready } from "./fb.js";
+import { app, auth, db, doc, setDoc, deleteDoc, serverTimestamp, ready } from "./fb.js";
 import { store, configured, pushState } from "./util.js";
 export * from "./util.js";
 
@@ -15,9 +15,16 @@ export async function enablePush(cats) {
   const { getMessaging, getToken } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js");
   const token = await getToken(getMessaging(app), { vapidKey: VAPID_KEY, serviceWorkerRegistration: reg });
   if (!token) throw new Error("Impossible d'obtenir l'autorisation de notification.");
-  await setDoc(doc(db, "pushTokens", token), { cats, updatedAt: serverTimestamp() });
+  const uid = auth && auth.currentUser ? auth.currentUser.uid : null;
+  await setDoc(doc(db, "pushTokens", token), { cats, ...(uid ? { uid } : {}), updatedAt: serverTimestamp() });
   store.set("push", { token, cats });
 }
+/* Relie l'appareil déjà inscrit au compte connecté (pour recevoir les messages personnels), ou le délie à la déconnexion. */
+export async function linkPush(user) {
+  const p = pushState(); if (!p || !p.token || !db) return;
+  try { await setDoc(doc(db, "pushTokens", p.token), { cats: p.cats || [], ...(user ? { uid: user.uid } : {}), updatedAt: serverTimestamp() }); } catch { /* pas grave */ }
+}
+export const unlinkPush = () => linkPush(null);
 export async function disablePush() {
   const p = pushState();
   if (p?.token) { try { await deleteDoc(doc(db, "pushTokens", p.token)); } catch { /* déjà supprimé */ } }

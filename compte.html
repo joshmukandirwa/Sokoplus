@@ -6,16 +6,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Mon compte - SokoPlus</title>
   <!-- SEO -->
-  <meta name="description" content="Crée ton compte SokoPlus pour noter les boutiques et retrouver tes favoris.">
+  <meta name="description"
+    content="Crée ton compte SokoPlus pour noter les boutiques et retrouver tes favoris.">
   <meta name="robots" content="noindex,max-image-preview:large">
   <link rel="canonical" href="https://sokoplus-rdc.vercel.app/compte.html">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="SokoPlus">
   <meta property="og:locale" content="fr_FR">
   <meta property="og:title" content="Mon compte - SokoPlus">
-  <meta property="og:description" content="Crée ton compte SokoPlus pour noter les boutiques et retrouver tes favoris.">
+  <meta property="og:description"
+    content="Crée ton compte SokoPlus pour noter les boutiques et retrouver tes favoris.">
   <meta property="og:url" content="https://sokoplus-rdc.vercel.app/compte.html">
-  <meta property="og:image" content="https://sokoplus-rdc.vercel.app/icons/og-image.png">
+  <meta property="og:image" content="https://sokoplus-rdc.vercel.app/icons/og-image.jpg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="SokoPlus, le marché en ligne d'Afrique">
@@ -23,7 +25,7 @@
   <meta name="twitter:title" content="Mon compte - SokoPlus">
   <meta name="twitter:description"
     content="Crée ton compte SokoPlus pour noter les boutiques et retrouver tes favoris.">
-  <meta name="twitter:image" content="https://sokoplus-rdc.vercel.app/icons/og-image.png">
+  <meta name="twitter:image" content="https://sokoplus-rdc.vercel.app/icons/og-image.jpg">
   <!-- /SEO -->
   <meta name="theme-color" content="#1b1b1f">
   <link rel="manifest" href="manifest.json">
@@ -41,8 +43,7 @@
 
     <section id="auth" hidden>
       <h1 style="font-size:clamp(1.7rem,4vw,2.2rem);margin-bottom:6px">Mon compte</h1>
-      <p class="note" style="margin:0 0 16px">Un compte gratuit pour noter les boutiques et donner ton avis. Pas besoin
-        d'avoir une boutique.</p>
+      <p class="note" style="margin:0 0 16px">Un compte gratuit pour noter les boutiques et donner ton avis. Pas besoin d'avoir une boutique.</p>
       <div class="panel">
         <button class="btn ghost gbtn" type="button" id="gBtn"><svg viewBox="0 0 48 48" aria-hidden="true">
             <path fill="#EA4335"
@@ -60,20 +61,16 @@
         </div>
         <form id="fLogin" class="panel" style="border:0;padding:0">
           <label class="field">Adresse email<input id="loginId" type="email" autocomplete="username" required></label>
-          <label class="field">Mot de passe<input id="loginPw" type="password" autocomplete="current-password"
-              required></label>
+          <label class="field">Mot de passe<input id="loginPw" type="password" autocomplete="current-password" required></label>
           <button class="btn" type="submit">Se connecter</button>
           <button class="btn ghost small" type="button" id="forgot">Mot de passe oublié</button>
         </form>
         <form id="fSignup" class="panel" style="border:0;padding:0" hidden>
-          <label class="field">Ton prénom ou pseudo<input id="bName" required minlength="2" maxlength="40"
-              autocomplete="nickname"></label>
+          <label class="field">Ton prénom ou pseudo<input id="bName" required minlength="2" maxlength="40" autocomplete="nickname"></label>
           <label class="field">Adresse email<input id="bMail" type="email" autocomplete="email" required></label>
-          <label class="field">Mot de passe (6 caractères minimum)<input id="bPw" type="password" minlength="6" required
-              autocomplete="new-password"></label>
+          <label class="field">Mot de passe (6 caractères minimum)<input id="bPw" type="password" minlength="6" required autocomplete="new-password"></label>
           <button class="btn" type="submit">Créer mon compte</button>
-          <p class="note">Ton prénom sera affiché avec tes avis. En créant ton compte, tu acceptes la <a
-              href="confidentialite.html">politique de confidentialité</a>.</p>
+          <p class="note">Ton prénom sera affiché avec tes avis. En créant ton compte, tu acceptes la <a href="confidentialite.html">politique de confidentialité</a>.</p>
         </form>
         <p class="msg" id="authMsg" hidden></p>
       </div>
@@ -90,8 +87,7 @@
       </div>
     </section>
 
-    <p class="msg warn" id="noFb" hidden>La connexion n'est pas disponible pour le moment. Vérifie ta connexion internet
-      et recharge la page.</p>
+    <p class="msg warn" id="noFb" hidden>La connexion n'est pas disponible pour le moment. Vérifie ta connexion internet et recharge la page.</p>
   </main>
   <script type="module" src="js/ui.js"></script>
   <script type="module" src="js/maintenance.js"></script>

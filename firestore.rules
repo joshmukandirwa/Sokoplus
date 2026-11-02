@@ -328,12 +328,24 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Abonnements aux boutiques : écrits uniquement par le serveur (api/follow.js). Chacun ne lit que les siens.
+    match /follows/{id} {
+      allow read: if signedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow write: if false;
+    }
+    // Nombre d'abonnés par boutique : public en lecture, écrit uniquement par le serveur
+    match /shopStats/{id} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // Appareils inscrits aux notifications (le jeton sert d'identifiant)
     match /pushTokens/{token} {
       allow create, update: if token.size() >= 100 && token.size() <= 300
-        && request.resource.data.keys().hasOnly(['cats', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['cats', 'updatedAt', 'uid'])
         && request.resource.data.updatedAt == request.time
-        && request.resource.data.cats is list && request.resource.data.cats.size() <= 12;
+        && request.resource.data.cats is list && request.resource.data.cats.size() <= 12
+        && (!('uid' in request.resource.data) || (signedIn() && request.resource.data.uid == request.auth.uid));
       allow delete: if true;
       allow read: if false;
     }

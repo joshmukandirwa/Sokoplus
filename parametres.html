@@ -33,10 +33,10 @@
             id="ver">1.0.0</span></span></div>
     </section>
 
-    <h2 class="grp" data-reveal>Affichage</h2>
+    <h2 class="grp" data-reveal data-i18n="set.g.look">Affichage</h2>
     <section class="group" data-reveal>
       <div class="item col">
-        <div class="ilab"><span class="ico"><svg viewBox="0 0 24 24">
+        <div class="ilab"><span class="ico t-orange"><svg viewBox="0 0 24 24">
               <circle cx="12" cy="12" r="4" />
               <path
                 d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
@@ -47,19 +47,24 @@
           <button data-v="auto"><span class="sw sw-a"></span><small data-i18n="set.auto">Automatique</small></button>
         </div>
       </div>
-      <div class="item">
-        <div class="ilab"><span class="ico"><svg viewBox="0 0 24 24">
+      <div class="item col">
+        <div class="ilab"><span class="ico t-blue"><svg viewBox="0 0 24 24">
               <circle cx="12" cy="12" r="9" />
               <path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" />
             </svg></span><b data-i18n="set.lang">Langue</b></div>
-        <div class="pills" id="segLang"><button data-v="fr">FR</button><button data-v="en">EN</button></div>
+        <div class="langs" id="segLang">
+          <button data-v="fr"><b>Français</b><small>French</small></button>
+          <button data-v="en"><b>English</b><small>Anglais</small></button>
+        </div>
+        <button class="langmore" id="gtOpen" type="button"><span class="gtl"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" /></svg></span><span class="gtt"><b>Autres langues</b><small id="gtNow">Kiswahili, Lingála, Português, العربية…</small></span><span class="chev"><svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6" /></svg></span></button>
+        <button class="btn ghost small" id="gtOff" type="button" hidden>Revenir au français</button>
       </div>
     </section>
 
     <h2 class="grp" data-reveal id="notifications" data-i18n="set.notif">Notifications</h2>
     <section class="group" data-reveal>
       <div class="item col">
-        <div class="ilab"><span class="ico"><svg viewBox="0 0 24 24">
+        <div class="ilab"><span class="ico t-purple"><svg viewBox="0 0 24 24">
               <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
               <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
             </svg></span>
@@ -74,7 +79,7 @@
       </div>
     </section>
 
-    <h2 class="grp" data-reveal>Application</h2>
+    <h2 class="grp" data-reveal data-i18n="set.g.app">Application</h2>
     <section class="group" data-reveal>
       <button class="item act" id="upd"><span class="ilab"><span class="ico"><svg viewBox="0 0 24 24">
               <path d="M21 12a9 9 0 1 1-3-6.7L21 8" />
@@ -99,17 +104,21 @@
             viewBox="0 0 24 24">
             <path d="m9 6 6 6-6 6" />
           </svg></span></button>
-      <button class="item act" id="cache"><span class="ilab"><span class="ico"><svg viewBox="0 0 24 24">
-              <path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14" />
-            </svg></span>
-          <div><b>Vider les données hors connexion</b><small>Tes favoris sont conservés</small></div>
-        </span><span class="chev"><svg viewBox="0 0 24 24">
-            <path d="m9 6 6 6-6 6" />
-          </svg></span></button>
       <p class="msg" id="uMsg" hidden></p>
     </section>
 
-    <h2 class="grp" data-reveal>Mon compte</h2>
+    <h2 class="grp" data-reveal id="confidentialite" data-i18n="set.g.priv">Confidentialité et sécurité</h2>
+    <section class="group" data-reveal>
+      <a class="item act" href="confidentialite.html"><span class="ilab"><span class="ico t-green"><svg viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z" /><path d="m9 12 2 2 4-4" /></svg></span>
+          <div><b>Politique de confidentialité</b><small>Ce que nous gardons, et pourquoi</small></div></span><span class="chev"><svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6" /></svg></span></a>
+      <button class="item act" id="cache"><span class="ilab"><span class="ico t-blue"><svg viewBox="0 0 24 24"><path d="m7 21-4-4a2 2 0 0 1 0-2.8L14.2 3a2 2 0 0 1 2.8 0l4 4a2 2 0 0 1 0 2.8L11 21z" /><path d="M9 11l6 6M21 21H7" /></svg></span>
+          <div><b>Effacer les données de cet appareil</b><small>Cache hors connexion. Tes favoris sont conservés</small></div></span><span class="chev"><svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6" /></svg></span></button>
+      <a class="item act danger" id="delAcc" href="#" target="_blank" rel="noopener"><span class="ilab"><span class="ico t-red"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v5M14 11v5" /></svg></span>
+          <div><b>Supprimer mon compte et mes données</b><small>Demande envoyée à SokoPlus sur WhatsApp</small></div></span><span class="chev"><svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6" /></svg></span></a>
+      <p class="msg" id="cMsg" hidden></p>
+    </section>
+
+    <h2 class="grp" data-reveal data-i18n="set.g.acc">Mon compte</h2>
     <section class="group" data-reveal>
       <a class="item act" href="compte.html"><span class="ilab"><span class="ico"><svg viewBox="0 0 24 24">
               <circle cx="12" cy="8" r="4" />
@@ -121,7 +130,7 @@
           </svg></span></a>
     </section>
 
-    <h2 class="grp" data-reveal>Aide et informations</h2>
+    <h2 class="grp" data-reveal data-i18n="set.g.help">Aide et informations</h2>
     <section class="group" data-reveal>
       <a class="item act" id="help" href="#" target="_blank" rel="noopener"><span class="ilab"><span class="ico wa"><svg
               viewBox="0 0 24 24">
@@ -149,12 +158,6 @@
         </span><span class="chev"><svg viewBox="0 0 24 24">
             <path d="m9 6 6 6-6 6" />
           </svg></span></a>
-      <a class="item act" href="confidentialite.html"><span class="ilab"><span class="ico"><svg viewBox="0 0 24 24">
-              <path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z" />
-              <path d="m9 12 2 2 4-4" />
-            </svg></span><b>Politique de confidentialité</b></span><span class="chev"><svg viewBox="0 0 24 24">
-            <path d="m9 6 6 6-6 6" />
-          </svg></span></a>
       <a class="item act" href="vendeur.html"><span class="ilab"><span class="ico"><svg viewBox="0 0 24 24">
               <path d="M3 9l1.5-5h15L21 9" />
               <path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0" />
@@ -170,6 +173,14 @@
       <button class="reset" id="reset" data-i18n="set.reset">Réinitialiser mes préférences</button>
     </section>
   </main>
+  <dialog class="gtdlg" id="gtDlg">
+    <div class="gtbox">
+      <h3>Autres langues</h3>
+      <p class="note">Traduction automatique par Google. Elle reste active quand tu changes de page.</p>
+      <div class="gtlist" id="gtList" translate="no"></div>
+      <button class="btn ghost" id="gtClose" type="button">Fermer</button>
+    </div>
+  </dialog>
   <script type="module" src="js/ui.js"></script>
   <script type="module" src="js/maintenance.js"></script>
   <script type="module" src="js/parametres.js"></script>

@@ -22,10 +22,37 @@ const EN = {
   "set.check": "Check for updates", "set.install": "Install the app", "set.share": "Share SokoPlus", "set.help": "Need help?", "set.reset": "Reset my preferences",
   "set.by": "Created by", "set.tech": "Technical direction", "set.portfolio": "Portfolio", "set.soon": "Coming soon",
   "gate.t": "Check your seller account", "gate.p": "To sell on SokoPlus you need a shop account and to be signed in. Make sure you have an account to continue.",
-  "gate.in": "I already have an account", "gate.up": "Create my shop for free", "gate.later": "Not now"
+  "gate.in": "I already have an account", "gate.up": "Create my shop for free", "gate.later": "Not now",
+  "set.g.look": "Display", "set.g.priv": "Privacy and security", "set.g.app": "App", "set.g.acc": "My account", "set.g.help": "Help and info"
 };
-export const lang = () => store.get("lang", "fr");
-export const t = (k, fr) => (lang() === "en" && EN[k]) || fr;
+/* Autres langues : traducteur Google (cookie « googtrans », gardé 1 an, actif sur toutes les pages) */
+export const GT_LANGS = [
+  ["sw", "Kiswahili", "Swahili"], ["ln", "Lingála", "Lingala"], ["pt", "Português", "Portugais"], ["ar", "العربية", "Arabe"],
+  ["am", "አማርኛ", "Amharique"], ["ha", "Hausa", "Haoussa"], ["yo", "Yorùbá", "Yoruba"], ["ig", "Igbo", "Igbo"],
+  ["zu", "isiZulu", "Zoulou"], ["sn", "chiShona", "Shona"], ["so", "Soomaali", "Somali"], ["rw", "Kinyarwanda", "Kinyarwanda"],
+  ["mg", "Malagasy", "Malgache"], ["es", "Español", "Espagnol"], ["zh-CN", "中文", "Chinois"],
+  ["af", "Afrikaans", "Afrikaans"], ["om", "Afaan Oromoo", "Oromo"], ["ti", "ትግርኛ", "Tigrigna"], ["wo", "Wolof", "Wolof"],
+  ["lg", "Luganda", "Ganda"], ["ny", "Chichewa", "Chichewa"], ["xh", "isiXhosa", "Xhosa"], ["st", "Sesotho", "Sotho du Sud"]
+];
+const gtCookie = () => { const m = document.cookie.match(/(?:^|; )googtrans=([^;]*)/); return m ? decodeURIComponent(m[1]) : ""; };
+export const gtCode = () => { const m = gtCookie().match(/^\/[^/]+\/([^/]+)$/); return m && m[1] !== "fr" ? m[1] : ""; };
+export function gtSet(code) {
+  const host = location.hostname, doms = /^[\d.]+$/.test(host) || !host.includes(".") ? [""] : ["", `; domain=${host}`, `; domain=.${host}`];
+  doms.forEach(d => { document.cookie = code ? `googtrans=/fr/${code}; path=/; max-age=31536000; SameSite=Lax${d}` : `googtrans=; path=/; max-age=0; SameSite=Lax${d}`; });
+  store.set("gt", code || null);
+}
+(function initGt() {
+  let code = gtCode(); const saved = store.get("gt", "");
+  if (!code && saved) { gtSet(saved); code = saved; }
+  if (!code) return;
+  document.documentElement.classList.add("gt-on");
+  const box = document.createElement("div"); box.id = "google_translate_element"; box.setAttribute("aria-hidden", "true"); document.body ? document.body.appendChild(box) : addEventListener("DOMContentLoaded", () => document.body.appendChild(box));
+  window.__gtInit = () => new google.translate.TranslateElement({ pageLanguage: "fr", autoDisplay: false }, "google_translate_element");
+  const sc = document.createElement("script"); sc.src = "https://translate.google.com/translate_a/element.js?cb=__gtInit"; sc.async = true; document.head.appendChild(sc);
+})();
+const DICT = { en: EN };
+export const lang = () => gtCode() ? "fr" : store.get("lang", "fr");
+export const t = (k, fr) => (DICT[lang()] && DICT[lang()][k]) || fr;
 function translate(root = document) {
   $$("[data-i18n]", root).forEach(e => { if (!e.dataset.fr) e.dataset.fr = e.textContent; e.textContent = t(e.dataset.i18n, e.dataset.fr); });
   $$("[data-i18n-ph]", root).forEach(e => { if (!e.dataset.fr) e.dataset.fr = e.getAttribute("placeholder") || ""; e.setAttribute("placeholder", t(e.dataset.i18nPh, e.dataset.fr)); });

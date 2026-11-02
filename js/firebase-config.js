@@ -14,7 +14,7 @@ export const firebaseConfig = {
 
 // Notifications push quand le site est fermé (optionnel, voir README, option B)
 // Console Firebase > Paramètres > Cloud Messaging > Certificats Web Push > Clé publique
-export const VAPID_KEY = "";
+export const VAPID_KEY = "BNwfyknUe0e3ArpTgxsFQfb4fumLASlRDSnT3cx4fc34gQhTd-Mz6w2wHE-OgJcV5Jh5sjhPBTZSG0r3CrHd3rw";
 
 // Photos des articles : compte gratuit sur cloudinary.com (sans carte bancaire)
 export const CLOUDINARY = {

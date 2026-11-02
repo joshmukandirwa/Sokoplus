@@ -1372,7 +1372,7 @@ section[id] {
   color: var(--night)
 }
 
-:root[data-theme=dark] a {
+:where(:root[data-theme=dark]) a {
   color: var(--blue-d)
 }
 

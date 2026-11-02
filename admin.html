@@ -51,52 +51,35 @@
       <div class="ad">
         <div class="ad-scrim" id="adScrim"></div>
         <aside class="ad-side" id="adSide" aria-label="Menu de l'administration">
-          <a class="ad-brand" href="./" aria-label="SokoPlus, accueil"><img src="icons/logo-mark.png"
-              alt=""><span>Soko<b>Plus</b><small>Administration</small></span></a>
+          <a class="ad-brand" href="./" aria-label="SokoPlus, accueil"><img src="icons/logo-mark.png" alt=""><span>Soko<b>Plus</b><small>Administration</small></span></a>
           <nav class="ad-nav">
-            <button type="button" data-t="home" aria-selected="true"><span data-ic="home"></span>Tableau de
-              bord</button>
-            <button type="button" data-t="pending" aria-selected="false"><span data-ic="shield"></span>À valider <em
-                id="pCount">0</em></button>
-            <button type="button" data-t="users" aria-selected="false"><span data-ic="shop"></span>Boutiques <em
-                id="uCount" class="soft">0</em></button>
-            <button type="button" data-t="items" aria-selected="false"><span data-ic="box"></span>Articles <em
-                id="iCount" class="soft">0</em></button>
-            <button type="button" data-t="reports" aria-selected="false"><span data-ic="bell"></span>Signalements <em
-                id="rCount">0</em></button>
-            <button type="button" id="maintBtn" class="ad-maint"><span data-ic="tools"></span><span
-                class="mtx">Maintenance<small id="maintS">Site en ligne</small></span></button>
+            <button type="button" data-t="home" aria-selected="true"><span data-ic="home"></span>Tableau de bord</button>
+            <button type="button" data-t="pending" aria-selected="false"><span data-ic="shield"></span>À valider <em id="pCount">0</em></button>
+            <button type="button" data-t="users" aria-selected="false"><span data-ic="shop"></span>Boutiques <em id="uCount" class="soft">0</em></button>
+            <button type="button" data-t="items" aria-selected="false"><span data-ic="box"></span>Articles <em id="iCount" class="soft">0</em></button>
+            <button type="button" data-t="reports" aria-selected="false"><span data-ic="bell"></span>Signalements <em id="rCount">0</em></button>
+            <button type="button" id="maintBtn" class="ad-maint"><span data-ic="tools"></span><span class="mtx">Maintenance<small id="maintS">Site en ligne</small></span></button>
           </nav>
-          <div class="ad-promo"><span data-ic="shop"></span><b>SokoPlus</b><small>Ensemble, faisons grandir le commerce
-              à Goma.</small></div>
+          <div class="ad-promo"><span data-ic="shop"></span><b>SokoPlus</b><small>Ensemble, faisons grandir le commerce à Goma.</small></div>
           <button type="button" class="ad-out" id="logout2"><span data-ic="logout"></span>Déconnexion</button>
         </aside>
 
         <div class="ad-main">
           <header class="ad-top">
             <button type="button" class="ad-burger" id="adMenu" aria-label="Ouvrir le menu" data-ic="menu"></button>
-            <label class="ad-search"><span data-ic="search"></span><input id="aSearch" type="search"
-                placeholder="Rechercher une boutique, un article…" autocomplete="off" aria-label="Rechercher"></label>
-            <button type="button" class="ad-bell" id="adBell" aria-label="Voir ce qui attend"><span
-                data-ic="bell"></span><em id="bellN" hidden>0</em></button>
-            <div class="ad-me"><img src="icons/logo-mark.png" alt="">
-              <div><b>Admin SokoPlus</b><small id="aWho"></small></div>
-            </div>
+            <label class="ad-search"><span data-ic="search"></span><input id="aSearch" type="search" placeholder="Rechercher une boutique, un article…" autocomplete="off" aria-label="Rechercher"></label>
+            <button type="button" class="ad-bell" id="adBell" aria-label="Voir ce qui attend"><span data-ic="bell"></span><em id="bellN" hidden>0</em></button>
+            <div class="ad-me"><img src="icons/logo-mark.png" alt=""><div><b>Admin SokoPlus</b><small id="aWho"></small></div></div>
           </header>
 
           <div class="ad-content">
             <div class="ad-title">
-              <div>
-                <h1 id="adTitle">Tableau de bord</h1>
-                <p id="adSub">Vue d'ensemble de votre plateforme</p>
-              </div>
+              <div><h1 id="adTitle">Tableau de bord</h1><p id="adSub">Vue d'ensemble de votre plateforme</p></div>
               <span class="a-live"><i></i>En direct</span>
             </div>
             <div id="homeView"></div>
             <div id="listView" hidden>
-              <div class="a-tools" id="aTools">
-                <div class="a-chips" id="aChips"></div>
-              </div>
+              <div class="a-tools" id="aTools"><div class="a-chips" id="aChips"></div></div>
               <div class="list a-list" id="list"></div>
             </div>
           </div>

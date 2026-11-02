@@ -3,7 +3,7 @@ import {
   auth, db, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendPasswordResetEmail,
   GoogleAuthProvider, signInWithPopup, signInWithRedirect, doc, getDoc, setDoc, serverTimestamp
 } from "./fb.js";
-import { $, esc, isNetErr, NET_MSG, toast } from "./common.js";
+import { $, esc, isNetErr, NET_MSG, toast, unlinkPush } from "./common.js";
 import { run, btnOf } from "./feedback.js";
 
 const say = (el, text, kind = "") => { el.hidden = !text; el.className = "msg " + kind; el.textContent = text || ""; };
@@ -99,5 +99,5 @@ $("#gBtn").onclick = () => {
   });
 };
 $("#logout").onclick = async () => {
-  try { await signOut(auth); toast("Tu es déconnecté."); } catch (err) { say($("#meMsg"), nice(err), "err"); }
+  try { await unlinkPush().catch(() => { }); await signOut(auth); toast("Tu es déconnecté."); } catch (err) { say($("#meMsg"), nice(err), "err"); }
 };

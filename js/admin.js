@@ -7,6 +7,7 @@ import { icon } from "./icons.js";
 import { notify } from "./notify.js";
 import { run, btnOf } from "./feedback.js";
 import { bindLogout } from "./logout.js";
+import { pingPush } from "./pushapi.js";
 import { homeHTML, chartTip } from "./admin-home.js";
 
 configBanner();
@@ -156,7 +157,7 @@ function certCard(r) {
   </article>`;
 }
 /* Message dans l'espace du vendeur (affiché dans Ma boutique et dans la cloche) */
-const tell = (uid, kind, title, text) => addDoc(collection(db, "userNotifs"), { uid, kind, title, text, read: false, createdAt: serverTimestamp() });
+const tell = async (uid, kind, title, text) => { const r = await addDoc(collection(db, "userNotifs"), { uid, kind, title, text, read: false, createdAt: serverTimestamp() }); pingPush({ type: "user", notifId: r.id }); return r; };
 async function certify(u, on) {
   await updateDoc(doc(db, "users", u.id), { certified: on });
   for (const i of items.filter(x => x.ownerId === u.id)) await updateDoc(doc(db, "items", i.id), { certified: on });   // le badge suit tous ses articles
@@ -471,6 +472,7 @@ const onAction = async e => {
             ...(owner?.certified ? { certified: true } : {}), ...(s.oldPrice ? { oldPrice: s.oldPrice } : {}), ...(s.tag ? { tag: s.tag } : {})
           });
           await updateDoc(doc(db, "submissions", s.id), { status: "approved" });
+          pingPush({ type: "item", itemId: s.id });
           if (owner?.email) notify("approved", { to: owner.email, title: s.title, shopName: s.shopName });
         }, { busy: "Validation…", done: "Validé", hold: 700 });
         toast("Article validé et en ligne. Le vendeur est prévenu.");

@@ -4,7 +4,7 @@
 
 const PROJECT = "sokoplus-6b1a0";
 const SITE = "https://sokoplus-rdc.vercel.app";
-const DEFAULT_IMG = SITE + "/icons/og-image.png";
+const DEFAULT_IMG = SITE + "/icons/og-image.jpg";
 const DEFAULT_TITLE = "SokoPlus - Achetez et vendez partout en Afrique";
 const DEFAULT_DESC = "Le marché en ligne d'Afrique : trouve des articles près de chez toi, contacte le vendeur directement sur WhatsApp. Vends gratuitement 30 jours.";
 

@@ -1,14 +1,15 @@
 import { $, $$, esc, store, SITE, waLink, pushAvailable, pushState, configured, toast } from "./util.js";
-import { checkUpdate, applyUpdate, installEvt } from "./ui.js";
+import { checkUpdate, applyUpdate, installEvt, GT_LANGS, gtCode, gtSet } from "./ui.js";
 
 const VERSION = "1.0.0";
 $("#ver").textContent = VERSION;
+$("#delAcc").href = waLink(SITE.adminWhatsapp, "Bonjour SokoPlus, je souhaite supprimer mon compte et mes données. Merci de me dire comment procéder.");
 $("#help").href = waLink(SITE.adminWhatsapp, "Bonjour SokoPlus, j'ai besoin d'aide.");
 const net = () => { const on = navigator.onLine; $("#net").classList.toggle("off", !on); $("#netT").textContent = on ? "En ligne" : "Hors connexion"; };
 net(); addEventListener("online", net); addEventListener("offline", net);
 $("#cache").onclick = async () => {
-  try { const ks = await caches.keys(); await Promise.all(ks.filter(k => k.startsWith("sokoplus-")).map(k => caches.delete(k))); say("Données hors connexion effacées. Elles se rechargent à la prochaine visite.", "good"); }
-  catch { say("Rien à effacer pour le moment.", "warn"); }
+  try { const ks = await caches.keys(); await Promise.all(ks.filter(k => k.startsWith("sokoplus-")).map(k => caches.delete(k))); say("Données hors connexion effacées. Elles se rechargent à la prochaine visite.", "good", "cMsg"); }
+  catch { say("Rien à effacer pour le moment.", "warn", "cMsg"); }
 };
 
 /* Boutons segmentés : apparence, langue */
@@ -19,7 +20,25 @@ function seg(id, key, def, after) {
   paint();
 }
 seg("#segTheme", "theme", "light", () => window.__applyTheme());
-seg("#segLang", "lang", "fr", () => { window.__applyTheme(); document.dispatchEvent(new CustomEvent("lang")); toast(store.get("lang", "fr") === "en" ? "Language: English" : "Langue : français", { ms: 1500 }); });
+seg("#segLang", "lang", "fr", () => {
+  if (gtCode()) { gtSet(""); location.reload(); return; }   // on quitte la traduction Google : retour au texte d'origine
+  window.__applyTheme(); document.dispatchEvent(new CustomEvent("lang")); toast(({ fr: "Langue : français", en: "Language: English" })[store.get("lang", "fr")] || "OK", { ms: 1500 });
+});
+
+/* Autres langues (traducteur Google) */
+(function () {
+  const dlg = $("#gtDlg"), cur = gtCode(), now = GT_LANGS.find(l => l[0] === cur);
+  $("#gtList").innerHTML = GT_LANGS.map(l => `<button type="button" data-gt="${l[0]}" aria-pressed="${l[0] === cur}"><b>${l[1]}</b><small>${l[2]}</small></button>`).join("");
+  if (now) {
+    $$("#segLang button").forEach(b => b.setAttribute("aria-pressed", "false"));
+    $("#gtOpen").classList.add("on"); $("#gtNow").textContent = "Traduit en " + now[1]; $("#gtOff").hidden = false;
+  }
+  $("#gtOpen").onclick = () => dlg.showModal ? dlg.showModal() : dlg.setAttribute("open", "");
+  $("#gtClose").onclick = () => dlg.close();
+  dlg.addEventListener("click", e => { if (e.target === dlg) dlg.close(); });
+  $("#gtList").onclick = e => { const b = e.target.closest("[data-gt]"); if (!b) return; store.set("lang", "fr"); gtSet(b.dataset.gt); location.reload(); };
+  $("#gtOff").onclick = () => { gtSet(""); location.reload(); };
+})();
 
 /* Notifications */
 function notifUI() {
@@ -47,7 +66,7 @@ $("#nOff").onclick = async () => { try { const { disablePush } = await import(".
 notifUI();
 
 /* Mises à jour, installation, partage */
-const say = (t, kind = "") => { const m = $("#uMsg"); m.hidden = !t; m.className = "msg " + kind; m.textContent = t; };
+const say = (t, kind = "", id = "uMsg") => { const m = $("#" + id); m.hidden = !t; m.className = "msg " + kind; m.textContent = t; };
 $("#upd").onclick = async () => {
   say("Recherche de mises à jour…");
   const r = await checkUpdate();
@@ -67,6 +86,6 @@ $("#share").onclick = async () => {
 $("#reset").onclick = e => {
   const b = e.currentTarget;
   if (!b.dataset.sure) { b.dataset.sure = "1"; const o = b.textContent; b.textContent = "Confirmer ?"; setTimeout(() => { delete b.dataset.sure; b.textContent = o; }, 3000); return; }
-  ["theme", "lang", "cur", "recent"].forEach(k => localStorage.removeItem(k)); location.reload();
+  ["theme", "lang", "cur", "recent", "gt"].forEach(k => localStorage.removeItem(k)); gtSet(""); location.reload();
 };
 if (location.hash === "#notifications") $("#notifications").scrollIntoView();

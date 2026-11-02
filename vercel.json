@@ -38,7 +38,7 @@
         },
         {
           "key": "Content-Security-Policy-Report-Only",
-          "value": "default-src 'self'; script-src 'self' https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com https://api.cloudinary.com https://script.google.com https://script.googleusercontent.com; frame-src https://sokoplus-6b1a0.firebaseapp.com https://accounts.google.com; worker-src 'self'"
+          "value": "default-src 'self'; script-src 'self' https://www.gstatic.com https://apis.google.com https://translate.google.com https://translate.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://www.gstatic.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://translate.googleapis.com https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com https://api.cloudinary.com https://script.google.com https://script.googleusercontent.com; frame-src https://sokoplus-6b1a0.firebaseapp.com https://accounts.google.com; worker-src 'self'"
         }
       ]
     }

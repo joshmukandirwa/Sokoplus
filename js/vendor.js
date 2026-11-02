@@ -6,11 +6,13 @@ import {
 import { bindLogout } from "./logout.js";
 import {
   SITE, store, configured, configBanner, $, $$, esc, safeUrl, money, normPhone, prettyPhone, waLink,
-  compress, uploadImage, thumb, tileColor, toast, ago, isNetErr, NET_MSG, needNet, normLink, shopInfoHtml, coverCss
+  compress, uploadImage, thumb, tileColor, toast, ago, isNetErr, NET_MSG, needNet, normLink, shopInfoHtml, coverCss,
+  pushAvailable, pushState, enablePush, unlinkPush
 } from "./common.js";
-import { injectIcons } from "./icons.js";
+import { injectIcons, icon } from "./icons.js";
 import { notify } from "./notify.js";
-import { onMyNotifs, myNotifs, unread, markRead, ms as nms } from "./mesnotifs.js";
+import { pingPush } from "./pushapi.js";
+import { onMyNotifs, myNotifs, unread, markRead, removeNotifs, ms as nms } from "./mesnotifs.js";
 import { COUNTRIES, DEFAULT_COUNTRY, citiesOf, currenciesOf, curName, ALL_CURRENCIES, decimalsOf } from "./pays.js";
 import { run, btnOf } from "./feedback.js";
 
@@ -165,7 +167,7 @@ function leave() {
   store.set("me", null);
   $("#dash").hidden = true; $("#complete").hidden = true; $("#auth").hidden = false; $("#logout").hidden = true;
 }
-bindLogout($("#logout"), () => signOut(auth), () => ($("#dShop")?.textContent || "").trim());
+bindLogout($("#logout"), async () => { await unlinkPush().catch(() => { }); return signOut(auth); }, () => ($("#dShop")?.textContent || "").trim());
 addEventListener("hashchange", hashTab);   // les boutons « J'ai déjà un compte » / « Créer ma boutique » de la fenêtre Vendre
 
 let welcome = false;
@@ -215,11 +217,24 @@ function state() {
 const CERT_BADGE = '<img class="ic cert-ic" src="icons/certifie.png" width="16" height="16" alt="Boutique certifiée" title="Boutique certifiée SokoPlus" draggable="false">';
 
 /* ---------------- Certification SokoPlus : guide, demande et messages de SokoPlus ---------------- */
+/* Invitation à activer les alertes (même app fermée) pour les vendeurs connectés */
+function renderPushAsk() {
+  let el = $("#pushAsk");
+  const ok = pushAvailable() && !pushState() && typeof Notification !== "undefined" && Notification.permission !== "denied" && Date.now() > (store.get("pushLater", 0) || 0);
+  if (!ok) { if (el) el.remove(); return; }
+  if (el || !$("#certBox")) return;
+  el = document.createElement("section"); el.id = "pushAsk"; el.className = "pushask";
+  el.innerHTML = '<div><b>Reçois les alertes SokoPlus</b><span>Certification, articles validés… même quand l\'app est fermée.</span></div><div class="pa"><button class="btn small" id="paYes" type="button">Activer</button><button class="btn small ghost" id="paNo" type="button">Plus tard</button></div>';
+  $("#certBox").before(el);
+  $("#paYes").onclick = async () => { try { await enablePush([]); toast("Alertes activées"); } catch (e) { toast(e.message || "Impossible d'activer les alertes."); } renderPushAsk(); };
+  $("#paNo").onclick = () => { store.set("pushLater", Date.now() + 7 * 864e5); renderPushAsk(); };
+}
 function renderCert() {
   const b = $("#certBox"); if (!b || !profile) return;
+  renderPushAsk();
   b.hidden = false;
   const msgs = myNotifs().slice(0, 3), nu = unread().length;
-  const inbox = msgs.length ? `<div class="cmsgs"><h3>Messages de SokoPlus${nu ? ` <em>${nu} nouveau${nu > 1 ? "x" : ""}</em>` : ""}</h3>${msgs.map(n => `<div class="cmsg ${n.kind === "cert_rejected" ? "bad" : "ok"}${n.read ? "" : " new"}"><b>${esc(n.title || "Message de SokoPlus")}</b><span>${esc(n.text || "")}</span><small>${ago(nms(n))}</small></div>`).join("")}${nu ? '<button class="btn small ghost" type="button" id="cRead">Marquer comme lu</button>' : ""}</div>` : "";
+  const inbox = msgs.length ? `<div class="cmsgs"><h3>Messages de SokoPlus${nu ? ` <em>${nu} nouveau${nu > 1 ? "x" : ""}</em>` : ""}</h3>${msgs.map(n => `<div class="cmsg ${n.kind === "cert_rejected" ? "bad" : "ok"}${n.read ? "" : " new"}"><b>${esc(n.title || "Message de SokoPlus")}</b><span>${esc(n.text || "")}</span><small>${ago(nms(n))}</small><button class="cdel" type="button" data-del="${esc(n.id)}" aria-label="Supprimer ce message">✕</button></div>`).join("")}<div class="cacts">${nu ? '<button class="btn small ghost" type="button" id="cRead">Marquer comme lu</button>' : ""}<button class="btn small ghost cdelall" type="button" id="cDelAll">Tout supprimer</button></div></div>` : "";
   let body;
   if (profile.certified) {
     body = `<div class="cstate ok"><b>Ta boutique est certifiée SokoPlus.</b> Le badge s'affiche à côté de son nom, et tes nouveaux articles sont publiés tout de suite.</div>`;
@@ -240,6 +255,14 @@ function renderCert() {
   b.innerHTML = `<h2>Certification SokoPlus</h2>${body}${inbox}`;
   const ask = $("#cAsk"); if (ask) ask.onclick = () => askCert(ask);
   const rd = $("#cRead"); if (rd) rd.onclick = () => markRead(unread().map(n => n.id));
+  $$("#certBox [data-del]").forEach(x => x.onclick = async () => {
+    if (!confirm("Supprimer ce message ?")) return;
+    const ok = (await removeNotifs([x.dataset.del]))[0]; toast(ok ? "Message supprimé" : "Suppression impossible, réessaie.", { ms: 1600 });
+  });
+  const da = $("#cDelAll"); if (da) da.onclick = async () => {
+    const n = myNotifs().length; if (!n || !confirm(n > 1 ? `Supprimer les ${n} messages de SokoPlus ?` : "Supprimer ce message ?")) return;
+    const r = await removeNotifs(myNotifs().map(m => m.id)); toast(r.every(Boolean) ? "Messages supprimés" : "Certains messages n'ont pas pu être supprimés.", { ms: 1800 });
+  };
 }
 async function askCert(btn) {
   if (!needNet("Pas de connexion : tu ne peux pas envoyer ta demande pour l'instant.")) return;
@@ -259,9 +282,11 @@ function paintCard() {
   $("#dCover").style.cssText = coverCss(pub.cover, profile.shopName);
   $("#seeShop").href = `recherche.html?shop=${encodeURIComponent(user.uid)}`;
   const about = $("#dAbout"), info = $("#dInfo");
-  about.hidden = false;
+  /* Le conseil « Ajoute une photo de couverture… » ne s'affiche que si la boutique est encore vide */
+  const filled = !!(pub.cover || pub.about || pub.address || pub.email || pub.website || pub.facebook || pub.instagram);
   about.classList.toggle("empty", !pub.about);
-  about.textContent = pub.about || "Ajoute une photo de couverture, une présentation et tes coordonnées : les acheteurs te font plus confiance.";
+  about.textContent = pub.about || (filled ? "" : "Ajoute une photo de couverture, une présentation et tes coordonnées : les acheteurs te font plus confiance.");
+  about.hidden = !about.textContent;
   info.innerHTML = shopInfoHtml(pub, profile.phone); info.hidden = !info.innerHTML;
 }
 function renderStatus() {
@@ -285,10 +310,15 @@ function renderStatus() {
   if (!qb.hidden) {
     const left = Math.max(0, 2 - used);
     qb.className = "qbox " + (full ? "full" : "open");
-    qb.innerHTML = `<div class="qdots" aria-hidden="true">${[0, 1].map(n => `<i class="${n < used ? "on" : ""}"></i>`).join("")}</div>
-      <div class="qtx"><b>${full ? "Tu as utilisé tes 2 publications du jour" : `Encore ${left} publication${left > 1 ? "s" : ""} aujourd'hui`}</b>
-        <small>${full ? `${esc(profile.shopName)}, la prochaine publication gratuite s'ouvre dans` : "Le compteur repart à zéro dans"} <span class="qcd" data-reset></span>.${full ? " Pour publier sans limite, passe à la version complète." : ""}</small>
-        ${full ? `<a class="btn small" href="${esc(waLink(SITE.adminWhatsapp, `Bonjour SokoPlus, je suis ${profile.shopName} (${prettyPhone(profile.phone)}). Je voudrais passer à la version complète de SokoPlus.`))}" target="_blank" rel="noopener">Passer à la version complète</a>` : ""}</div>`;
+    const C = 163.4, pct = left / 2;
+    const cta = full ? `<a class="btn small qcta" href="${esc(waLink(SITE.adminWhatsapp, `Bonjour SokoPlus, je suis ${profile.shopName} (${prettyPhone(profile.phone)}). Je voudrais passer à la version complète de SokoPlus.`))}" target="_blank" rel="noopener">Passer à la version complète</a>` : "";
+    qb.innerHTML = `<div class="qtop">
+        <div class="qring" aria-hidden="true"><svg viewBox="0 0 64 64"><circle class="qr-bg" cx="32" cy="32" r="26"/><circle class="qr-fg" cx="32" cy="32" r="26" stroke-dasharray="${C}" stroke-dashoffset="${(C * (1 - pct)).toFixed(1)}" transform="rotate(-90 32 32)"/></svg><b>${left}<small>/2</small></b></div>
+        <div class="qtx"><span class="qtag">Essai gratuit · limite du jour</span>
+          <b>${full ? "Tes 2 publications du jour sont utilisées" : `Encore ${left} publication${left > 1 ? "s" : ""} aujourd'hui`}</b></div></div>
+      <div class="qseg" role="img" aria-label="${used} publication${used > 1 ? "s" : ""} utilisée${used > 1 ? "s" : ""} sur 2">${[0, 1].map(n => `<i class="${n < used ? "on" : ""}"></i>`).join("")}</div>
+      <div class="qfoot"><span class="qchip">${icon("clock")}${full ? "Reprise dans" : "Remise à zéro dans"} <span class="qcd" data-reset></span></span></div>
+      ${full ? `<p class="qnote">${esc(profile.shopName)}, ta prochaine publication gratuite s'ouvre à minuit. Pour publier sans limite, passe à la version complète.</p>` : ""}${cta}`;
     tickReset();
   }
   $("#wiz").hidden = (!s.ok || full) && !editing;
@@ -420,6 +450,7 @@ $("#fItem").addEventListener("submit", e => {
         ...data, images: urls, ownerId: user.uid, shopName: profile.shopName, phone: profile.phone, shopLogo: profile.logo || "", ...(profile.payments ? { shopPay: profile.payments } : {}),
         certified: true, status: "available", featured: false, createdAt: serverTimestamp()
       });
+      pingPush({ type: "item", itemId: iid });
       toast("Ton article est en ligne tout de suite. Boutique certifiée.");
     } else {
       const sub = {

@@ -17,7 +17,7 @@
   <meta property="og:description"
     content="Crée ta boutique en 2 minutes et vends partout en Afrique. 30 jours d'essai gratuit. Tes clients te contactent directement sur WhatsApp.">
   <meta property="og:url" content="https://sokoplus-rdc.vercel.app/vendeur.html">
-  <meta property="og:image" content="https://sokoplus-rdc.vercel.app/icons/og-image.png">
+  <meta property="og:image" content="https://sokoplus-rdc.vercel.app/icons/og-image.jpg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="SokoPlus, le marché en ligne d'Afrique">
@@ -25,7 +25,7 @@
   <meta name="twitter:title" content="Vendre sur SokoPlus : crée ta boutique gratuitement en Afrique">
   <meta name="twitter:description"
     content="Crée ta boutique en 2 minutes et vends partout en Afrique. 30 jours d'essai gratuit. Tes clients te contactent directement sur WhatsApp.">
-  <meta name="twitter:image" content="https://sokoplus-rdc.vercel.app/icons/og-image.png">
+  <meta name="twitter:image" content="https://sokoplus-rdc.vercel.app/icons/og-image.jpg">
   <!-- /SEO -->
   <meta name="theme-color" content="#1b1b1f">
   <link rel="manifest" href="manifest.json">
@@ -125,6 +125,7 @@
             <div><b id="vsOn">0</b><span>en ligne</span></div>
             <div><b id="vsWait">0</b><span>en attente</span></div>
             <div><b id="vsSold">0</b><span>vendus</span></div>
+            <div><b id="vsFol">0</b><span>abonnés</span></div>
           </div>
           <div class="shopbtns">
             <button class="btn small" id="editShop" type="button">Modifier ma boutique</button>
@@ -184,8 +185,7 @@
               <label class="field">Ville<select id="iCity" required></select></label>
             </div>
             <div class="cols">
-              <label class="field">Quartier ou adresse<input id="iAddr" required maxlength="120"
-                  placeholder="Ex. kyeshero, avenue de la Paix"></label>
+              <label class="field">Quartier ou adresse<input id="iAddr" required maxlength="120"></label>
             </div>
           </fieldset>
 
@@ -195,7 +195,7 @@
                 multiple></label>
             <div class="previews" id="previews"></div>
             <p class="note">Photos nettes, bien éclairées, sur un fond simple : les articles bien photographiés se
-              vendent plus vite.</p>
+              vendent plus vite</p>
           </fieldset>
 
           <fieldset class="step" data-step="4" hidden>
