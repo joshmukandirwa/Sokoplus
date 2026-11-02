@@ -6,6 +6,7 @@ import { COUNTRIES, OTHER_CITY, countryName, citiesOf } from "./pays.js";
 const page = document.body.dataset.page || "";
 const HAS_ITEMS = ["home", "categories", "favoris", "recherche"].includes(page);   // pages qui chargent les articles
 const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+if (HAS_ITEMS.includes(page)) import("./follow.js").catch(() => { /* hors connexion : pas d'abonnement */ });
 
 /* ---------- Langue (interface) ---------- */
 const EN = {

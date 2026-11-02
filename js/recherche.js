@@ -48,9 +48,10 @@ function shopHead() {
       <span class="sh-av" style="background:${tileColor(f.shopName)}">${logo ? `<img src="${esc(logo)}" alt="" draggable="false">` : esc((f.shopName || "?")[0].toUpperCase())}</span>
       <div class="sh-id"><h2>${esc(f.shopName)}${certMark(f)}</h2>
         <p>${f.certified ? '<span class="pill ok">Boutique certifiée SokoPlus</span> ' : ""}${esc(f.city || "")}${f.city ? " · " : ""}premier article ${esc(ago(since))}</p></div>
-      <div class="sh-stats"><span><b>${live}</b> en ligne</span><span><b>${sold}</b> vendus</span>${promos ? `<span><b>${promos}</b> en promo</span>` : ""}</div>
+      <div class="sh-stats"><span><b data-followers="${esc(shop)}">–</b> abonnés</span><span><b>${live}</b> en ligne</span><span><b>${sold}</b> vendus</span>${promos ? `<span><b>${promos}</b> en promo</span>` : ""}</div>
       ${x.about ? `<p class="sh-about">${esc(x.about)}</p>` : ""}
       ${info ? `<ul class="sh-info">${info}</ul>` : ""}
+      <button class="btn follow" type="button" data-follow="${esc(shop)}">S'abonner</button>
       <a class="btn ok" href="${esc(waLink(f.phone, msg))}" target="_blank" rel="noopener">Écrire sur WhatsApp</a>
     </div>`;
 }

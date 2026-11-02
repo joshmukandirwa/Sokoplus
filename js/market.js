@@ -298,6 +298,7 @@ export function openDetail(id) {
           ${shopAv(it, 44)}
           <div><b>${esc(it.shopName)}${certMark(it)}</b><small>${esc(where(it))}</small></div>
           <button class="btn ghost small" id="shopBtn" type="button">Voir la boutique</button>
+          <button class="btn small follow" type="button" data-follow="${esc(it.ownerId)}">S'abonner</button>
         </div>
         <div class="pdp-actions">${buy}<button class="btn ghost" id="shareBtn" type="button">Partager</button></div>
       </aside>
