@@ -2812,3 +2812,162 @@ iframe.skiptranslate,
   gap: 8px;
   flex-wrap: wrap
 }
+
+/* ===== Abonnements aux boutiques ===== */
+.btn.follow,
+[data-follow] {
+  white-space: nowrap
+}
+
+[data-follow].on {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--line);
+  box-shadow: none
+}
+
+.vp .vstats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr)
+}
+
+.sh-stats b[data-followers] {
+  font-variant-numeric: tabular-nums
+}
+
+.favtabs {
+  display: flex;
+  gap: 8px;
+  margin: 4px 0 14px;
+  overflow-x: auto;
+  scrollbar-width: none
+}
+
+.favtabs button {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border-radius: 99px;
+  border: 2px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font: 700 .9rem var(--body);
+  cursor: pointer
+}
+
+.favtabs button em {
+  font-style: normal;
+  font-size: .76rem;
+  min-width: 22px;
+  padding: 2px 7px;
+  border-radius: 99px;
+  background: var(--soft, rgba(0, 0, 0, .08));
+  text-align: center
+}
+
+.favtabs button[aria-pressed=true] {
+  border-color: #ff6a00;
+  background: #fff1e3;
+  color: #5a2b00
+}
+
+.favtabs button[aria-pressed=true] em {
+  background: #ff6a00;
+  color: #fff
+}
+
+:root[data-theme=dark] .favtabs button[aria-pressed=true] {
+  background: #3a2410;
+  color: #ffd9b8
+}
+
+.shoplist {
+  display: grid;
+  gap: 10px
+}
+
+.shrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 18px;
+  background: var(--surface);
+  border: 1px solid var(--line)
+}
+
+.shrow .shl {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  color: var(--ink);
+  text-decoration: none
+}
+
+.shrow .sh-av {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  flex: none;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: #fff;
+  font-weight: 900
+}
+
+.shrow .sh-av img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover
+}
+
+.shrow .shn {
+  display: grid;
+  min-width: 0
+}
+
+.shrow .shn b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap
+}
+
+.shrow .shn small {
+  color: var(--muted)
+}
+
+/* ===== Statistiques de la boutique : 4 colonnes, une seule ligne ===== */
+.vp .vstats {
+  grid-template-columns: repeat(4, 1fr)
+}
+
+.vp .vstats div {
+  padding: 12px 2px;
+  min-width: 0
+}
+
+.vp .vstats span {
+  font-size: .8rem;
+  white-space: nowrap
+}
+
+/* ===== Mes articles : titre en haut, boutons alignés en dessous ===== */
+.mine .it .acts {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1.5fr 1.1fr;
+  gap: 8px
+}
+
+.mine .it .acts .btn {
+  width: 100%;
+  padding: 9px 6px;
+  font-size: .84rem;
+  white-space: nowrap;
+  justify-content: center
+}

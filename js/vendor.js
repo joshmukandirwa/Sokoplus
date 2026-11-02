@@ -12,6 +12,7 @@ import {
 import { injectIcons, icon } from "./icons.js";
 import { notify } from "./notify.js";
 import { pingPush } from "./pushapi.js";
+import { watchMyFollowers, fmtCount } from "./follow.js";
 import { onMyNotifs, myNotifs, unread, markRead, removeNotifs, ms as nms } from "./mesnotifs.js";
 import { COUNTRIES, DEFAULT_COUNTRY, citiesOf, currenciesOf, curName, ALL_CURRENCIES, decimalsOf } from "./pays.js";
 import { run, btnOf } from "./feedback.js";
@@ -217,6 +218,8 @@ function state() {
 const CERT_BADGE = '<img class="ic cert-ic" src="icons/certifie.png" width="16" height="16" alt="Boutique certifiée" title="Boutique certifiée SokoPlus" draggable="false">';
 
 /* ---------------- Certification SokoPlus : guide, demande et messages de SokoPlus ---------------- */
+watchMyFollowers(n => { const e = $("#vsFol"); if (e) e.textContent = fmtCount(n); });
+
 /* Invitation à activer les alertes (même app fermée) pour les vendeurs connectés */
 function renderPushAsk() {
   let el = $("#pushAsk");
@@ -534,9 +537,10 @@ function renderMine() {
       ${img ? `<img src="${esc(img)}" alt="">` : `<div class="ph" style="background:${tileColor(profile.shopName)}"></div>`}
       <div class="txt"><b>${esc(it.title)}</b><div class="note">${money(it.price, it.currency)} · ${ago(it.createdAt?.toMillis?.() ?? Date.now())}
         ${it.status === "sold" ? '<span class="pill bad">Vendu</span>' : it.featured ? '<span class="pill warn">À la une</span>' : '<span class="pill ok">En ligne</span>'}</div>
-        <div class="row"><button class="btn small ghost" data-a="edit">Modifier</button>
+</div>
+      <div class="acts"><button class="btn small ghost" data-a="edit">Modifier</button>
         <button class="btn small ghost" data-a="sold">${it.status === "sold" ? "Remettre en vente" : "Marquer vendu"}</button>
-        <button class="btn small ghost" data-a="del">Supprimer</button></div></div></div>`;
+        <button class="btn small ghost" data-a="del">Supprimer</button></div></div>`;
   }).join("") : `<p class="empty">Ta boutique est prête. Publie ton premier article ci-dessus pour commencer à vendre.</p>`;
 }
 $("#mine").addEventListener("click", async e => {
