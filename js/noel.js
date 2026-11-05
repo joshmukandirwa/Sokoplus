@@ -1,4 +1,4 @@
-/* Ambiance fêtes : charge le style, change les logos et fait tomber de minuscules flocons ❄ */
+/* Ambiance fêtes : charge le style, change les logos et fait tomber de minuscules flocons */
 const root = document.documentElement;
 root.classList.add("noel");
 if (!document.getElementById("noelCss")) {
@@ -25,7 +25,7 @@ if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
     x.shadowColor = "rgba(160,215,255,.95)"; x.shadowBlur = blur ? 10 : 6; x.drawImage(img, pad, pad, size, size);
     return { c, w: size + pad * 2 };
   };
-  const build = () => { dpr = Math.min(devicePixelRatio || 1, 2); sprites = [mk(9, 0), mk(13, 0), mk(19, 0), mk(27, 0), mk(38, 0), mk(58, 3.2)]; };
+  const build = () => { dpr = Math.min(devicePixelRatio || 1, 2); sprites = [mk(6, 0), mk(9, 0), mk(13, 0), mk(18, 0), mk(25, 0), mk(38, 2.4)]; };
   const spawn = (top) => {
     const r = Math.random(), layer = r < .12 ? 5 : r < .30 ? 4 : r < .55 ? 3 : r < .8 ? 2 : r < .93 ? 1 : 0, z = [.25, .35, .5, .7, .85, 1.1][layer];
     return { x: Math.random() * W, y: top ? -60 : Math.random() * H, layer, z, v: 16 + z * 46 + Math.random() * 14, sway: 6 + Math.random() * 18, ph: Math.random() * 6.28, flip: Math.random() * 6.28, fv: .6 + Math.random() * 1.6, rot: Math.random() * 6.28, rv: (Math.random() - .5) * .9, a: layer === 5 ? .55 : .55 + Math.random() * .4 };

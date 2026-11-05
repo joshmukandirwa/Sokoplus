@@ -439,24 +439,16 @@ function renderStatus() {
         <div class="qtx"><span class="qtag">Essai gratuit · limite du jour</span>
           <b>${full ? "Tes 2 publications du jour sont utilisées" : `Encore ${left} publication${left > 1 ? "s" : ""} aujourd'hui`}</b></div></div>
       <div class="qseg" role="img" aria-label="${used} publication${used > 1 ? "s" : ""} utilisée${used > 1 ? "s" : ""} sur 2">${[0, 1].map(n => `<i class="${n < used ? "on" : ""}"></i>`).join("")}</div>
-      <div class="qfoot"><span class="qchip">${icon("clock")}${full ? "Reprise dans" : "Remise à zéro dans"} <span class="qcd" data-reset></span></span></div>
       ${full ? `<p class="qnote">${esc(profile.shopName)}, ta prochaine publication gratuite s'ouvre à minuit. Pour publier sans limite, passe à la version complète.</p>` : ""}${cta}`;
-    tickReset();
   }
   $("#wiz").hidden = (!s.ok || full) && !editing;
   $("#iSubmit").disabled = (!s.ok && !editing) || (full && !editing);
 }
-/* Compte à rebours jusqu'à minuit (heure de RDC) : la limite du jour repart à zéro */
+/* La limite du jour repart à zéro à minuit (heure de RDC) : on met l'état à jour au changement de jour */
 let lastDay = "";
-const untilReset = () => { const n = Date.now() + 2 * 3600e3, d = new Date(n); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1) - n; };
-function tickReset() {
-  const ms = untilReset(), t = `${Math.floor(ms / 3600e3)} h ${String(Math.floor(ms % 3600e3 / 60e3)).padStart(2, "0")} min ${String(Math.floor(ms % 60e3 / 1e3)).padStart(2, "0")} s`;
-  $$("[data-reset]").forEach(el => { el.textContent = t; });
-}
-/* Compte à rebours : le temps restant défile en direct */
+/* Abonnement : le temps restant défile en direct */
 setInterval(() => {
   if (!profile || !user || $("#dash").hidden) return;
-  tickReset();
   if (lastDay && lastDay !== dayKey()) renderStatus();   // minuit passé : les 2 publications sont de nouveau disponibles
   const s = state(), was = $("#dSub")?.dataset.ok;
   paintSub(s);
@@ -466,16 +458,36 @@ $("#resend").onclick = async () => { if (!needNet()) return; try { await sendEma
 $("#refresh").onclick = async () => { if (!needNet()) return; try { await user.reload(); await user.getIdToken(true); renderStatus(); if (!user.emailVerified) toast("Email pas encore vérifié."); } catch (e) { toast(nice(e)); } };
 
 /* ---------------- Formulaire article ---------------- */
-$("#iImgs").addEventListener("change", e => {
-  const files = [...e.target.files].slice(0, 3);
-  const big = files.find(f => f.size > MAX_MB * 1048576);
-  if (big) { e.target.value = ""; $("#previews").innerHTML = ""; return toast(`La photo « ${big.name} » est trop lourde (${(big.size / 1048576).toFixed(1).replace(".", ",")} Mo). Maximum ${MAX_MB} Mo par photo.`); }
-  $("#previews").innerHTML = "";
-  files.forEach(f => { const i = new Image(); i.src = URL.createObjectURL(f); i.alt = ""; $("#previews").append(i); });
+/* Photos : on les ajoute une à une, chacune peut être retirée avant l'envoi (3 au maximum) */
+let picked = [], editImgs = [];
+const picUrls = new WeakMap(), picUrl = f => { if (!picUrls.has(f)) picUrls.set(f, URL.createObjectURL(f)); return picUrls.get(f); };
+function paintPics() {
+  const box = $("#previews");
+  if (picked.length) box.innerHTML = picked.map((f, i) => `<div class="ph"><img src="${picUrl(f)}" alt="Photo ${i + 1}"><button type="button" class="ph-x" data-i="${i}" aria-label="Retirer la photo ${i + 1}">${icon("close")}</button></div>`).join("");
+  else if (editImgs.length) box.innerHTML = editImgs.map(u => `<div class="ph"><img src="${esc(thumb(u, 160))}" alt=""></div>`).join("") + '<p class="ph-hint">Photos actuelles. Choisis de nouvelles photos pour les remplacer.</p>';
+  else box.innerHTML = '<span class="ph-empty">Aucune photo</span>';
+  $("#iPick").textContent = picked.length ? (picked.length < 3 ? "Ajouter une photo" : "Changer les photos") : "Choisir des photos";
+  $("#iPick").hidden = false; $("#iClear").hidden = !picked.length;
+}
+$("#iPick").onclick = () => { if (picked.length >= 3) { picked = []; paintPics(); } $("#iImgs").click(); };
+$("#iClear").onclick = () => { picked = []; paintPics(); };
+$("#previews").addEventListener("click", e => {
+  const b = e.target.closest(".ph-x"); if (!b) return;
+  picked.splice(Number(b.dataset.i), 1); paintPics();
 });
+$("#iImgs").addEventListener("change", e => {
+  const files = [...e.target.files].filter(f => f.type.startsWith("image/")); e.target.value = "";
+  const big = files.find(f => f.size > MAX_MB * 1048576);
+  if (big) toast(`La photo « ${big.name} » est trop lourde (${(big.size / 1048576).toFixed(1).replace(".", ",")} Mo). Maximum ${MAX_MB} Mo par photo.`);
+  const ok = files.filter(f => f.size <= MAX_MB * 1048576 && !picked.some(p => p.name === f.name && p.size === f.size && p.lastModified === f.lastModified));
+  const room = 3 - picked.length;
+  if (ok.length > room && !big) toast("3 photos au maximum. Retire-en une pour en ajouter une autre.");
+  picked = picked.concat(ok.slice(0, room)); paintPics();
+});
+paintPics();
 
 function resetForm() {
-  editing = null; $("#fItem").reset(); $("#previews").innerHTML = "";
+  editing = null; $("#fItem").reset(); picked = []; editImgs = []; paintPics();
   $("#fTitle").textContent = "Publier un article"; $("#iSubmit").textContent = "Publier"; $("#iCancel").hidden = true;
   fillPlace(DEFAULT_COUNTRY); showStep(1); renderStatus();
 }
@@ -487,7 +499,7 @@ const stepEl = n => document.querySelector(`.step[data-step="${n}"]`);
 function validStep(n) {
   const ok = [...stepEl(n).querySelectorAll("input,select,textarea")].every(el => el.type === "file" || el.reportValidity());
   if (!ok) return false;
-  if (n === 3 && !editing && !$("#iImgs").files.length) { say($("#iMsg"), "Ajoute au moins une photo pour continuer.", "err"); return false; }
+  if (n === 3 && !editing && !picked.length) { say($("#iMsg"), "Ajoute au moins une photo pour continuer.", "err"); return false; }
   say($("#iMsg"), "");
   return true;
 }
@@ -506,7 +518,7 @@ function showStep(n, scroll = true) {
 function recap() {
   const cur = ALL_CURRENCIES.includes($("#iCur").value) ? $("#iCur").value : "USD", price = Number($("#iPrice").value), desc = $("#iDesc").value.trim();
   const after = isTrial() && !editing ? Math.max(0, 1 - usedToday()) : null;   // publications restantes après cet envoi
-  $("#recap").innerHTML = `<div class="rprev">${$("#previews").innerHTML}</div>
+  $("#recap").innerHTML = `<div class="rprev">${[...$("#previews").querySelectorAll("img")].map(i => i.outerHTML).join("")}</div>
     <h3>${esc($("#iTitle").value.trim())}</h3>
     <div class="rprice">${money(price, cur)}</div>
     <dl class="rlist"><div><dt>Catégorie</dt><dd>${esc($("#iCat").value)}</dd></div>
@@ -526,7 +538,7 @@ $("#fItem").addEventListener("submit", e => {
   for (let i = 1; i < STEPS; i++) if (!validStep(i)) { showStep(i); setTimeout(() => validStep(i), 50); return; }
   const m = $("#iMsg"), btn = $("#iSubmit");
   run(btn, async () => {
-    const files = [...$("#iImgs").files].slice(0, 3);
+    const files = picked.slice(0, 3);
     if (!editing && !files.length) throw { message: "Ajoute au moins une photo." };
     const big = files.find(f => f.size > MAX_MB * 1048576);
     if (big) throw { message: `La photo « ${big.name} » fait ${(big.size / 1048576).toFixed(1).replace(".", ",")} Mo. Maximum ${MAX_MB} Mo par photo : choisis-en une plus légère.` };
@@ -682,7 +694,7 @@ $("#mine").addEventListener("click", async e => {
       editing = it;
       $("#iTitle").value = it.title; $("#iCat").value = it.category; $("#iPrice").value = it.price; $("#iCur").value = it.currency || "USD"; $("#iTag").value = it.tag || ""; $("#iOld").value = it.oldPrice || "";
       $("#iDesc").value = it.description || ""; $("#iAddr").value = it.address; fillPlace(it.country || DEFAULT_COUNTRY, it.city || "", it.currency || "USD");
-      $("#previews").innerHTML = (it.images || []).map(u => `<img src="${esc(thumb(u, 160))}" alt="">`).join("");
+      picked = []; editImgs = it.images || []; paintPics();
       $("#fTitle").textContent = "Modifier l'article"; $("#iSubmit").textContent = "Enregistrer"; $("#iCancel").hidden = false;
       renderStatus(); $("#iSubmit").disabled = false; showStep(1);
       $("#fItem").scrollIntoView({ behavior: "smooth" });

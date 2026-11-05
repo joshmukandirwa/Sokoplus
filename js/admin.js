@@ -76,7 +76,7 @@ else onAuthStateChanged(auth, async u => {
     }),
     onSnapshot(query(collection(db, "announcements"), orderBy("createdAt", "desc"), limit(100)), s => { anns = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, () => { }),
     onSnapshot(doc(db, "config", "maintenance"), s => { maint = s.exists() ? s.data() : null; paintMaint(); }),
-    onSnapshot(doc(db, "config", "theme"), s => { festive = s.exists() ? s.data().festive : "auto"; paintFest(); }, () => { }),
+    onSnapshot(doc(db, "config", "theme"), s => { festive = s.exists() && FEST[s.data().festive] ? s.data().festive : "auto"; paintFest(); }, () => { }),
     onSnapshot(doc(db, "config", "pricing"), s => { pricingDoc = s.exists() ? s.data() : null; if (tab === "price") render(); }, () => { }),
     onSnapshot(collection(db, "buyers"), s => { buyers = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, () => { }),
     onSnapshot(collection(db, "users"), s => { users = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }),
@@ -290,12 +290,12 @@ function annView(q) {
   const list = anns.filter(a => !q || norm(`${a.title} ${a.text}`).includes(q));
   return head + (list.map(annCard).join("") || empty("mega", "Aucune annonce pour le moment. Touche « Nouvelle annonce » pour en publier une."));
 }
-/* ---------- Ambiance de fêtes : Automatique → Activée → Désactivée (valable pour tout le site) ---------- */
+/* ---------- Ambiance de fêtes : Automatique / Activée / Désactivée (seul l'admin décide pour tout le site) ---------- */
 let festive = "auto";
-const FEST = { auto: "Automatique (1er déc. au 10 janv.)", on: "Activée pour tout le monde", off: "Désactivée pour tout le monde" };
+const FEST = { auto: "Automatique (5 déc. au 10 janv.)", on: "Activée (chacun peut la couper)", off: "Désactivée pour tout le monde" };
 function paintFest() {
-  const t = $("#festS"); if (!t) return; t.textContent = FEST[festive] || FEST.auto;
-  $$("#festSeg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === (FEST[festive] ? festive : "auto"))));
+  const t = $("#festS"); if (!t) return; t.textContent = FEST[festive];
+  $$("#festSeg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === festive)));
   $("#festBox").classList.toggle("on", festive === "on");
 }
 paintFest();
@@ -303,7 +303,7 @@ $("#festSeg").addEventListener("click", ev => {
   const b = ev.target.closest("button"); if (!b || b.dataset.v === festive) return;
   const v = b.dataset.v; b.disabled = true;
   setDoc(doc(db, "config", "theme"), { festive: v, updatedAt: serverTimestamp() })
-    .then(() => toast(v === "on" ? "Ambiance de fêtes activée pour tout le monde." : v === "off" ? "Ambiance de fêtes désactivée pour tout le monde." : "Ambiance de fêtes en mode automatique."))
+    .then(() => toast(v === "on" ? "Ambiance de fêtes activée. Chaque visiteur peut la couper dans Paramètres." : v === "off" ? "Ambiance de fêtes désactivée pour tout le monde." : "Ambiance de fêtes en mode automatique : du 5 décembre au 10 janvier."))
     .catch(err => toast(isNetErr(err) ? NET_MSG : failText(err))).finally(() => { b.disabled = false; });
 });
 

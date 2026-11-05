@@ -20,7 +20,6 @@ function seg(id, key, def, after) {
   paint();
 }
 seg("#segTheme", "theme", "light", () => window.__applyTheme());
-seg("#segNoel", "noel", "auto", () => { toast("Ambiance de fêtes mise à jour", { ms: 1200 }); setTimeout(() => location.reload(), 600); });
 seg("#segLang", "lang", "fr", () => {
   if (gtCode()) { gtSet(""); location.reload(); return; }   // on quitte la traduction Google : retour au texte d'origine
   window.__applyTheme(); document.dispatchEvent(new CustomEvent("lang")); toast(({ fr: "Langue : français", en: "Language: English" })[store.get("lang", "fr")] || "OK", { ms: 1500 });

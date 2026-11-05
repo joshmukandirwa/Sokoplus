@@ -321,26 +321,24 @@ mount(); translate(); reveal();
 document.addEventListener("lang", () => translate());
 window.SOKO = { translate, reveal };
 
-/* Ambiance de fêtes : réglée par l'admin pour tout le site (Automatique / Activée / Désactivée), ou choisie dans Paramètres.
-   Automatique = du 1er décembre au 10 janvier. ?noel=1 / ?noel=0 pour essayer sur ton téléphone. */
+/* Ambiance de fêtes : seul l'admin décide pour tout le site (Automatique = du 5 décembre au 10 janvier, Activée, Désactivée). */
+export const noelSiteOn = () => {
+  const v = store.get("noelSite", "auto"), d = new Date(), m = d.getMonth(), j = d.getDate();
+  return v === "on" || (v !== "off" && ((m === 11 && j >= 5) || (m === 0 && j <= 10)));
+};
 (function festive() {
   if (/admin\.html|\/admin\/?$/.test(location.pathname)) return;
-  try { const q = new URLSearchParams(location.search).get("noel"); if (q === "1" || q === "0") store.set("noel", q === "1" ? "on" : "off"); } catch { /* adresse illisible */ }
-  const d = new Date(), season = d.getMonth() === 11 || (d.getMonth() === 0 && d.getDate() <= 10);
-  const decide = () => {
-    const mine = store.get("noel", "auto"), site = store.get("noelSite", "auto");
-    if (mine === "on" || mine === "off") return mine === "on";
-    return site === "on" || (site === "auto" && season);
-  };
+  const decide = () => noelSiteOn();
   const active = decide();
   if (active) import("./noel.js").catch(() => { /* décor facultatif */ });
   /* Réglage du site : on le lit sur le serveur ; s'il change, la page se recharge une fois pour l'appliquer */
   import("./fb.js").then(({ db, doc, onSnapshot }) => {
     if (!db) return;
     onSnapshot(doc(db, "config", "theme"), s => {
-      const v = s.exists() ? s.data().festive : "auto", old = store.get("noelSite", "auto");
-      if (v !== "on" && v !== "off") { if (old !== "auto") { store.set("noelSite", "auto"); if (decide() !== active) location.reload(); } return; }
-      if (v !== old) { store.set("noelSite", v); if (decide() !== active) location.reload(); }
+      const f = s.exists() ? s.data().festive : "auto", v = f === "on" || f === "off" ? f : "auto", old = store.get("noelSite", "auto");
+      if (v === old) return;
+      store.set("noelSite", v);
+      if (decide() !== active) location.reload();
     }, () => { /* hors connexion : on garde le dernier réglage connu */ });
   }).catch(() => { });
 })();

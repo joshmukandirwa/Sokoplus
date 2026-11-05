@@ -30,12 +30,12 @@
   <!-- /SEO -->
   <meta name="theme-color" content="#1b1b1f">
   <link rel="manifest" href="manifest.json">
-  <script src="js/boot.js"></script>
   <link rel="icon" type="image/png" href="icons/logo-mark.png">
   <link rel="stylesheet"
     href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,700;0,800;0,900;1,900&family=Figtree:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/alibaba.css">
+  <script src="js/boot.js"></script>
 </head>
 
 <body data-page="vendeur">
@@ -197,9 +197,11 @@
 
           <fieldset class="step" data-step="3" hidden>
             <legend>Montre-le avec de belles photos</legend>
-            <label class="field">Photos (1 à 3, 4 Mo maximum chacune)<input id="iImgs" type="file" accept="image/*"
-                multiple></label>
-            <div class="previews" id="previews"></div>
+            <div class="field"><span>Photos (1 à 3, 4 Mo maximum chacune)</span>
+              <input id="iImgs" type="file" accept="image/*" multiple hidden>
+              <div class="previews" id="previews"></div>
+              <div class="ph-btns"><button type="button" class="btn small ghost" id="iPick">Choisir des photos</button><button type="button" class="btn small ghost" id="iClear" hidden>Tout retirer</button></div>
+            </div>
             <p class="note">Photos nettes, bien éclairées, sur un fond simple : les articles bien photographiés se
               vendent plus vite.</p>
           </fieldset>

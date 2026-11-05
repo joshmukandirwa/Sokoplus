@@ -88,15 +88,24 @@ function tick() {
   ov.querySelector("[data-u=d]").style.display = d ? "" : "none";
 }
 
-/* Affichage immédiat avec la dernière info connue, puis le serveur confirme ou corrige */
+/* Si une maintenance était en cours à la dernière visite, boot.js cache la page dès le départ (classe mt-lock).
+   On attend alors la réponse du serveur (2,5 s au plus) pour afficher la bonne page, sans jamais montrer d'ancienne info.
+   Hors connexion ou trop lent : on affiche la dernière info connue. */
+const unlock = () => document.documentElement.classList.remove("mt-lock");
 const old = saved();
-if (old && old.until > Date.now()) { cur = old; show(); }
+let confirmed = false;
+if (old && old.until > Date.now()) {
+  cur = old;
+  setTimeout(() => { if (!confirmed) { show(); unlock(); } }, 2500);
+}
 if (db) {
   try {
     onSnapshot(doc(db, "config", "maintenance"), s => {
+      confirmed = true;
       const d = s.exists() ? s.data() : null, end = d?.until?.toMillis?.() ?? 0;
       if (d?.on && end > Date.now()) { cur = { until: end, message: d.message || "" }; keep(cur); show(); }
       else { cur = null; keep(null); hide(); }
-    }, () => { /* hors connexion : on ne bloque pas */ });
-  } catch { /* Firebase indisponible : on ne bloque pas */ }
-}
+      unlock();
+    }, () => { confirmed = true; if (cur) show(); unlock(); });
+  } catch { if (cur) show(); unlock(); }
+} else { if (cur) show(); unlock(); }
