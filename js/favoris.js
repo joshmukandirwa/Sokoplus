@@ -33,7 +33,7 @@ document.addEventListener("cur", render);
 document.addEventListener("follows", render);
 $("#favTabs").addEventListener("click", e => { const b = e.target.closest("[data-t]"); if (!b) return; tab = b.dataset.t; render(); });
 $("#clear").addEventListener("click", e => {
-  const b = e.currentTarget;
-  if (!b.dataset.sure) { b.dataset.sure = "1"; b.textContent = "Confirmer ?"; setTimeout(() => { delete b.dataset.sure; b.textContent = "Tout vider"; }, 3000); return; }
-  favs.clear(); store.set("favs", []); document.dispatchEvent(new CustomEvent("favs")); delete b.dataset.sure; b.textContent = "Tout vider"; render();
+  const b = e.currentTarget, reset = () => { delete b.dataset.sure; b.classList.remove("sure"); b.setAttribute("aria-label", "Tout vider"); };
+  if (!b.dataset.sure) { b.dataset.sure = "1"; b.classList.add("sure"); b.setAttribute("aria-label", "Confirmer : tout vider"); clearTimeout(b._t); b._t = setTimeout(reset, 3000); return; }
+  clearTimeout(b._t); favs.clear(); store.set("favs", []); document.dispatchEvent(new CustomEvent("favs")); reset(); render();
 });

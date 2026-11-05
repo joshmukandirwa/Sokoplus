@@ -88,7 +88,7 @@ function mount() {
   const city = store.get("city", "");
   document.body.insertAdjacentHTML("afterbegin", `
   <header class="top"><div class="wrap bar">
-    <a class="logo" href="index.html" aria-label="SokoPlus"><img class="mark" src="icons/logo-mark.png" alt=""><span class="wm">SOKO<b>PLUS</b></span></a>
+    <a class="logo" href="index.html" aria-label="SokoPlus"><img class="logo-img" src="icons/logo-full.png" alt="SokoPlus, tous vos achats, un seul endroit" width="150" height="49" draggable="false"></a>
     <nav class="dnav" aria-label="Navigation">
       <a href="index.html" data-p="home" data-i18n="nav.home">Accueil</a><a href="categories.html" data-p="categories" data-i18n="nav.cats">Catégories</a>
       <a href="favoris.html" data-p="favoris" data-i18n="nav.favs">Favoris</a><a href="vendeur.html" data-p="vendeur" data-i18n="nav.shop">Ma boutique</a><a href="parametres.html" data-p="parametres" data-i18n="nav.settings">Paramètres</a>
@@ -279,6 +279,25 @@ if ("serviceWorker" in navigator && location.protocol !== "file:") {
 }
 export const applyUpdate = () => { sessionStorage.setItem("soko-reload", "1"); reg && reg.waiting && reg.waiting.postMessage("SKIP_WAITING"); setTimeout(() => location.reload(), 800); };
 
+/* Avis « Nouvelle version » (toutes les pages) : l'app installée se met à jour en un geste */
+(function updateToast() {
+  if (!("serviceWorker" in navigator) || location.protocol === "file:") return;
+  let box;
+  const show = () => {
+    if (box || !document.body) return;
+    box = document.createElement("div"); box.className = "updtoast"; box.setAttribute("role", "status");
+    box.innerHTML = '<span><b>Nouvelle version</b><small>Logo et améliorations prêts.</small></span><button type="button" class="btn small">Mettre à jour</button><button type="button" class="updtoast-x" aria-label="Plus tard">&times;</button>';
+    box.querySelector(".btn").onclick = () => { box.querySelector(".btn").textContent = "Mise à jour…"; applyUpdate(); };
+    box.querySelector(".updtoast-x").onclick = () => { box.remove(); box = null; };
+    document.body.append(box); requestAnimationFrame(() => box.classList.add("in"));
+  };
+  document.addEventListener("sw-update", show);
+  navigator.serviceWorker.getRegistration().then(r => { if (r && r.waiting && navigator.serviceWorker.controller) show(); }).catch(() => {});
+  let last = 0;
+  const poll = () => { if (document.visibilityState !== "visible" || Date.now() - last < 6e4) return; last = Date.now(); navigator.serviceWorker.getRegistration().then(r => r && r.update().then(() => { if (r.waiting && navigator.serviceWorker.controller) show(); })).catch(() => {}); };
+  document.addEventListener("visibilitychange", poll); addEventListener("focus", poll); setTimeout(poll, 2500);
+})();
+
 /* Installation (PWA) */
 export let installEvt = null;
 addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; document.dispatchEvent(new CustomEvent("installable")); });
@@ -301,3 +320,27 @@ window.__uiOk = true;
 mount(); translate(); reveal();
 document.addEventListener("lang", () => translate());
 window.SOKO = { translate, reveal };
+
+/* Ambiance de fêtes : réglée par l'admin pour tout le site (Automatique / Activée / Désactivée), ou choisie dans Paramètres.
+   Automatique = du 1er décembre au 10 janvier. ?noel=1 / ?noel=0 pour essayer sur ton téléphone. */
+(function festive() {
+  if (/admin\.html|\/admin\/?$/.test(location.pathname)) return;
+  try { const q = new URLSearchParams(location.search).get("noel"); if (q === "1" || q === "0") store.set("noel", q === "1" ? "on" : "off"); } catch { /* adresse illisible */ }
+  const d = new Date(), season = d.getMonth() === 11 || (d.getMonth() === 0 && d.getDate() <= 10);
+  const decide = () => {
+    const mine = store.get("noel", "auto"), site = store.get("noelSite", "auto");
+    if (mine === "on" || mine === "off") return mine === "on";
+    return site === "on" || (site === "auto" && season);
+  };
+  const active = decide();
+  if (active) import("./noel.js").catch(() => { /* décor facultatif */ });
+  /* Réglage du site : on le lit sur le serveur ; s'il change, la page se recharge une fois pour l'appliquer */
+  import("./fb.js").then(({ db, doc, onSnapshot }) => {
+    if (!db) return;
+    onSnapshot(doc(db, "config", "theme"), s => {
+      const v = s.exists() ? s.data().festive : "auto", old = store.get("noelSite", "auto");
+      if (v !== "on" && v !== "off") { if (old !== "auto") { store.set("noelSite", "auto"); if (decide() !== active) location.reload(); } return; }
+      if (v !== old) { store.set("noelSite", v); if (decide() !== active) location.reload(); }
+    }, () => { /* hors connexion : on garde le dernier réglage connu */ });
+  }).catch(() => { });
+})();

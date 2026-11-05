@@ -1,6 +1,7 @@
 import { load, items, filter, paint, bind, counts, shops, catIcon, openFromUrl, notice, suggest, hasTaste, isPromo, isDeal, certMark } from "./market.js";
 import { SITE, $, $$, esc, tileColor, thumb } from "./common.js";
-import { countUp } from "./ui.js";
+import { countUp, installEvt } from "./ui.js";
+import { initAnnonces } from "./annonces.js";
 
 let sort = "recent", opened = false, shown = 0;
 const LIMIT = 18;
@@ -43,3 +44,33 @@ promos.addEventListener("scroll", () => {
   dots.forEach((d, n) => d.classList.toggle("on", n === idx));
 }, { passive: true });
 dots.forEach((d, n) => d.addEventListener("click", () => slide(n)));
+
+initAnnonces();
+
+
+/* ---------- Bannière « Installer l'application » (accueil) ---------- */
+(function installBanner() {
+  const bar = $("#installBar"); if (!bar) return;
+  const KEY = "soko-inst-x", WAIT = 3 * 864e5, DELAY = 3500;  // « Plus tard » = on revient dans 3 jours ; elle glisse en bas après 3,5 s, sans pousser le contenu
+  const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+  const recentlyClosed = () => { try { return Date.now() - Number(localStorage.getItem(KEY) || 0) < WAIT; } catch { return false; } };
+  const refresh = () => {
+    if (standalone || recentlyClosed()) { bar.hidden = true; return; }
+    if (ios) $("#installHint").textContent = "Touche Partager, puis « Sur l'écran d'accueil ».";
+    const can = !!(installEvt || ios);
+    if (!can) { bar.hidden = true; return; }
+    if (!bar.hidden || shown) return;
+    clearTimeout(t); t = setTimeout(() => { shown = true; bar.hidden = false; requestAnimationFrame(() => bar.classList.add("in")); }, DELAY);
+  };
+  let t, shown = false;
+  const close = () => { bar.classList.remove("in"); setTimeout(() => { bar.hidden = true; }, 250); };
+  $("#installBtn").onclick = async () => {
+    if (installEvt) { installEvt.prompt(); try { await installEvt.userChoice; } catch { /* annulé */ } close(); }
+    else if (ios) $("#installHint").textContent = "Touche l'icône Partager de Safari, puis « Sur l'écran d'accueil ».";
+  };
+  $("#installX").onclick = () => { try { localStorage.setItem(KEY, String(Date.now())); } catch { /* stockage bloqué */ } close(); };
+  document.addEventListener("installable", refresh);
+  addEventListener("appinstalled", () => { close(); });
+  refresh();
+})();

@@ -123,8 +123,14 @@ a {
 .logo .mark {
   height: 44px;
   width: auto;
-  mix-blend-mode: screen;
   flex: none
+}
+
+.logo .logo-img {
+  height: 49px;
+  width: auto;
+  flex: none;
+  display: block
 }
 
 .wm {
@@ -716,26 +722,46 @@ a {
 footer.foot {
   margin: 30px calc(-1*max(16px, env(safe-area-inset-left, 0px))) calc(-92px - env(safe-area-inset-bottom, 0px));
   background: var(--night);
-  color: #9fb0d6;
-  padding: 28px max(16px, env(safe-area-inset-left, 0px)) calc(110px + env(safe-area-inset-bottom, 0px));
+  color: #8d9bbd;
+  padding: 30px max(16px, env(safe-area-inset-left, 0px)) calc(110px + env(safe-area-inset-bottom, 0px));
   text-align: center;
-  font-size: .85rem
+  font-size: .8rem
 }
 
 footer.foot img {
-  width: 150px;
-  mix-blend-mode: screen;
+  width: min(190px, 56%);
+  height: auto;
   display: block;
-  margin: 0 auto 6px
+  margin: 0 auto 18px
 }
 
-footer.foot a {
-  color: #fff
-}
-
-footer.foot .row {
+footer.foot .foot-links {
+  display: flex;
   justify-content: center;
-  gap: 6px 18px
+  gap: 0;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, .08)
+}
+
+footer.foot .foot-links a {
+  color: #d5dcf0;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: .76rem;
+  white-space: nowrap;
+  padding: 6px 10px
+}
+
+footer.foot .foot-links a + a {
+  border-left: 1px solid rgba(255, 255, 255, .14)
+}
+
+footer.foot .foot-note {
+  margin: 10px auto 0;
+  max-width: 300px;
+  line-height: 1.55;
+  font-size: .74rem;
+  opacity: .8
 }
 
 /* ---------- barre du bas ---------- */
@@ -1297,6 +1323,10 @@ dialog::backdrop {
     height: 38px
   }
 
+  .logo .logo-img {
+    height: 42px
+  }
+
   .cur button {
     padding: 0 8px
   }
@@ -1752,9 +1782,10 @@ a.search::after,
   transition: transform .25s cubic-bezier(.3, 1.6, .5, 1)
 }
 
+/* Pas d'inclinaison ni de zoom au clic sur une boutique */
 .shopav:hover span,
 .shopav:active span {
-  transform: scale(1.1) rotate(-4deg)
+  transform: none
 }
 
 .shopav b {
@@ -3896,3 +3927,37 @@ a.search::after,
 
 .nimg.mn-ic.ok { background: transparent }
 .nimg.mn-ic img { width: 28px; height: 28px; object-fit: contain }
+
+/* ---------- Annonces officielles + compteur de vues (l'œil) ---------- */
+.eye { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); font: 700 .8rem var(--body); white-space: nowrap }
+.eye .ic { width: 16px; height: 16px }
+.eye b { font-weight: 800; color: inherit }
+.pdp-views { display: flex; align-items: center; gap: 8px; margin: 2px 0 8px; color: var(--muted) }
+.pdp-views small { font-size: .82rem }
+.ann { margin-top: 20px }
+.annc-official { display: inline-flex; align-items: center; gap: 6px; font: 800 .76rem var(--body); color: var(--blue-d); background: var(--soft); border-radius: 99px; padding: 5px 11px; white-space: nowrap }
+.annc-official img { width: 16px; height: 16px }
+.annrow { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; margin: 0 calc(-1*max(16px, env(safe-area-inset-left, 0px))); padding: 4px max(16px, env(safe-area-inset-left, 0px)) 8px; scrollbar-width: none }
+.annrow::-webkit-scrollbar { display: none }
+.annc { flex: 0 0 min(80%, 330px); scroll-snap-align: start; border: var(--bw) solid var(--line); border-radius: 20px; background: var(--surface); overflow: hidden; display: flex; flex-direction: column; cursor: pointer; box-shadow: 0 4px 0 var(--line); transition: transform .15s, box-shadow .15s }
+.annrow.one .annc { flex-basis: 100% }
+.annc:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--line) }
+.annc-img { position: relative; aspect-ratio: 16/9; background: linear-gradient(135deg, #1470ff, #081a3d); overflow: hidden; border-bottom: var(--bw) solid var(--line) }
+.annc-img img { width: 100%; height: 100%; object-fit: cover; display: block }
+.annc-img img.annc-mark { position: absolute; inset: 0; margin: auto; width: 64px; height: 64px; object-fit: contain }
+.annc-kind { position: absolute; left: 10px; top: 10px; font: 800 .72rem var(--body); font-style: normal; letter-spacing: .02em; padding: 4px 11px; border-radius: 99px; color: #fff; background: var(--blue); border: 2px solid var(--line) }
+.k-communique .annc-kind, .annc-kind.k-communique { background: var(--ink); color: var(--orange) }
+.k-important .annc-kind, .annc-kind.k-important { background: var(--orange); color: var(--ink) }
+.annc-in { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 6px; flex: 1 }
+.annc-in h3 { margin: 0; font: 800 1.05rem/1.2 var(--display); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden }
+.annc-in p { margin: 0; color: var(--muted); font-size: .88rem; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden }
+.annc-foot { margin-top: auto; padding-top: 4px; display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: .8rem }
+#annDlg .dlg-head { align-items: center }
+.agal-w { position: relative }
+.agal { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; border: var(--bw) solid var(--line); border-radius: 16px; background: #0b1530; scrollbar-width: none }
+.agal::-webkit-scrollbar { display: none }
+.agal img { flex: 0 0 100%; scroll-snap-align: center; max-height: 60dvh; object-fit: contain; display: block }
+.a-meta2 { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; color: var(--muted); font: 700 .85rem var(--body) }
+.a-meta2 .annc-kind { position: static }
+.a-title2 { margin: 0; font: 900 1.5rem/1.15 var(--display) }
+.a-text2 { font-size: 1rem; line-height: 1.6; overflow-wrap: anywhere }

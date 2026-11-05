@@ -14,7 +14,11 @@ function no() { throw Object.assign(new Error("Pas de connexion à Firebase."), 
 const g = (o, k) => o[k] || no;
 export const app = A.initializeApp ? A.initializeApp(firebaseConfig) : null;
 export const auth = app ? S.getAuth(app) : null;
-export const db = app ? F.getFirestore(app) : null;
+export const db = app ? (() => {
+  // Cache local persistant : les articles déjà vus s'affichent tout de suite, la liste à jour arrive ensuite.
+  try { return F.initializeFirestore(app, { localCache: F.persistentLocalCache({ tabManager: F.persistentMultipleTabManager() }) }); }
+  catch { return F.getFirestore(app); }
+})() : null;
 export const onAuthStateChanged = S.onAuthStateChanged || ((a, cb) => { cb(null); return () => {}; });
 export const createUserWithEmailAndPassword = g(S, "createUserWithEmailAndPassword");
 export const signInWithEmailAndPassword = g(S, "signInWithEmailAndPassword");
@@ -25,5 +29,5 @@ export const GoogleAuthProvider = g(S, "GoogleAuthProvider"), signInWithPopup = 
 export const collection = g(F, "collection"), doc = g(F, "doc"), getDoc = g(F, "getDoc"), setDoc = g(F, "setDoc");
 export const addDoc = g(F, "addDoc"), updateDoc = g(F, "updateDoc"), deleteDoc = g(F, "deleteDoc");
 export const query = g(F, "query"), orderBy = g(F, "orderBy"), limit = g(F, "limit"), where = g(F, "where"), getDocs = g(F, "getDocs");
-export const deleteField = g(F, "deleteField");
+export const deleteField = g(F, "deleteField"), increment = g(F, "increment");
 export const onSnapshot = g(F, "onSnapshot"), serverTimestamp = g(F, "serverTimestamp"), Timestamp = F.Timestamp || {};

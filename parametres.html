@@ -12,7 +12,12 @@
   <meta name="theme-color" content="#1b1b1f">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/png" href="icons/logo-mark.png">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-any-192.png">
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+  <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js">
+  <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js">
+  <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet"
     href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,700;0,800;0,900;1,900&family=Figtree:wght@400;500;600;700;800&display=swap">
@@ -45,6 +50,14 @@
           <button data-v="light"><span class="sw sw-l"></span><small data-i18n="set.light">Clair</small></button>
           <button data-v="dark"><span class="sw sw-d"></span><small data-i18n="set.dark">Sombre</small></button>
           <button data-v="auto"><span class="sw sw-a"></span><small data-i18n="set.auto">Automatique</small></button>
+        </div>
+      </div>
+      <div class="item col">
+        <div class="ilab"><span class="ico t-blue"><svg viewBox="0 0 24 24"><path d="M12 2v20M4.2 7l15.6 10M19.8 7 4.2 17M9 3.5l3 2.5 3-2.5M9 20.5l3-2.5 3 2.5" /></svg></span><b>Ambiance de fêtes</b></div>
+        <div class="swatches" id="segNoel">
+          <button data-v="auto"><span class="sw sw-a"></span><small>Automatique</small></button>
+          <button data-v="on"><span class="sw sw-l"></span><small>Activée</small></button>
+          <button data-v="off"><span class="sw sw-d"></span><small>Désactivée</small></button>
         </div>
       </div>
       <div class="item col">

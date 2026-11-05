@@ -2,17 +2,20 @@ import {
   auth, db, onAuthStateChanged, signInWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup, doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField, serverTimestamp,
   collection, query, orderBy, limit, where, getDocs, onSnapshot, Timestamp, addDoc
 } from "./fb.js";
-import { SITE, configured, configBanner, $, $$, esc, safeUrl, money, prettyPhone, waLink, ago, toast, thumb, tileColor, isNetErr, failText, NET_MSG } from "./common.js";
+import { SITE, configured, configBanner, $, $$, esc, safeUrl, money, prettyPhone, phoneIssue, waLink, ago, toast, thumb, tileColor, compress, uploadImage, isNetErr, failText, NET_MSG } from "./common.js";
 import { icon } from "./icons.js";
+import { eyeHTML } from "./vues.js";
+import { KINDS } from "./annonces.js";
 import { notify } from "./notify.js";
 import { run, btnOf } from "./feedback.js";
 import { bindLogout } from "./logout.js";
 import { pingPush } from "./pushapi.js";
 import { homeHTML, chartTip } from "./admin-home.js";
+import { priceHtml, priceText, struck, fmt as fmtMoney } from "./pricing.js";
 
 configBanner();
 const DAY = 864e5;
-let buyers = [], range = 7, revs = [], pubRevs = [], maint = null, tab = "home", users = [], items = [], reports = [], subs = [], reqs = [], creqs = [], unsubs = [], firstSubs = true, firstReqs = true, firstRevs = true, firstCreqs = true;
+let buyers = [], range = 7, revs = [], pubRevs = [], maint = null, tab = "home", users = [], items = [], anns = [], viewsMap = new Map(), reports = [], subs = [], reqs = [], creqs = [], unsubs = [], firstSubs = true, firstReqs = true, firstRevs = true, firstCreqs = true;
 
 const say = (t, kind = "") => { const m = $("#aMsg"); m.hidden = !t; m.className = "msg " + kind; m.textContent = t || ""; };
 
@@ -71,7 +74,10 @@ else onAuthStateChanged(auth, async u => {
       });
       firstRevs = false; const all = s.docs.map(d => ({ id: d.id, ...d.data() })); revs = all.filter(r => r.status !== "approved"); pubRevs = all.filter(r => r.status === "approved"); render();
     }),
+    onSnapshot(query(collection(db, "announcements"), orderBy("createdAt", "desc"), limit(100)), s => { anns = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, () => { }),
     onSnapshot(doc(db, "config", "maintenance"), s => { maint = s.exists() ? s.data() : null; paintMaint(); }),
+    onSnapshot(doc(db, "config", "theme"), s => { festive = s.exists() ? s.data().festive : "auto"; paintFest(); }, () => { }),
+    onSnapshot(doc(db, "config", "pricing"), s => { pricingDoc = s.exists() ? s.data() : null; if (tab === "price") render(); }, () => { }),
     onSnapshot(collection(db, "buyers"), s => { buyers = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }, () => { }),
     onSnapshot(collection(db, "users"), s => { users = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }),
     onSnapshot(query(collection(db, "items"), orderBy("createdAt", "desc"), limit(200)), s => { items = s.docs.map(d => ({ id: d.id, ...d.data() })); render(); }),
@@ -105,27 +111,35 @@ function chipsHTML(defs, cnt) {
   $("#aChips").innerHTML = defs.map(([k, l]) => `<button class="a-chip" data-c="${k}" aria-pressed="${chips[tab] === k}">${l}<em>${cnt[k] || 0}</em></button>`).join("");
 }
 
+/* Fiabilité du numéro : « faux » (indicatif inexistant, RDC incomplet…), « non confirmé » (facultatif) ou « confirmé » */
+const phoneKind = u => !u.phone || phoneIssue(String(u.phone)) !== "" ? "suspect" : u.phoneVerified ? "ok" : "unconf";
+function phoneTag(u) {
+  const bad = !u.phone || phoneIssue(String(u.phone)) !== "";
+  if (bad) return '<span class="pill bad" title="Ce numéro ne peut pas exister : probablement un faux numéro">Numéro suspect</span>';
+  return u.phoneVerified ? '<span class="pill ok" title="Le vendeur t\'a écrit sur WhatsApp depuis ce numéro">Numéro confirmé</span>' : '<span class="pill" title="Numéro plausible, pas encore confirmé par un message WhatsApp (facultatif)">Non confirmé</span>';
+}
 function userCard(u) {
   const st = userState(u), ms = left(u), mine = items.filter(i => i.ownerId === u.id);
   const pill = { blocked: '<span class="pill bad">Bloquée</span>', expired: '<span class="pill bad">Expirée</span>', pro: '<span class="pill ok">Abonnée</span>', trial: '<span class="pill warn">Essai</span>' }[st];
   const pct = st === "blocked" || ms <= 0 ? 0 : Math.min(100, Math.round(ms / (30 * DAY) * 100));
   const meter = st === "blocked" ? "Compte suspendu" : ms <= 0 ? `Terminé le ${dateFr(until(u))}` : `${fmtD(ms)} restants, jusqu'au ${dateFr(until(u))}`;
   return `<article class="a-card" data-row data-uid="${esc(u.id)}">
-    <div class="a-head">${av(u.shopName, u.logo)}<div class="a-id"><b>${esc(u.shopName)}${u.certified ? ' <span class="cert" title="Certifiée"><img class="cert-ic" src="icons/certifie.png" width="14" height="14" alt="" draggable="false"> Certifiée</span>' : ""}</b><small>${esc(prettyPhone(u.phone))} · ${esc(u.email)}</small></div>${pill}</div>
+    <div class="a-head">${av(u.shopName, u.logo)}<div class="a-id"><b>${esc(u.shopName)}${u.certified ? ' <span class="cert" title="Certifiée"><img class="cert-ic" src="icons/certifie.png" width="14" height="14" alt="" draggable="false"> Certifiée</span>' : ""}</b><small>${esc(prettyPhone(u.phone))} · ${esc(u.email)}</small>${phoneTag(u)}</div>${pill}</div>
     <div class="a-meter ${st}"><div class="a-bar"><i style="width:${pct}%"></i></div><span${st === "trial" || st === "pro" ? ` data-until="${until(u)}"` : ""}>${esc(meter)}</span></div>
     <div class="a-stats"><span><b>${mine.filter(i => i.status !== "sold").length}</b> en ligne</span><span><b>${mine.filter(i => i.status === "sold").length}</b> vendus</span>${u.createdAt?.toMillis ? `<span>Inscrite ${esc(ago(u.createdAt.toMillis()))}</span>` : ""}</div>
     <div class="a-actions">
       <a class="btn small ghost" href="${esc(waLink(u.phone, "Bonjour " + u.shopName + ", ici SokoPlus."))}" target="_blank" rel="noopener">WhatsApp</a>
       <button class="btn small" data-a="sub">Abonner</button>
+      ${u.phoneVerified ? '<button class="btn small ghost" data-a="phone">Retirer « numéro confirmé »</button>' : '<button class="btn small ok" data-a="phone">Numéro confirmé</button>'}
       <button class="btn small ${u.certified ? "warn" : "ok"}" data-a="cert">${u.certified ? "Retirer la certification" : "Certifier"}</button>
       <button class="btn small ${u.status === "blocked" ? "ok" : "warn"}" data-a="block">${u.status === "blocked" ? "Débloquer" : "Bloquer"}</button>
     </div></article>`;
 }
 function usersView(q) {
-  const cnt = { all: users.length, trial: 0, pro: 0, expired: 0, blocked: 0 };
-  users.forEach(u => cnt[userState(u)]++);
-  chipsHTML([["all", "Toutes"], ["trial", "Essai"], ["pro", "Abonnées"], ["expired", "Expirées"], ["blocked", "Bloquées"]], cnt);
-  const list = users.filter(u => (chips.users === "all" || userState(u) === chips.users) && (!q || norm(`${u.shopName} ${u.phone} ${u.email}`).includes(q)))
+  const cnt = { all: users.length, trial: 0, pro: 0, expired: 0, blocked: 0, suspect: 0, unconf: 0 };
+  users.forEach(u => { cnt[userState(u)]++; const ps = phoneKind(u); if (ps !== "ok") cnt[ps]++; });
+  chipsHTML([["all", "Toutes"], ["suspect", "Numéros suspects"], ["unconf", "Non confirmés"], ["trial", "Essai"], ["pro", "Abonnées"], ["expired", "Expirées"], ["blocked", "Bloquées"]], cnt);
+  const list = users.filter(u => (chips.users === "all" || (chips.users === "suspect" || chips.users === "unconf" ? phoneKind(u) === chips.users : userState(u) === chips.users)) && (!q || norm(`${u.shopName} ${u.phone} ${u.email}`).includes(q)))
     .sort((a, b) => until(a) - until(b));
   return list.map(userCard).join("") || empty("shop", "Aucune boutique ne correspond.");
 }
@@ -172,7 +186,7 @@ async function applyProfile(r, u) {
     if ((await getDoc(doc(db, "phoneIndex", r.phone))).exists()) throw { message: "Ce numéro est déjà utilisé par une autre boutique." };
     await setDoc(doc(db, "phoneIndex", r.phone), { uid: u.id, email: u.email });
     if (u.phone) await deleteDoc(doc(db, "phoneIndex", u.phone)).catch(() => { });
-    patch.phone = r.phone;
+    patch.phone = r.phone; patch.phoneVerified = false;
   }
   await updateDoc(doc(db, "users", u.id), patch);
   const mineSnap = await getDocs(query(collection(db, "items"), where("ownerId", "==", u.id)));   // les articles déjà en ligne suivent
@@ -220,6 +234,7 @@ function itemCard(i) {
   return `<article class="a-card a-item" data-row data-iid="${esc(i.id)}">
     <div class="a-pic" style="background:${tileColor(i.shopName)}">${img}</div>
     <div class="a-info"><b>${esc(i.title)}</b><small>${esc(i.shopName)} · ${money(i.price, i.currency)} · ${ago(when(i.createdAt))}</small>
+      <div class="a-eye">${eyeHTML(viewsMap.get(i.id) || 0)}</div>
       <div>${i.featured ? '<span class="pill warn">À la une</span> ' : ""}${i.status === "sold" ? '<span class="pill bad">Vendu</span>' : '<span class="pill ok">En ligne</span>'}</div></div>
     <div class="a-actions"><a class="btn small ghost" href="./?item=${encodeURIComponent(i.id)}" target="_blank" rel="noopener">Voir</a>
       <button class="btn small ghost" data-a="feat">${i.featured ? "Retirer de la une" : "Mettre à la une"}</button>
@@ -251,25 +266,194 @@ const TITLES = {
   pending: ["À valider", "Articles, avis, certifications et modifications en attente"],
   users: ["Boutiques", "Abonnements, certifications et blocages"],
   items: ["Articles", "Tout ce qui est en ligne sur SokoPlus"],
-  reports: ["Signalements", "Ce que la communauté t'a signalé"]
+  reports: ["Signalements", "Ce que la communauté t'a signalé"],
+  ann: ["Annonces", "Communiqués affichés en haut de l'accueil, avec le nombre de vues"],
+  price: ["Tarifs", "Prix de l'abonnement, prix barré et message aux vendeurs"]
 };
+/* ---------- Annonces : liste, publication (fenêtre), suppression, vues ---------- */
+const annLeft = a => { const e = a.expiresAt?.toMillis?.(); return e ? e - Date.now() : null; };
+function annCard(a) {
+  const img = a.images?.[0] ? `<img src="${esc(thumb(a.images[0], 200))}" alt="" loading="lazy">` : `<span>${icon("mega")}</span>`;
+  const left = annLeft(a), k = KINDS[a.kind] ? a.kind : "annonce";
+  const state = left === null ? '<span class="pill ok">Visible sans limite</span>' : left <= 0 ? '<span class="pill bad">Terminée</span>' : `<span class="pill ok">Visible encore ${esc(fmtD(left))}</span>`;
+  return `<article class="a-card a-item a-ann" data-row data-nid="${esc(a.id)}">
+    <div class="a-pic" style="background:var(--soft)">${img}</div>
+    <div class="a-info"><b>${esc(a.title)}</b><small>${esc(KINDS[k])} · ${ago(when(a.createdAt))}${a.images?.length ? ` · ${a.images.length} image${a.images.length > 1 ? "s" : ""}` : ""}</small>
+      <div>${state} ${eyeHTML(a.views || 0)}</div></div>
+    <div class="a-actions"><a class="btn small ghost" href="./?annonce=${encodeURIComponent(a.id)}" target="_blank" rel="noopener">Voir</a>
+      <button class="btn small ghost" data-a="andel">Supprimer</button></div></article>`;
+}
+function annView(q) {
+  $("#aChips").innerHTML = '<button class="btn small" type="button" id="anNew">+ Nouvelle annonce</button>';
+  const total = anns.reduce((t, a) => t + (a.views || 0), 0);
+  const head = anns.length ? `<p class="a-desc">${anns.length} annonce${anns.length > 1 ? "s" : ""} · ${eyeHTML(total)} au total</p>` : "";
+  const list = anns.filter(a => !q || norm(`${a.title} ${a.text}`).includes(q));
+  return head + (list.map(annCard).join("") || empty("mega", "Aucune annonce pour le moment. Touche « Nouvelle annonce » pour en publier une."));
+}
+/* ---------- Ambiance de fêtes : Automatique → Activée → Désactivée (valable pour tout le site) ---------- */
+let festive = "auto";
+const FEST = { auto: "Automatique (1er déc. au 10 janv.)", on: "Activée pour tout le monde", off: "Désactivée pour tout le monde" };
+function paintFest() {
+  const t = $("#festS"); if (!t) return; t.textContent = FEST[festive] || FEST.auto;
+  $$("#festSeg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === (FEST[festive] ? festive : "auto"))));
+  $("#festBox").classList.toggle("on", festive === "on");
+}
+paintFest();
+$("#festSeg").addEventListener("click", ev => {
+  const b = ev.target.closest("button"); if (!b || b.dataset.v === festive) return;
+  const v = b.dataset.v; b.disabled = true;
+  setDoc(doc(db, "config", "theme"), { festive: v, updatedAt: serverTimestamp() })
+    .then(() => toast(v === "on" ? "Ambiance de fêtes activée pour tout le monde." : v === "off" ? "Ambiance de fêtes désactivée pour tout le monde." : "Ambiance de fêtes en mode automatique."))
+    .catch(err => toast(isNetErr(err) ? NET_MSG : failText(err))).finally(() => { b.disabled = false; });
+});
+
+/* ---------- Tarifs : prix actuel, prix barré, message aux vendeurs ---------- */
+let pricingDoc = null, prFile = null, prRemove = false;
+const DEF_PRICE = { price: 5, currency: "USD", per: "par mois" };
+const prNum = v => { const n = Number(String(v).replace(",", ".")); return isFinite(n) && n > 0 ? n : 0; };
+const prDraft = () => ({ price: prNum($("#prNow").value), currency: $("#prCur").value, per: $("#prPer").value, oldPrice: prNum($("#prOld").value) || null, endsAt: $("#prEnd").value ? Date.parse($("#prEnd").value + "T23:59:59") : null });
+const prBase = () => ({ ...DEF_PRICE, ...(pricingDoc || {}) });
+function priceView() {
+  $("#aChips").innerHTML = "";
+  return `<div id="pricePane" class="pr-pane">
+    <section class="pr-card"><h3>Tarif de l'abonnement</h3>
+      <div class="pr-row"><label class="field">Prix actuel<input id="prNow" type="number" inputmode="decimal" min="0" step="0.01"></label>
+        <label class="field">Devise<select id="prCur"><option value="USD">$ (dollar)</option><option value="FC">FC (franc)</option></select></label></div>
+      <label class="field">Période affichée<select id="prPer"><option>par mois</option><option>par trimestre</option><option>par an</option></select></label>
+      <label class="field"><span>Ancien prix barré <span class="an-opt">· facultatif, pour une promo</span></span><input id="prOld" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Laisse vide pour un prix fixe"></label>
+      <label class="field"><span>Promo valable jusqu'au <span class="an-opt">· facultatif</span></span><input id="prEnd" type="date"></label>
+    </section>
+    <section class="pr-card"><h3>Image du tarif <span class="an-opt">· facultatif</span></h3>
+      <p class="an-sub">Une affiche ou une capture que les vendeurs verront avec le prix, et dans l'annonce si tu en publies une.</p>
+      <input id="prFile" type="file" accept="image/*" hidden>
+      <div id="prPic" class="pr-pic"></div>
+      <div class="pr-picbtns"><button type="button" class="btn small ghost" id="prPick">Choisir une image</button><button type="button" class="btn small ghost" id="prDrop" hidden>Retirer</button></div>
+    </section>
+    <section class="pr-card pr-prev"><small>Aperçu côté vendeur</small><div id="prPrev" class="pr-big"></div><p id="prDelta" class="pr-delta"></p></section>
+    <section class="pr-card"><h3>Prévenir les vendeurs</h3>
+      <label class="pr-chk"><input type="checkbox" id="prNotify" checked><span>Afficher un avis « Nouveau tarif » dans leur espace vendeur</span></label>
+      <label class="pr-chk"><input type="checkbox" id="prAnn"><span>Publier aussi une annonce sur l'accueil</span></label>
+      <label class="field" id="prMsgW" hidden>Message de l'annonce<textarea id="prMsg" rows="4" maxlength="600"></textarea></label>
+    </section>
+    <p class="msg" id="prSay" hidden></p>
+    <div class="an-actions"><button class="btn" type="button" id="prSave">Enregistrer le tarif</button><button class="btn ghost" type="button" id="prReset">Rétablir</button></div>
+  </div>`;
+}
+function prPicPaint() {
+  const box = $("#prPic"); if (!box) return;
+  const url = prFile ? URL.createObjectURL(prFile) : (!prRemove && pricingDoc?.image) || "";
+  box.innerHTML = url ? `<img src="${esc(url)}" alt="Image du tarif">` : '<span>Aucune image</span>';
+  $("#prDrop").hidden = !url; $("#prPick").textContent = url ? "Changer l'image" : "Choisir une image";
+}
+function prFill() {
+  const d = prBase(), pane = $("#pricePane"); if (!pane) return;
+  prFile = null; prRemove = false; prPicPaint();
+  $("#prNow").value = d.price ?? ""; $("#prCur").value = d.currency || "USD"; $("#prPer").value = d.per || "par mois";
+  $("#prOld").value = d.oldPrice ?? "";
+  const e = d.endsAt?.toMillis?.() ?? d.endsAt; $("#prEnd").value = e ? new Date(e).toISOString().slice(0, 10) : "";
+  delete pane.dataset.dirty; $("#prMsg").dataset.dirty = ""; prPaint();
+}
+function prTexts(d) {
+  const b = prBase(), prev = pricingDoc ? b.price : DEF_PRICE.price, was = fmtMoney(prev, b.currency), now = fmtMoney(d.price, d.currency);
+  const until = struck(d) && d.endsAt ? ` Offre valable jusqu'au ${new Date(d.endsAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}.` : "";
+  if (struck(d)) return { title: "Promo sur l'abonnement SokoPlus", text: `Bonne nouvelle : l'abonnement passe de ${fmtMoney(d.oldPrice, d.currency)} à ${now} ${d.per}.${until}` };
+  if (d.price < prev) return { title: "Le prix de l'abonnement baisse", text: `Bonne nouvelle : l'abonnement SokoPlus passe de ${was} à ${now} ${d.per}.` };
+  if (d.price > prev) return { title: "Changement du prix de l'abonnement", text: `Le prix de l'abonnement SokoPlus passe de ${was} à ${now} ${d.per}.` };
+  return { title: "Tarif de l'abonnement SokoPlus", text: `L'abonnement SokoPlus est à ${now} ${d.per}.` };
+}
+function prPaint() {
+  const d = prDraft(), b = prBase(), prev = pricingDoc ? b.price : DEF_PRICE.price;
+  $("#prPrev").innerHTML = d.price ? priceHtml(d) : "—";
+  let t = "";
+  if (d.price && pricingDoc !== null || d.price) t = d.price > prev ? `Hausse : ${fmtMoney(prev, b.currency)} → ${fmtMoney(d.price, d.currency)} (+${Math.round((d.price / prev - 1) * 100)} %)` : d.price < prev ? `Baisse : ${fmtMoney(prev, b.currency)} → ${fmtMoney(d.price, d.currency)} (−${Math.round((1 - d.price / prev) * 100)} %)` : "Prix inchangé";
+  if (d.oldPrice && !struck(d)) t += (t ? " · " : "") + "L'ancien prix doit être plus haut que le prix actuel pour être barré.";
+  $("#prDelta").textContent = t;
+  const w = $("#prMsgW"); w.hidden = !$("#prAnn").checked;
+  if (!w.hidden && !$("#prMsg").dataset.dirty && d.price) $("#prMsg").value = prTexts(d).text;
+}
+document.addEventListener("input", e => {
+  const pane = e.target.closest("#pricePane"); if (!pane) return;
+  if (e.target.id === "prMsg") e.target.dataset.dirty = "1"; else pane.dataset.dirty = "1";
+  prPaint();
+});
+document.addEventListener("change", e => {
+  if (e.target.id === "prFile") { const f = e.target.files[0]; e.target.value = ""; if (f && f.type.startsWith("image/")) { prFile = f; prRemove = false; $("#pricePane").dataset.dirty = "1"; prPicPaint(); } return; }
+  if (e.target.closest("#pricePane")) prPaint();
+});
+document.addEventListener("click", ev => {
+  if (ev.target.closest("#prReset")) return prFill();
+  if (ev.target.closest("#prPick")) return $("#prFile").click();
+  if (ev.target.closest("#prDrop")) { prFile = null; prRemove = true; $("#pricePane").dataset.dirty = "1"; return prPicPaint(); }
+  const bt = ev.target.closest("#prSave"); if (!bt) return;
+  const say = (t, k = "") => { const m = $("#prSay"); m.hidden = !t; m.className = "msg " + k; m.textContent = t || ""; };
+  const d = prDraft(); if (!d.price) return say("Entre un prix supérieur à 0.", "warn");
+  if (d.oldPrice && !struck(d)) return say("L'ancien prix doit être plus haut que le prix actuel pour être barré.", "warn");
+  const b = prBase(), prev = pricingDoc ? b.price : DEF_PRICE.price, tx = prTexts(d), ann = $("#prAnn").checked, msg = $("#prMsg").value.trim();
+  if (ann && msg.length < 5) return say("Écris le message de l'annonce.", "warn");
+  run(btnOf(ev), async () => {
+    let image = pricingDoc?.image || null;
+    if (prFile) { say("Envoi de l'image…"); image = await uploadImage(await compress(prFile, 1400)); } else if (prRemove) image = null;
+    const data = { image, price: d.price, currency: d.currency, per: d.per, oldPrice: d.oldPrice, endsAt: d.endsAt ? Timestamp.fromMillis(d.endsAt) : null, prev: d.price !== prev ? prev : (pricingDoc?.prev ?? null), notify: $("#prNotify").checked, version: Date.now(), updatedAt: serverTimestamp() };
+    data.text = priceText(data);
+    await setDoc(doc(db, "config", "pricing"), data);
+    if (ann) await addDoc(collection(db, "announcements"), { kind: "communique", title: tx.title, text: msg, images: image ? [image] : [], views: 0, createdAt: serverTimestamp(), expiresAt: Timestamp.fromMillis(Date.now() + 30 * DAY) });
+  }, { busy: "Enregistrement…", done: "Enregistré", hold: 700 }).then(() => { say(""); toast(ann ? "Tarif enregistré et annonce publiée." : "Tarif enregistré. Les vendeurs le voient tout de suite."); $("#prAnn").checked = false; prFill(); })
+    .catch(err => say(isNetErr(err) ? NET_MSG : failText(err), "err"));
+});
+
+const ad = $("#annDlg"); let anFiles = [];
+function anPaint() {
+  $("#anPics").innerHTML = anFiles.map((f, n) => `<span class="an-pic"><img src="${esc(URL.createObjectURL(f))}" alt=""><button type="button" data-rm="${n}" aria-label="Retirer l'image">×</button></span>`).join("");
+  $("#anAdd").hidden = anFiles.length >= 4;
+}
+const anSeg = () => { for (const [g, sel] of [["#anKinds", "#anKind"], ["#anLifes", "#anLife"]]) $$(g + " button").forEach(b => b.setAttribute("aria-checked", String(b.dataset.v === $(sel).value))); };
+document.addEventListener("click", e => { const b = e.target.closest("#anKinds button, #anLifes button"); if (!b) return; $(b.closest("#anKinds") ? "#anKind" : "#anLife").value = b.dataset.v; anSeg(); });
+function anOpen() { anFiles = []; $("#anKind").value = "annonce"; $("#anTitle").value = ""; $("#anText").value = ""; $("#anLife").value = "30"; $("#anMsg").hidden = true; $("#anFiles").value = ""; anPaint(); anSeg(); ad.showModal(); }
+document.addEventListener("click", e => { if (e.target.closest("#anNew")) anOpen(); });
+ad.addEventListener("click", e => {
+  if (e.target === ad || e.target.closest("[data-close]")) return ad.close();
+  if (e.target.closest("#anAdd")) return $("#anFiles").click();
+  const r = e.target.closest("[data-rm]"); if (r) { anFiles.splice(Number(r.dataset.rm), 1); anPaint(); }
+});
+$("#anFiles").addEventListener("change", e => { anFiles = [...anFiles, ...e.target.files].filter(f => f.type.startsWith("image/")).slice(0, 4); e.target.value = ""; anPaint(); });
+$("#anSend").addEventListener("click", ev => {
+  const m = $("#anMsg"), say = (t, k = "") => { m.hidden = !t; m.className = "msg " + k; m.textContent = t || ""; };
+  const title = $("#anTitle").value.trim().replace(/\s+/g, " "), text = $("#anText").value.trim();
+  if (title.length < 2) return say("Écris un titre (au moins 2 lettres).", "warn");
+  if (!text && !anFiles.length) return say("Ajoute un message ou au moins une image.", "warn");
+  run(btnOf(ev), async () => {
+    say("Envoi des images…");
+    const images = [];
+    for (const f of anFiles) images.push(await uploadImage(await compress(f, 1400)));
+    say("Publication…");
+    const days = Number($("#anLife").value), data = { kind: $("#anKind").value, title, text, images, views: 0, createdAt: serverTimestamp() };
+    if (days) data.expiresAt = Timestamp.fromMillis(Date.now() + days * DAY);
+    await addDoc(collection(db, "announcements"), data);
+  }, { busy: "Publication…", done: "Publiée", hold: 700 }).then(() => { say(""); ad.close(); toast("Annonce publiée : elle apparaît déjà sur l'accueil."); }).catch(err => say(isNetErr(err) ? NET_MSG : failText(err), "err"));
+});
+async function loadViews() {
+  try { const s = await getDocs(query(collection(db, "itemViews"), limit(1000))); viewsMap = new Map(s.docs.map(d => [d.id, Number(d.data().n) || 0])); if (tab === "items") render(); } catch { /* compteurs indisponibles : on affiche 0 */ }
+}
+
 function render() {
   const now = Date.now(), waiting = subs.filter(s => s.status === "pending").length + reqs.filter(r => r.status === "pending").length + creqs.filter(r => r.status === "pending").length + revs.filter(r => r.status === "pending").length;
   $("#aWho").textContent = auth.currentUser?.email || "";
   $("#pCount").textContent = waiting; $("#pCount").hidden = !waiting;
   $("#uCount").textContent = users.length; $("#iCount").textContent = items.length;
-  $("#rCount").textContent = reports.length; $("#rCount").hidden = !reports.length;
+  $("#aCount").textContent = anns.length; $("#rCount").textContent = reports.length; $("#rCount").hidden = !reports.length;
   const bn = waiting + reports.length; $("#bellN").hidden = !bn; $("#bellN").textContent = bn > 9 ? "9+" : bn;
   document.title = (waiting ? `(${waiting}) ` : "") + "Administration – SokoPlus";
   $$("[data-t]").forEach(b => b.setAttribute("aria-selected", b.dataset.t === tab));
   $("#adTitle").textContent = TITLES[tab][0]; $("#adSub").textContent = TITLES[tab][1];
   const home = tab === "home";
   $("#homeView").hidden = !home; $("#listView").hidden = home;
-  $("#aSearch").placeholder = { home: "Rechercher une boutique, un article…", pending: "Chercher un article ou une boutique", users: "Chercher une boutique, un numéro, un e-mail", items: "Chercher un article", reports: "Chercher un signalement" }[tab];
+  $("#aSearch").placeholder = { home: "Rechercher une boutique, un article…", pending: "Chercher un article ou une boutique", users: "Chercher une boutique, un numéro, un e-mail", items: "Chercher un article", reports: "Chercher un signalement", price: "Pas de recherche ici", ann: "Chercher une annonce" }[tab];
   if (home) { $("#homeView").innerHTML = homeHTML({ users, items, subs, creqs, reports, revs, buyers, range, av, state: userState, waiting }); return; }
   const list = $("#list");
   list.classList.toggle("a-in", fxNext); fxNext = false;
-  list.innerHTML = { pending: pendingView, users: usersView, items: itemsView, reports: reportsView }[tab](norm($("#aSearch").value.trim()));
+  if (tab === "price" && $("#pricePane")) { if (!$("#pricePane").dataset.dirty) prFill(); return; }   // on ne réécrit pas le formulaire pendant que tu tapes
+  list.innerHTML = { pending: pendingView, users: usersView, items: itemsView, reports: reportsView, ann: annView, price: priceView }[tab](norm($("#aSearch").value.trim()));
+  if (tab === "price") prFill();
 }
 
 /* Minuteurs des boutiques : le temps restant défile chaque seconde */
@@ -282,7 +466,7 @@ setInterval(() => {
 }, 1000);
 
 $$("[data-ic]").forEach(el => { el.innerHTML = icon(el.dataset.ic); });
-const go = t => { tab = t; fxNext = true; document.body.classList.remove("ad-open"); render(); scrollTo({ top: 0 }); };
+const go = t => { if (t === "items") loadViews(); tab = t; fxNext = true; document.body.classList.remove("ad-open"); render(); scrollTo({ top: 0 }); };
 $$("[data-t]").forEach(b => b.onclick = () => go(b.dataset.t));
 $("#aSearch").addEventListener("input", () => {
   const q = norm($("#aSearch").value.trim());
@@ -500,6 +684,23 @@ const onAction = async e => {
       if (a === "rvdel") { if (!window.confirm("Supprimer cet avis définitivement ?")) return; await deleteDoc(doc(db, "reviews", r.id)); return; }
       await run(b, () => updateDoc(doc(db, "reviews", r.id), { status: a === "rvok" ? "approved" : "rejected" }), { busy: a === "rvok" ? "Validation…" : "Refus…", done: a === "rvok" ? "Validé" : "Refusé", hold: 600 });
       toast(a === "rvok" ? "Avis validé : il est maintenant visible." : "Avis refusé.");
+      return;
+    }
+    if (a === "phone") {
+      const u = users.find(x => x.id === row.dataset.uid); if (!u) return;
+      const on = !u.phoneVerified;
+      if (on && phoneIssue(String(u.phone || "")) !== "") { toast("Ce numéro est invalide : demande au vendeur de le corriger d'abord."); return; }
+      if (!window.confirm(on ? `Confirmer le numéro ${prettyPhone(u.phone)} ? Vérifie d'abord que le message WhatsApp reçu vient bien de ce numéro.` : `Retirer la confirmation du numéro de « ${u.shopName} » ?`)) return;
+      await run(b, () => updateDoc(doc(db, "users", u.id), { phoneVerified: on }), { busy: "Mise à jour…", done: on ? "Confirmé" : "Retiré", hold: 600 });
+      if (on) await tell(u.id, "phone_ok", "Numéro confirmé", "Merci : SokoPlus a bien reçu ton message. Ton numéro WhatsApp est confirmé.").catch(() => { });
+      toast(on ? `Numéro de ${u.shopName} confirmé.` : "Confirmation retirée.");
+      return;
+    }
+    if (a === "andel") {
+      const n = anns.find(x => x.id === row.dataset.nid); if (!n) return;
+      if (!b.dataset.sure) { b.dataset.sure = "1"; b.textContent = "Confirmer ?"; return setTimeout(() => { delete b.dataset.sure; b.textContent = "Supprimer"; }, 3000); }
+      await run(b, () => deleteDoc(doc(db, "announcements", n.id)), { busy: "Suppression…", done: "Supprimée", hold: 600 });
+      toast(`Annonce « ${n.title} » supprimée.`);
       return;
     }
     if (a === "cert") {

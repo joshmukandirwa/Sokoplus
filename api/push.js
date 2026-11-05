@@ -33,7 +33,7 @@ async function send(db, tokens, message) {
 
 const wrap = (title, body, link) => ({
   notification: { title: String(title).slice(0, 80), body: String(body).slice(0, 160) },
-  webpush: { fcmOptions: { link }, notification: { icon: SITE + "/icons/icon-192.png" } }
+  webpush: { fcmOptions: { link }, notification: { icon: SITE + "/icons/icon-any-192.png" } }
 });
 
 const fresh = ts => { const t = ts && ts.toMillis ? ts.toMillis() : 0; return t && Date.now() - t < FRESH_MS; };

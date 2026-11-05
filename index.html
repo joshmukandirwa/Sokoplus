@@ -36,7 +36,12 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/png" href="icons/logo-mark.png">
   <link rel="icon" type="image/png" href="icons/logo-mark.png">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-any-192.png">
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+  <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js">
+  <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js">
+  <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet"
     href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,700;0,800;0,900;1,900&family=Figtree:wght@400;500;600;700;800&display=swap">
@@ -53,7 +58,7 @@
   <main class="wrap">
 
     <section class="hero" data-reveal>
-      <h1><span data-i18n="home.h1a">Tous vos achats,</span> <em data-i18n="home.h1b">un seul endroit.</em></h1>
+      <h1 class="vh"><span data-i18n="home.h1a">Tous vos achats,</span> <em data-i18n="home.h1b">un seul endroit.</em></h1>
       <a class="search" href="recherche.html" aria-label="Rechercher"><svg viewBox="0 0 24 24">
           <circle cx="11" cy="11" r="7" />
           <path d="m20 20-3.5-3.5" />
@@ -63,6 +68,25 @@
           <path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z" />
           <circle cx="12" cy="10" r="2.5" />
         </svg><span id="regionLbl">Toute l'Afrique</span><small>Changer</small></button>
+    </section>
+
+    <div id="installBar" class="instsheet" role="dialog" aria-label="Installer SokoPlus" hidden>
+      <button type="button" class="instsheet-x" id="installX" aria-label="Plus tard">&times;</button>
+      <div class="instsheet-top">
+        <img class="instsheet-ic" src="icons/logo-mark.png" alt="" width="56" height="56" draggable="false">
+        <div class="instsheet-tx">
+          <b>Installe SokoPlus</b>
+          <small id="installHint">Un seul geste pour ouvrir le marché, avec les alertes de tes boutiques.</small>
+        </div>
+      </div>
+      <button type="button" class="btn instsheet-go" id="installBtn">Installer l'application</button>
+    </div>
+
+    <section id="annSec" class="ann" hidden aria-label="Annonces officielles de SokoPlus">
+      <div class="sech">
+        <h2>Annonces</h2><span class="annc-official"><img src="icons/certifie.png" width="16" height="16" alt="" draggable="false"> SokoPlus officiel</span>
+      </div>
+      <div class="annrow" id="annRow"></div>
     </section>
 
     <div class="promos" id="promos">
@@ -151,9 +175,12 @@
   </main>
   <footer class="foot">
     <img src="icons/logo-full.png" alt="SokoPlus, tous vos achats, un seul endroit" draggable="false">
-    <div class="row"><a href="vendeur.html">Espace vendeur</a><a href="parametres.html">Paramètres</a><a
-        href="confidentialite.html">Confidentialité</a><span>Fondé à Goma, RD Congo</span></div>
-    <p>Le paiement se règle directement avec le vendeur, selon les règles de sa boutique.</p>
+    <nav class="foot-links" aria-label="Liens utiles">
+      <a href="vendeur.html">Espace vendeur</a>
+      <a href="parametres.html">Paramètres</a>
+      <a href="confidentialite.html">Confidentialité</a>
+    </nav>
+    <p class="foot-note">Fondé à Goma, RD Congo<br>Le paiement se règle directement avec le vendeur, selon les règles de sa boutique.</p>
   </footer>
 
   <script type="module" src="js/ui.js"></script>

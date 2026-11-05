@@ -67,7 +67,7 @@
 
         <form id="fLogin" class="panel" style="border:0;padding:0">
           <label class="field">Adresse email ou numéro de téléphone<input id="loginId" autocomplete="username" required
-              placeholder="vous@mail.com ou 0990 000 001"></label>
+              placeholder="vous@mail.com ou 0993 582 704"></label>
           <label class="field">Mot de passe<input id="loginPw" type="password" autocomplete="current-password"
               required></label>
           <button class="btn" type="submit">Se connecter</button>
@@ -78,7 +78,7 @@
           <label class="field">Nom de ta boutique ou entreprise<input id="shopName" required minlength="2"
               maxlength="60" autocomplete="organization"></label>
           <label class="field">Numéro de téléphone (WhatsApp)<input id="phone" type="tel" required autocomplete="tel"
-              inputmode="tel" placeholder="0990 000 001 ou +250 788 000 000"></label>
+              inputmode="tel" placeholder="0993 582 704 ou +250 788 357 924"></label>
           <label class="field">Mot de passe (6 caractères minimum)
             <span class="pwrap"><input id="pw" type="password" minlength="6" required autocomplete="new-password">
               <button class="btn small ghost" type="button" id="pwToggle" aria-controls="pw">Afficher</button></span></label>
@@ -101,7 +101,7 @@
         <label class="field">Nom de ta boutique ou entreprise<input id="cShop" required minlength="2" maxlength="60"
             autocomplete="organization"></label>
         <label class="field">Numéro de téléphone (WhatsApp)<input id="cPhone" type="tel" required autocomplete="tel"
-            placeholder="0990 000 001 ou +250 788 000 000"></label>
+            placeholder="0993 582 704 ou +250 788 357 924"></label>
         <button class="btn" type="submit">Créer ma boutique</button>
         <button class="btn ghost" type="button" id="cCancel">Annuler</button>
         <p class="note">Ton numéro sera affiché sur tes articles. 30 jours d'essai gratuit. <a
@@ -118,7 +118,7 @@
           <div class="avatar vp-av" id="dAvatar" aria-hidden="true"></div>
           <div class="vp-hello" id="dHello"></div>
           <h1 class="vp-name" id="dShop"></h1>
-          <div class="row" style="margin-top:6px"><span class="pill" id="dStatus"></span></div>
+          <button type="button" class="subpill" id="dSub" aria-haspopup="dialog" aria-controls="subDlg" hidden></button>
           <p class="vp-about" id="dAbout" hidden></p>
           <ul class="vp-info" id="dInfo" hidden></ul>
           <div class="vstats" id="vstats" style="grid-template-columns:repeat(4,1fr)">
@@ -140,6 +140,11 @@
           id="verifyMail"></span>.
         <div class="row" style="margin-top:8px"><button class="btn small" id="resend">Renvoyer le lien</button><button
             class="btn small ghost" id="refresh">J'ai cliqué sur le lien</button></div>
+      </div>
+      <div class="msg warn" id="phoneBox" hidden>
+        <b>Confirme ton numéro WhatsApp (facultatif)</b> pour rassurer tes clients : ta boutique affichera « Numéro confirmé ».
+        Écris-nous un message depuis ce numéro (c'est gratuit), on valide dès qu'on le reçoit. Tu peux publier sans attendre.
+        <div class="row" style="margin-top:8px"><a class="btn small" id="phoneWa" href="#" target="_blank" rel="noopener">Confirmer sur WhatsApp</a></div>
       </div>
       <div class="msg err" id="blockBox" hidden></div>
 
@@ -222,6 +227,11 @@
   </main>
 
 
+  <dialog id="subDlg" class="subsheet" aria-label="Mon abonnement">
+    <div class="ss-bar"><h2 id="ssTitle">Mon abonnement</h2><button type="button" class="ss-x" id="ssClose" aria-label="Fermer">&times;</button></div>
+    <div class="ss-body" id="ssBody"></div>
+  </dialog>
+
   <dialog id="shopDlg" class="pe">
     <form id="fShop" novalidate>
       <header class="pe-bar">
@@ -248,7 +258,7 @@
           <h3>Ma boutique</h3>
           <label class="field">Nom de la boutique<input id="sName" required minlength="2" maxlength="60"></label>
           <label class="field">Numéro WhatsApp<input id="sPhone" type="tel" required inputmode="tel"
-              placeholder="Ex. 0990 000 001"></label>
+              placeholder="Ex. 0993 582 704"></label>
           <label class="field">À propos<textarea id="sAbout" maxlength="300"
               placeholder="Présente ta boutique en quelques mots : ce que tu vends, tes horaires, ta façon de livrer."></textarea></label>
           <label class="field">Modes de paiement acceptés<input id="sPay" maxlength="120"

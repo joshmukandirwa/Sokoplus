@@ -12,7 +12,12 @@
   <meta name="theme-color" content="#1b1b1f">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/png" href="icons/logo-mark.png">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-any-192.png">
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+  <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js">
+  <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js">
+  <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet"
     href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,700;0,800;0,900;1,900&family=Figtree:wght@400;500;600;700;800&display=swap">
@@ -24,12 +29,12 @@
 <body data-page="favoris">
   <main class="wrap">
 
-    <section class="pagehead row between" data-reveal>
-      <div>
-        <h1 data-i18n="favs.title">Favoris</h1>
-        <p class="note" data-i18n="favs.sub">Les articles que tu as gardés, prêts quand tu l'es.</p>
-      </div>
-      <button class="btn ghost small" id="clear" hidden data-i18n="favs.clear">Tout vider</button>
+    <section class="pagehead favhead" data-reveal>
+      <h1 data-i18n="favs.title">Favoris</h1>
+      <button class="favclear" id="clear" type="button" hidden aria-label="Tout vider" title="Tout vider">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>
+        <span class="lbl">Confirmer ?</span>
+      </button>
     </section>
     <div class="favtabs" id="favTabs" role="tablist">
       <button type="button" data-t="items" aria-pressed="true">Articles <em id="tItems">0</em></button>

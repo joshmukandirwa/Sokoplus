@@ -1,3 +1,4 @@
+import { priceText, priceHtml, struck, watchPricing } from "./pricing.js";
 import {
   auth, db, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
   sendEmailVerification, sendPasswordResetEmail, GoogleAuthProvider, signInWithPopup, signInWithRedirect, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc,
@@ -5,7 +6,7 @@ import {
 } from "./fb.js";
 import { bindLogout } from "./logout.js";
 import {
-  SITE, store, configured, configBanner, $, $$, esc, safeUrl, money, normPhone, prettyPhone, waLink,
+  SITE, store, configured, configBanner, $, $$, esc, safeUrl, money, normPhone, normPhoneLoose, phoneIssue, prettyPhone, waLink,
   compress, uploadImage, thumb, tileColor, toast, ago, isNetErr, NET_MSG, needNet, normLink, shopInfoHtml, coverCss,
   pushAvailable, pushState, enablePush, unlinkPush
 } from "./common.js";
@@ -18,7 +19,17 @@ import { COUNTRIES, DEFAULT_COUNTRY, citiesOf, currenciesOf, curName, ALL_CURREN
 import { run, btnOf } from "./feedback.js";
 
 configBanner();
-$("#subTxt").textContent = SITE.subscriptionText;
+let priceTxt = SITE.subscriptionText, priceNow = null;
+function paintPriceNote() {
+  let n = $("#priceNote");
+  const show = profile && priceNow?.notify && priceNow.version && store.get("priceSeen", 0) !== priceNow.version && !$("#dash")?.hidden;
+  if (!show) { if (n) n.remove(); return; }
+  if (!n) { n = document.createElement("div"); n.id = "priceNote"; n.className = "pricenote"; $("#dSub").after(n); }
+  const down = struck(priceNow) || (priceNow.prev && Number(priceNow.price) < Number(priceNow.prev));
+  const pic = priceNow.image && safeUrl(priceNow.image);
+  n.innerHTML = `${pic ? `<a class="pn-pic" href="${esc(pic)}" target="_blank" rel="noopener" aria-label="Voir l'affiche"><img src="${esc(priceNow.image)}" alt="" loading="lazy"></a>` : ""}<div><b>${down ? "Bonne nouvelle : le tarif baisse" : "Nouveau tarif de l'abonnement"}</b><span>${priceHtml(priceNow)}</span></div><button type="button" class="btn small ghost" id="pnOk">OK</button>`;
+  $("#pnOk").onclick = () => { store.set("priceSeen", priceNow.version); n.remove(); };
+}
 $("#iCat").innerHTML = SITE.categories.map(c => `<option>${esc(c)}</option>`).join("");
 $("#iCountry").innerHTML = COUNTRIES.map(c => `<option value="${c[0]}">${esc(c[1])}</option>`).join("");
 function fillPlace(country, city, cur) {   // villes et monnaies du pays choisi
@@ -32,6 +43,12 @@ fillPlace(DEFAULT_COUNTRY);
 $("#iCountry").addEventListener("change", e => fillPlace(e.target.value));
 
 let user = null, pending = null, profile = null, editing = null, unsub = null, signingUp = false;
+watchPricing(p => {
+  priceNow = p; priceTxt = priceText(p);
+  const t = $("#subTxt"); if (t) t.textContent = priceTxt;
+  const sb = $("#ssBody"); if (sb) { sb.dataset.built = "0"; if ($("#subDlg")?.open && profile) paintSheet(state()); }
+  paintPriceNote();
+});
 const DAY = 864e5;
 const fakeMail = phone => `${phone}@tel.sokoplus.app`;            // compte créé avec le téléphone seul : adresse technique, pas une vraie boîte mail
 const isFake = m => /@tel\.sokoplus\.app$/i.test(m || "");
@@ -63,6 +80,19 @@ function tab(login) {
 $("#tLogin").onclick = () => tab(true);
 $("#tSignup").onclick = () => tab(false);
 
+
+/* Numéro refusé : on explique pourquoi, simplement (indicatif qui n'existe pas, numéro RDC incomplet…) */
+function phoneError(raw) {
+  const d = normPhoneLoose(raw), why = d ? phoneIssue(d) : "format";
+  const ex = "Exemple : 0993 582 704 (RDC) ou +250 788 357 924 (autre pays, avec +).";
+  if (why === "indicatif") return `Ce numéro n'existe pas : l'indicatif du pays n'est pas reconnu. Mets ton vrai numéro WhatsApp. ${ex}`;
+  if (why === "rdc") return "Ce numéro congolais n'est pas valide. Un mobile RDC commence par 08 ou 09 et a 10 chiffres, par exemple 0993 582 704.";
+  if (why === "court") return "Ce numéro est trop court pour ce pays : il manque des chiffres. Vérifie ton vrai numéro WhatsApp. " + ex;
+  if (why === "long") return "Ce numéro est trop long pour ce pays : il y a des chiffres en trop. Vérifie ton vrai numéro WhatsApp. " + ex;
+  if (why === "repete") return "Ce numéro n'a pas l'air réel (trop de chiffres identiques). Mets ton vrai numéro WhatsApp.";
+  return `Numéro invalide. ${ex}`;
+}
+
 /* ---------------- Connexion (email OU téléphone) ---------------- */
 $("#fLogin").addEventListener("submit", e => {
   e.preventDefault();
@@ -71,8 +101,8 @@ $("#fLogin").addEventListener("submit", e => {
     welcome = true;
     let id = $("#loginId").value.trim();
     if (!id.includes("@")) {
-      const p = normPhone(id);
-      if (!p) throw { message: "Numéro invalide. Exemple : 0990 000 001" };
+      const p = normPhoneLoose(id);
+      if (!p) throw { message: "Numéro invalide. Exemple : 0993 582 704" };
       const snap = await getDoc(doc(db, "phoneIndex", p));
       if (!snap.exists()) throw { code: "auth/invalid-credential" };
       id = snap.data().email;
@@ -86,7 +116,7 @@ $("#forgot").onclick = async () => {
   const wa = `<a href="${esc(waLink(SITE.adminWhatsapp, "Bonjour SokoPlus, j'ai oublié le mot de passe de ma boutique (" + id + ")."))}" target="_blank" rel="noopener">Écris-nous sur WhatsApp</a>`;
   try {
     if (!id.includes("@")) {
-      const p = normPhone(id); if (!p) return say(m, "Numéro invalide. Exemple : 0990 000 001", "warn");
+      const p = normPhoneLoose(id); if (!p) return say(m, "Numéro invalide. Exemple : 0993 582 704", "warn");
       const snap = await getDoc(doc(db, "phoneIndex", p));
       if (!snap.exists()) return say(m, "On ne trouve pas de boutique avec ce numéro.", "err");
       id = snap.data().email;
@@ -118,7 +148,7 @@ $("#fComplete").addEventListener("submit", e => {
   const m = $("#cMsg");
   run(btnOf(e), async () => {
     const shopName = $("#cShop").value.trim(), phone = normPhone($("#cPhone").value), email = (pending.email || "").toLowerCase();
-    if (!phone) throw { message: "Numéro de téléphone invalide. Exemple : 0990 000 001" };
+    if (!phone) throw { message: phoneError($("#cPhone").value) };
     say(m, "On prépare ta boutique…");
     if ((await getDoc(doc(db, "phoneIndex", phone))).exists()) throw { message: "Ce numéro est déjà utilisé par une boutique." };
     await setDoc(doc(db, "users", pending.uid), { shopName, phone, email, status: "active", plan: "essai", activeUntil: Timestamp.fromMillis(Date.now() + 30 * DAY), createdAt: serverTimestamp() });
@@ -135,7 +165,7 @@ $("#fSignup").addEventListener("submit", e => {
   run(btnOf(e), async () => {
     welcome = true;
     const shopName = $("#shopName").value.trim(), phone = normPhone($("#phone").value);
-    if (!phone) throw { message: "Numéro de téléphone invalide. Exemple : 0990 000 001" };
+    if (!phone) throw { message: phoneError($("#phone").value) };
     const email = $("#email").value.trim().toLowerCase() || fakeMail(phone);
     say(m, "On prépare ta boutique…");
     if ((await getDoc(doc(db, "phoneIndex", phone))).exists()) throw { message: "Ce numéro est déjà utilisé par une boutique." };
@@ -188,6 +218,7 @@ async function enter(u) {
   if (welcome) { welcome = false; toast(`Bienvenue ${profile.shopName}, content de te voir.`); }
   $("#complete").hidden = true; $("#auth").hidden = true; $("#dash").hidden = false; $("#logout").hidden = false;
   renderStatus();
+  paintPriceNote();
   watchMine();
   if (location.hash === "#publier") setTimeout(() => $("#fItem").scrollIntoView({ behavior: "smooth" }), 150);
 }
@@ -206,13 +237,97 @@ function state() {
   if (!profile) return { ok: false };
   const shop = profile.shopName, trial = isTrial();
   if (profile.status === "blocked") return { ok: false, label: "Compte suspendu", kind: "bad", why: `${shop}, ton compte est suspendu pour le moment. Écris-nous sur WhatsApp, on t'explique et on règle ça ensemble.`, wa: "Mon compte est suspendu, pouvez-vous m'aider ?" };
+  if (phoneIssue(String(profile.phone || ""))) return { ok: false, label: "Numéro à corriger", kind: "bad", why: `${shop}, le numéro de ta boutique (${prettyPhone(profile.phone || "")}) n'est pas un vrai numéro WhatsApp. Corrige-le dans « Ma boutique » (Modifier la boutique) pour pouvoir publier. Si tu penses que c'est une erreur, écris-nous.`, wa: "Mon numéro est refusé, pouvez-vous m'aider ?" };
   const ms = profile.activeUntil.toMillis() - Date.now();
   if (ms <= 0) return { ok: false, label: trial ? "Essai terminé" : "Abonnement terminé", kind: "bad",
-    why: trial ? `${shop}, ton essai gratuit de 30 jours est terminé. Passe à la version complète pour continuer à publier et vendre sans limite (${SITE.subscriptionText}).`
-               : `${shop}, ton abonnement est arrivé à échéance. Renouvelle-le pour continuer à publier (${SITE.subscriptionText}).`,
+    why: trial ? `${shop}, ton essai gratuit de 30 jours est terminé. Passe à la version complète pour continuer à publier et vendre sans limite (${priceTxt}).`
+               : `${shop}, ton abonnement est arrivé à échéance. Renouvelle-le pour continuer à publier (${priceTxt}).`,
     wa: trial ? "Je voudrais passer à la version complète de SokoPlus." : "Je voudrais renouveler mon abonnement SokoPlus.",
     cta: trial ? "Passer à la version complète sur WhatsApp" : "Renouveler sur WhatsApp" };
-  return { ok: true, label: `${trial ? "Essai" : "Abonnement"} · ${fmtLeft(ms)}`, kind: ms <= 5 * DAY ? "warn" : "ok" };
+  return { ok: true, label: `${trial ? "Essai" : "Abonnement"} · ${fmtLeft(ms)}`, kind: ms <= 5 * DAY ? "warn" : "ok", ms, trial };
+}
+
+/* Compteur d'abonnement : 4 cases (jours, heures, minutes, secondes) + barre sur 30 jours.
+   La structure est créée une seule fois ; chaque seconde, seuls les chiffres changent (rien ne bouge à l'écran). */
+const two = n => String(n).padStart(2, "0");
+function paintCount(el, s) {
+  if (!el) return;
+  el.className = "subc " + (s.kind || "");
+  el.dataset.ok = s.ok ? "1" : "0";
+  if (!s.ok || !s.ms) {                         // suspendu, numéro à corriger, terminé : un simple message
+    if (el.dataset.mode !== "text" || el.dataset.label !== s.label) {
+      el.innerHTML = `<div class="subc-top"><span class="subc-dot" aria-hidden="true"></span><b class="subc-title">${esc(s.label || "")}</b></div>`;
+      el.dataset.mode = "text"; el.dataset.label = s.label || "";
+    }
+    return;
+  }
+  const ms = s.ms, d = Math.floor(ms / DAY), h = Math.floor(ms % DAY / 3600e3), m = Math.floor(ms % 3600e3 / 60e3), sec = Math.floor(ms % 60e3 / 1e3);
+  const title = s.kind === "warn" ? (s.trial ? "Essai bientôt terminé" : "Abonnement bientôt terminé") : (s.trial ? "Essai gratuit" : "Abonnement actif");
+  const end = new Date(profile.activeUntil.toMillis()).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+  if (el.dataset.mode !== "count") {
+    el.innerHTML = `<div class="subc-top"><span class="subc-dot" aria-hidden="true"></span><b class="subc-title"></b><span class="subc-end"></span></div>
+      <div class="subc-grid" aria-hidden="true"><div><b data-u="d"></b><small data-u="dl"></small></div><div><b data-u="h"></b><small>heures</small></div><div><b data-u="m"></b><small>min</small></div><div><b data-u="s"></b><small>sec</small></div></div>
+      <div class="subc-bar" aria-hidden="true"><i></i></div>`;
+    el.dataset.mode = "count";
+  }
+  const set = (u, v) => { const n = el.querySelector(`[data-u="${u}"]`); if (n && n.textContent !== v) n.textContent = v; };
+  set("d", String(d)); set("dl", d > 1 ? "jours" : "jour"); set("h", two(h)); set("m", two(m)); set("s", two(sec));
+  const t = el.querySelector(".subc-title"); if (t.textContent !== title) t.textContent = title;
+  const e = el.querySelector(".subc-end"); const et = `jusqu'au ${end}`; if (e.textContent !== et) e.textContent = et;
+  el.querySelector(".subc-bar i").style.width = Math.max(3, Math.min(100, ms / (30 * DAY) * 100)).toFixed(1) + "%";
+  el.setAttribute("aria-label", `Temps restant : ${fmtLeft(ms)}`);
+}
+
+
+/* Pastille compacte sur le profil + feuille « Mon abonnement » avec tout le détail (abonnement ou essai, compteur, certification) */
+function paintSub(s) {
+  const el = $("#dSub"); if (!el) return;
+  const d = s.ms ? Math.floor(s.ms / DAY) : 0, h = s.ms ? Math.floor(s.ms % DAY / 3600e3) : 0;
+  const left = !s.ms ? "" : d ? `${d} j restant${d > 1 ? "s" : ""}` : `${h} h restantes`;
+  const title = s.ms ? (s.kind === "warn" ? (s.trial ? "Essai bientôt terminé" : "Abonnement bientôt terminé") : (s.trial ? "Essai gratuit" : "Abonnement actif")) : (s.label || "Abonnement");
+  const key = title + "|" + left + "|" + (s.kind || "");
+  el.hidden = false; el.dataset.ok = s.ok ? "1" : "0";
+  if (el.dataset.key !== key) {
+    el.dataset.key = key; el.className = "subpill " + (s.kind || "");
+    el.innerHTML = `<span class="subc-dot" aria-hidden="true"></span><b>${esc(title)}</b>${left ? `<span class="sp-left">${esc(left)}</span>` : ""}<svg class="sp-go" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>`;
+    el.setAttribute("aria-label", `${title}${left ? ", " + left : ""}. Voir les détails`);
+  }
+  const dlg = $("#subDlg");
+  if (dlg?.open) paintSheet(s);
+}
+const longDate = ms => new Date(ms).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+function paintSheet(s) {
+  const box = $("#ssBody"); if (!box || !profile) return;
+  if (box.dataset.built !== "1") {
+    const trial = isTrial(), shop = profile.shopName, used = usedToday();
+    const ask = trial ? "Je voudrais passer à la version complète de SokoPlus." : "Je voudrais renouveler mon abonnement SokoPlus.";
+    const href = waLink(SITE.adminWhatsapp, `Bonjour SokoPlus, je suis ${shop} (${prettyPhone(profile.phone)}). ${s.wa || ask}`);
+    const end = profile.activeUntil?.toMillis ? longDate(profile.activeUntil.toMillis()) : "—";
+    const cert = profile.certified ? ["Certifiée", "ok", "Ton badge bleu est visible sur ta boutique et tes articles."]
+      : creq?.status === "pending" ? ["En attente", "warn", "SokoPlus vérifie ta demande (24 à 48 h)."]
+      : creq?.status === "rejected" ? ["Non acceptée", "bad", "Tu peux corriger puis refaire une demande."]
+      : ["Non certifiée", "", "Un badge de confiance pour attirer plus d'acheteurs."];
+    box.innerHTML = `${priceNow?.image && safeUrl(priceNow.image) ? `<a class="ss-pricepic" href="${esc(safeUrl(priceNow.image))}" target="_blank" rel="noopener" aria-label="Voir l'affiche du tarif"><img src="${esc(priceNow.image)}" alt="Tarif SokoPlus" loading="lazy"></a>` : ""}<div class="subc" id="sSub" role="timer" aria-label="Temps restant"></div>
+      <dl class="ss-list">
+        <div><dt>Formule</dt><dd>${trial ? "Essai gratuit de 30 jours" : "Version complète"}</dd></div>
+        <div><dt>${s.ok ? "Fin le" : "Terminé le"}</dt><dd>${esc(end)}</dd></div>
+        <div><dt>Publications</dt><dd>${trial ? `2 par jour <small>(${Math.min(used, 2)}/2 aujourd'hui)</small>` : "Illimitées"}</dd></div>
+        <div><dt>Prix de la version complète</dt><dd id="ssPrice">${esc(SITE.subscriptionText)}</dd></div>
+      </dl>
+      <div class="ss-cert ${cert[1]}"><div><small>Certification</small><b>${cert[0]}</b><span>${cert[2]}</span></div>${profile.certified ? "" : '<button type="button" class="btn small ghost" id="ssCert">Voir</button>'}</div>
+      <a class="btn ss-cta" href="${esc(href)}" target="_blank" rel="noopener">${trial ? "Passer à la version complète" : "Renouveler mon abonnement"}</a>
+      <p class="note ss-note">Le paiement se fait sur WhatsApp avec SokoPlus. Ton abonnement est prolongé dès qu'il est confirmé.</p>`;
+    box.dataset.built = "1";
+    const c = $("#ssCert"); if (c) c.onclick = () => { $("#subDlg").close(); $("#certBox")?.scrollIntoView({ behavior: "smooth", block: "start" }); };
+  }
+  paintCount($("#sSub"), s);
+}
+{
+  const dlg = $("#subDlg");
+  const open = () => { const b = $("#ssBody"); if (b) b.dataset.built = "0"; dlg.showModal(); paintSheet(state()); dlg.focus({ preventScroll: true }); };
+  $("#dSub").addEventListener("click", open);
+  $("#ssClose").onclick = () => dlg.close();
+  dlg.addEventListener("click", e => { if (e.target === dlg) dlg.close(); });   // toucher en dehors ferme
 }
 
 const CERT_BADGE = '<img class="ic cert-ic" src="icons/certifie.png" width="16" height="16" alt="Boutique certifiée" title="Boutique certifiée SokoPlus" draggable="false">';
@@ -301,9 +416,13 @@ function renderStatus() {
   const av = $("#dAvatar"); av.style.background = tileColor(profile.shopName);
   av.innerHTML = profile.logo ? `<img src="${esc(thumb(profile.logo, 160))}" alt="">` : esc((profile.shopName || "?")[0].toUpperCase());
   paintCard();
-  const pill = $("#dStatus"); pill.textContent = s.label || ""; pill.className = "pill " + (s.kind || "");
+  paintSub(s);
   renderCert();
-  $("#verifyBox").hidden = user.emailVerified || isFake(profile.email); $("#verifyMail").textContent = profile.email;
+  const viaGoogle = user.providerData.some(p => p.providerId === "google.com");   // compte Google : l'adresse est déjà vérifiée par Google, jamais de rappel
+  $("#verifyBox").hidden = viaGoogle || user.emailVerified || isFake(profile.email); $("#verifyMail").textContent = profile.email;
+  const pb = $("#phoneBox");   // confirmation du numéro WhatsApp : le vendeur écrit à SokoPlus depuis son numéro, l'admin voit que ça correspond
+  pb.hidden = !!profile.phoneVerified || profile.status === "blocked";
+  if (!pb.hidden) $("#phoneWa").href = waLink(SITE.adminWhatsapp, `Bonjour SokoPlus, je confirme mon numéro WhatsApp pour ma boutique « ${profile.shopName} » (${prettyPhone(profile.phone)}).`);
   const bb = $("#blockBox");
   bb.hidden = !s.why;
   if (s.why) bb.innerHTML = `${esc(s.why)} <a href="${esc(waLink(SITE.adminWhatsapp, `Bonjour SokoPlus, je suis ${profile.shopName} (${prettyPhone(profile.phone)}). ${s.wa || "Je voudrais activer mon abonnement."}`))}" target="_blank" rel="noopener">${s.cta || "Écrire sur WhatsApp"}</a>`;
@@ -339,10 +458,9 @@ setInterval(() => {
   if (!profile || !user || $("#dash").hidden) return;
   tickReset();
   if (lastDay && lastDay !== dayKey()) renderStatus();   // minuit passé : les 2 publications sont de nouveau disponibles
-  const s = state(), pill = $("#dStatus");
-  if (pill.textContent === s.label) return;
-  pill.textContent = s.label; pill.className = "pill " + (s.kind || "");
-  if (s.why) renderStatus();
+  const s = state(), was = $("#dSub")?.dataset.ok;
+  paintSub(s);
+  if (s.why && was === "1") renderStatus();   // l'abonnement vient de se terminer : afficher le message et verrouiller la publication
 }, 1000);
 $("#resend").onclick = async () => { if (!needNet()) return; try { await sendEmailVerification(user); toast("Lien renvoyé. Regarde aussi dans les spams."); } catch (e) { toast(nice(e)); } };
 $("#refresh").onclick = async () => { if (!needNet()) return; try { await user.reload(); await user.getIdToken(true); renderStatus(); if (!user.emailVerified) toast("Email pas encore vérifié."); } catch (e) { toast(nice(e)); } };
@@ -609,7 +727,7 @@ $("#fShop").addEventListener("submit", e => {
   run(btnOf(e), async () => {
     const name = $("#sName").value.trim().replace(/\s+/g, " "), phone = normPhone($("#sPhone").value);
     if (name.length < 2) throw { message: "Le nom de la boutique doit avoir au moins 2 caractères." };
-    if (!phone) throw { message: "Numéro invalide. Exemple : 0990 000 001 (RDC) ou +250 788 000 000 (autre pays, avec +)." };
+    if (!phone) throw { message: phoneError($("#sPhone").value) };
     const mail = $("#sMail").value.trim();
     if (mail && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail)) throw { message: "Cette adresse email n'a pas l'air correcte." };
     const website = normLink($("#sWeb").value), facebook = normLink($("#sFb").value, "https://facebook.com/"), instagram = normLink($("#sIg").value, "https://instagram.com/");
@@ -628,7 +746,7 @@ $("#fShop").addEventListener("submit", e => {
     // 1. identité de la boutique (nom, numéro, photo, paiements)
     const patch = {};
     if (name !== profile.shopName) patch.shopName = name;
-    if (phoneChanged) patch.phone = phone;
+    if (phoneChanged) { patch.phone = phone; if (profile.phoneVerified) patch.phoneVerified = false; }   // nouveau numéro = à reconfirmer
     if (logo !== (profile.logo || "")) patch.logo = logo;
     if (pay !== (profile.payments || "")) patch.payments = pay;
     const changed = Object.keys(patch).length > 0;

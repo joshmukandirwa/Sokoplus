@@ -25,7 +25,7 @@ async function congratulate(db, shopId, n) {
   if (!tokens.length) return;
   const res = await admin.messaging().sendEachForMulticast({
     tokens, notification: { title, body: text },
-    webpush: { fcmOptions: { link: SITE + "/vendeur.html" }, notification: { icon: SITE + "/icons/icon-192.png" } }
+    webpush: { fcmOptions: { link: SITE + "/vendeur.html" }, notification: { icon: SITE + "/icons/icon-any-192.png" } }
   });
   const dead = [];
   res.responses.forEach((r, j) => { if (!r.success && /registration-token-not-registered|invalid-registration-token|invalid-argument/.test((r.error && r.error.code) || "")) dead.push(tokens[j]); });

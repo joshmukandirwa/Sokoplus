@@ -1,0 +1,91 @@
+/* ===== Ambiance fêtes (décembre, Noël, nouvel an) : neige, cartes givrées, guirlandes ===== */
+#noelSnow { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 40 }
+
+/* Lueur glacée en haut de page */
+html.noel body { background-image: radial-gradient(120% 100% at 50% 0, rgba(150, 200, 255, .22), transparent 70%); background-size: 100% 460px; background-repeat: no-repeat }
+html.noel .top { box-shadow: 0 1px 0 rgba(180, 220, 255, .25), 0 8px 24px rgba(60, 120, 220, .12) }
+
+/* Guirlande suspendue sous l'en-tête (accueil) */
+html.noel body[data-page=home] main { position: relative }
+html.noel body[data-page=home] main::before { content: ""; display: block; height: 52px; margin: -4px -16px -22px; background: url(../icons/noel-garland.png) left top / auto 52px repeat-x; pointer-events: none; position: relative; z-index: 3 }
+
+/* Cartes givrées : verre dépoli, bord glacé, petit manteau de neige sur le dessus */
+html.noel .card, html.noel .panel, html.noel .instsheet, html.noel .subsheet, html.noel .pricenote {
+  position: relative;
+  background-image: linear-gradient(160deg, rgba(255, 255, 255, .16), rgba(255, 255, 255, .03) 45%, rgba(150, 200, 255, .10));
+  border: 1px solid rgba(175, 215, 255, .45) !important;
+  box-shadow: 0 8px 22px rgba(40, 100, 190, .20), inset 0 1px 0 rgba(255, 255, 255, .45), inset 0 0 22px rgba(170, 215, 255, .12);
+  -webkit-backdrop-filter: blur(6px) saturate(1.2); backdrop-filter: blur(6px) saturate(1.2)
+}
+html.noel .card { border-radius: 14px }
+html.noel .card::before { content: ""; position: absolute; z-index: 2; top: 6px; left: 6px; width: 24px; height: 24px; background: url(../icons/noel-flake.png) center / contain no-repeat; filter: drop-shadow(0 0 5px rgba(255, 255, 255, .95)) drop-shadow(0 0 10px rgba(130, 200, 255, .8)); pointer-events: none; animation: noelSpin 14s linear infinite }
+html.noel .card { overflow: hidden }
+html.noel .card::after { content: ""; position: absolute; z-index: 1; top: 0; bottom: 0; left: 0; width: 40%; pointer-events: none; background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .22), transparent); transform: translateX(-130%) skewX(-18deg); animation: noelShine 8s ease-in-out infinite; animation-delay: calc(var(--i, 0) * .5s + 1.5s) }
+html.noel .tabbar { box-shadow: 0 -1px 0 rgba(180, 220, 255, .3), 0 -10px 28px rgba(60, 120, 220, .14) }
+html.noel .regionchip, html.noel .search { border-color: rgba(175, 215, 255, .55) }
+
+/* Bandeau « Vous vendez… » : coin décoré */
+html.noel .sellband { position: relative; overflow: hidden }
+html.noel .sellband::after { content: ""; position: absolute; top: -6px; right: -8px; width: 150px; height: 100px; background: url(../icons/noel-corner.png) left top / contain no-repeat; transform: scaleX(-1); pointer-events: none }
+
+/* Pied de page : boules dorées dans les coins */
+html.noel footer.foot { position: relative; overflow: hidden }
+html.noel footer.foot::before { content: ""; position: absolute; inset: 0; background: url(../icons/noel-frame.png) center / cover no-repeat; opacity: .36; pointer-events: none }
+html.noel footer.foot > * { position: relative }
+
+/* Icône de la feuille d'installation */
+html.noel .instsheet-ic { background: transparent; padding: 0 }
+
+@media (prefers-reduced-motion: reduce) { #noelSnow { display: none } }
+
+/* Bandeau de fêtes : une seule ligne, discrète */
+.noel-strip { display: flex; align-items: center; gap: 12px; margin: 4px 0 14px; padding: 10px 12px; border-radius: 16px; color: var(--ink);
+  background-image: linear-gradient(120deg, rgba(255, 255, 255, .18), rgba(150, 200, 255, .10) 60%, rgba(255, 255, 255, .04));
+  border: 1px solid rgba(175, 215, 255, .45); box-shadow: 0 6px 18px rgba(40, 100, 190, .18), inset 0 1px 0 rgba(255, 255, 255, .4);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px) }
+.noel-strip .ns-ic { flex: none; width: 38px; height: 38px; display: grid; place-items: center; border-radius: 12px; background: rgba(150, 200, 255, .22) }
+.noel-strip .ns-ic img { width: 28px; height: 28px; animation: noelSpin 12s linear infinite; filter: drop-shadow(0 0 6px rgba(150, 210, 255, .9)) }
+.noel-strip .ns-ic svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round }
+.noel-strip .ns-tx { flex: 1; min-width: 0; display: grid; gap: 1px }
+.noel-strip .ns-tx b { font-size: .94rem }
+.noel-strip .ns-tx small { font-size: .74rem; color: var(--muted) }
+.noel-strip .ns-cd { display: flex; gap: 6px; flex: none }
+.noel-strip .ns-cd span { display: grid; justify-items: center; min-width: 38px; padding: 4px 6px; border-radius: 10px; background: rgba(0, 0, 0, .22); color: #fff }
+.noel-strip .ns-cd b { font: 800 .95rem/1.1 var(--display, inherit) }
+.noel-strip .ns-cd i { font-style: normal; font-size: .6rem; opacity: .75 }
+
+/* ===== Effets « ouf » ===== */
+@keyframes noelSpin { to { transform: rotate(360deg) } }
+@keyframes noelBlink { 0%, 100% { filter: brightness(1) saturate(1) } 50% { filter: brightness(1.45) saturate(1.3) drop-shadow(0 0 7px rgba(255, 215, 110, .85)) } }
+@keyframes noelGlow { 0%, 100% { filter: drop-shadow(0 0 2px rgba(150, 210, 255, .0)) } 50% { filter: drop-shadow(0 0 9px rgba(150, 215, 255, .95)) } }
+@keyframes noelAurora { 0% { transform: translateX(-6%) scale(1); opacity: .55 } 100% { transform: translateX(6%) scale(1.12); opacity: .95 } }
+@keyframes noelShine { 0%, 62% { transform: translateX(-130%) skewX(-18deg) } 100% { transform: translateX(260%) skewX(-18deg) } }
+
+/* Aurore douce derrière le haut de page */
+html.noel body::before { content: ""; position: fixed; z-index: -1; left: -10%; right: -10%; top: 0; height: 360px; pointer-events: none; filter: blur(22px);
+  background: radial-gradient(55% 90% at 18% 0, rgba(70, 255, 200, .30), transparent 70%), radial-gradient(55% 90% at 82% 5%, rgba(120, 140, 255, .38), transparent 70%), radial-gradient(40% 70% at 50% 0, rgba(255, 130, 200, .16), transparent 70%);
+  animation: noelAurora 9s ease-in-out infinite alternate }
+
+/* Guirlande qui clignote, logo qui brille */
+html.noel body[data-page=home] main::before { animation: noelBlink 2.6s ease-in-out infinite }
+html.noel .logo .logo-img { animation: noelGlow 3.4s ease-in-out infinite }
+
+/* Bandeau : reflet qui passe */
+.noel-strip { position: relative; overflow: hidden }
+.noel-strip::after { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 40%; background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .28), transparent); animation: noelShine 6s ease-in-out infinite; pointer-events: none }
+
+/* Neige entassée sur le pied de page */
+html.noel footer.foot::after { content: ""; position: absolute; z-index: 1; left: 0; right: 0; top: 0; height: 22px; pointer-events: none;
+  background: radial-gradient(circle at 14px 0, #fff 13px, transparent 14px) 0 0 / 28px 22px repeat-x, radial-gradient(circle at 20px 0, #cfe4ff 15px, transparent 16px) 9px 4px / 40px 22px repeat-x;
+  filter: drop-shadow(0 5px 7px rgba(110, 170, 255, .45)) }
+
+@media (prefers-reduced-motion: reduce) {
+  html.noel body::before, html.noel body[data-page=home] main::before, html.noel .logo .logo-img, .noel-strip::after, html.noel .card::before, html.noel .card::after, .noel-strip .ns-ic img { animation: none }
+}
+
+/* Père Noël en traîneau : traverse l'écran de droite à gauche en se balançant (accueil, à chaque ouverture) */
+.noel-sleigh { position: fixed; left: 0; z-index: 45; width: 170px; animation: noelFly 9s linear forwards; will-change: transform; -webkit-tap-highlight-color: transparent }
+.noel-sleigh img { display: block; width: 100%; height: auto; pointer-events: none; filter: drop-shadow(0 0 10px rgba(190, 225, 255, .6)); animation: noelBob 1.6s ease-in-out infinite alternate }
+@keyframes noelFly { from { transform: translateX(105vw) } to { transform: translateX(-200px) } }
+@keyframes noelBob { from { transform: translateY(-9px) rotate(-2deg) } to { transform: translateY(9px) rotate(2deg) } }
+@media (prefers-reduced-motion: reduce) { .noel-sleigh { display: none } }

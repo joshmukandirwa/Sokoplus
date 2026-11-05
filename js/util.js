@@ -24,8 +24,15 @@ export function money(price, cur = "USD") {   // chaque article garde sa monnaie
   return Number(n.toFixed(d)).toLocaleString("fr-FR", { maximumFractionDigits: d }) + " " + (SYM[cur] || cur);
 }
 
-/* ---------- Téléphone : "0990 000 001", "+243 990 000 001" -> "243990000001" ---------- */
-export function normPhone(raw) {
+/* ---------- Téléphone : "0993 582 704", "+243 990 123 456" -> "243990123456" ---------- */
+// Indicatifs téléphoniques réellement attribués (1, 2 ou 3 chiffres) : un numéro qui commence par autre chose (ex. 899) est faux.
+const CODES = new Set("1 7 20 27 30 31 32 33 34 36 39 40 41 43 44 45 46 47 48 49 51 52 53 54 55 56 57 58 60 61 62 63 64 65 66 81 82 84 86 90 91 92 93 94 95 98 211 212 213 216 218 220 221 222 223 224 225 226 227 228 229 230 231 232 233 234 235 236 237 238 239 240 241 242 243 244 245 246 247 248 249 250 251 252 253 254 255 256 257 258 260 261 262 263 264 265 266 267 268 269 290 291 297 298 299 350 351 352 353 354 355 356 357 358 359 370 371 372 373 374 375 376 377 378 380 381 382 383 385 386 387 389 420 421 423 500 501 502 503 504 505 506 507 508 509 590 591 592 593 594 595 596 597 598 599 670 672 673 674 675 676 677 678 679 680 681 682 683 685 686 687 688 689 690 691 692 850 852 853 855 856 880 886 960 961 962 963 964 965 966 967 968 970 971 972 973 974 975 976 977 992 993 994 995 996 998".split(" "));
+export const codeOf = d => [1, 2, 3].map(n => String(d).slice(0, n)).find(c => CODES.has(c)) || "";
+export const hasRealCode = d => !!codeOf(d);
+// Nombre de chiffres du numéro national (après l'indicatif) par pays : trop court ou trop long = numéro suspect. Pays absents : règle générale 10 à 15 chiffres au total.
+const LEN = {"243": [9, 9], "250": [9, 9], "257": [8, 8], "256": [9, 9], "254": [9, 9], "255": [9, 9], "242": [9, 9], "244": [9, 9], "260": [9, 9], "263": [9, 10], "258": [9, 9], "265": [7, 9], "27": [9, 9], "264": [7, 9], "267": [7, 8], "268": [8, 8], "266": [8, 8], "261": [9, 9], "230": [7, 8], "248": [7, 7], "269": [7, 7], "251": [9, 9], "291": [7, 7], "253": [8, 8], "252": [7, 9], "211": [9, 9], "249": [9, 9], "20": [9, 10], "218": [9, 10], "216": [8, 8], "213": [8, 9], "212": [9, 9], "222": [8, 8], "221": [9, 9], "33": [9, 9], "32": [8, 9], "1": [10, 10], "44": [10, 10], "91": [10, 10], "86": [11, 11], "971": [9, 9], "234": [8, 10], "233": [9, 9], "225": [8, 10], "237": [8, 9], "241": [7, 8], "236": [8, 8], "235": [8, 8], "229": [8, 10], "228": [8, 8], "226": [8, 8], "223": [8, 8], "227": [8, 8], "224": [9, 9], "231": [7, 9], "232": [8, 8], "220": [7, 7], "245": [7, 9], "238": [7, 7], "239": [7, 7], "240": [9, 9], "49": [10, 12], "39": [9, 11], "34": [9, 9], "351": [9, 9], "41": [9, 9], "31": [9, 9], "90": [10, 10], "966": [9, 9], "961": [7, 8], "7": [10, 10]};
+// Ancienne règle, large : sert seulement à retrouver un compte déjà créé (connexion, mot de passe oublié)
+export function normPhoneLoose(raw) {
   const s = String(raw || "").trim();
   let d = s.replace(/\D/g, "");
   if (!s.startsWith("+")) {
@@ -35,6 +42,22 @@ export function normPhone(raw) {
   }
   return /^\d{10,15}$/.test(d) ? d : "";
 }
+// Règle stricte (inscription, changement de numéro) : indicatif existant, RDC = mobile 08x/09x (12 chiffres), pas de chiffres répétés
+export function normPhone(raw) {
+  const d = normPhoneLoose(raw);
+  return d && phoneIssue(d) === "" ? d : "";
+}
+export function phoneIssue(d) {   // "" si le numéro (déjà normalisé) est plausible, sinon la raison
+  if (!/^\d{10,15}$/.test(d)) return "format";
+  if (!hasRealCode(d)) return "indicatif";
+  if (d.startsWith("243") && !/^243[89]\d{8}$/.test(d)) return "rdc";
+  const c = codeOf(d), r = LEN[c];
+  if (r) { const n = d.length - c.length; if (n < r[0]) return "court"; if (n > r[1]) return "long"; }
+  if (/(\d)\1{5,}/.test(d.slice(3))) return "repete";
+  if (/0123456|1234567|2345678|3456789|9876543|8765432|7654321|6543210/.test(d.slice(3))) return "repete";
+  return "";
+}
+// Confirmation WhatsApp du numéro : facultative (badge « Numéro confirmé » = bonus de confiance, plus aucun blocage de publication)
 export const prettyPhone = p => "+" + String(p).replace(/^(\d{3})(\d{3})(\d{3})(\d*)$/, "$1 $2 $3 $4").trim();
 export const waLink = (phone, text) => `https://wa.me/${String(phone).replace(/\D/g, "")}?text=${encodeURIComponent(text)}`;
 

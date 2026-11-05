@@ -1454,12 +1454,20 @@ iframe.skiptranslate, .goog-te-banner-frame, #goog-gt-tt, .goog-te-balloon-frame
 [data-follow].on { background: transparent; color: var(--ink); border-color: var(--line); box-shadow: none }
 .vp .vstats { display: grid; grid-template-columns: repeat(4, 1fr) }
 .sh-stats b[data-followers] { font-variant-numeric: tabular-nums }
-.favtabs { display: flex; gap: 8px; margin: 4px 0 14px; overflow-x: auto; scrollbar-width: none }
-.favtabs button { flex: none; display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px; border-radius: 99px; border: 2px solid var(--line); background: var(--surface); color: var(--ink); font: 700 .9rem var(--body); cursor: pointer }
-.favtabs button em { font-style: normal; font-size: .76rem; min-width: 22px; padding: 2px 7px; border-radius: 99px; background: var(--soft, rgba(0, 0, 0, .08)); text-align: center }
-.favtabs button[aria-pressed=true] { border-color: #ff6a00; background: #fff1e3; color: #5a2b00 }
+/* Favoris : titre + corbeille discrète, onglets en contrôle segmenté */
+.favhead { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 22px 0 14px }
+.favclear { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 38px; min-width: 38px; padding: 0 10px; border-radius: 99px; border: 1px solid rgba(127, 127, 127, .35); background: transparent; color: var(--muted, #8a8f9c); cursor: pointer; font: 700 .82rem var(--body) }
+.favclear[hidden] { display: none }
+.favclear svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round }
+.favclear .lbl { display: none }
+.favclear.sure { border-color: #e5484d; color: #e5484d; background: rgba(229, 72, 77, .1) }
+.favclear.sure .lbl { display: inline }
+.favtabs { display: flex; gap: 4px; padding: 4px; margin: 0 0 16px; border-radius: 14px; background: rgba(127, 127, 127, .14) }
+.favtabs button { flex: 1 1 0; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 8px; border-radius: 11px; border: 0; background: transparent; color: var(--muted, #8a8f9c); font: 700 .9rem var(--body); cursor: pointer; white-space: nowrap }
+.favtabs button em { font-style: normal; font-size: .74rem; min-width: 20px; padding: 1px 7px; border-radius: 99px; background: rgba(127, 127, 127, .18); text-align: center }
+.favtabs button[aria-pressed=true] { background: var(--surface, #fff); color: var(--ink); box-shadow: 0 1px 4px rgba(0, 0, 0, .18) }
 .favtabs button[aria-pressed=true] em { background: #ff6a00; color: #fff }
-:root[data-theme=dark] .favtabs button[aria-pressed=true] { background: #3a2410; color: #ffd9b8 }
+:root[data-theme=dark] .favtabs button[aria-pressed=true] { background: #2a2a31; color: #fff }
 .shoplist { display: grid; gap: 10px }
 .shrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line) }
 .shrow .shl { display: flex; align-items: center; gap: 12px; min-width: 0; color: var(--ink); text-decoration: none }
@@ -1492,3 +1500,157 @@ iframe.skiptranslate, .goog-te-banner-frame, #goog-gt-tt, .goog-te-balloon-frame
   .filters { display: flex; flex-wrap: wrap }
   .filters select { width: auto }
 }
+
+/* ===== Compteur d'abonnement (tableau de bord vendeur) ===== */
+.subc {
+  --c: #14803c; --c-bg: #eaf7ef; --c-line: #c4e8d1; --c-track: rgba(20, 128, 60, .16);
+  width: 100%; margin-top: 4px; padding: 12px 12px 12px;
+  display: grid; gap: 10px;
+  background: var(--c-bg); border: 1px solid var(--c-line); border-radius: 14px;
+  color: var(--c);
+}
+.subc.warn { --c: #8a5200; --c-bg: #fff4dc; --c-line: #f2d899; --c-track: rgba(138, 82, 0, .16) }
+.subc.bad  { --c: #b3261e; --c-bg: #fdecea; --c-line: #f4c3be; --c-track: rgba(179, 38, 30, .16) }
+:root[data-theme=dark] .subc { --c: #7ee8a6; --c-bg: #10281b; --c-line: #1f4a32; --c-track: rgba(126, 232, 166, .18) }
+:root[data-theme=dark] .subc.warn { --c: #ffc766; --c-bg: #2e2208; --c-line: #5a4414; --c-track: rgba(255, 199, 102, .18) }
+:root[data-theme=dark] .subc.bad  { --c: #ff9a92; --c-bg: #2e1311; --c-line: #5c2723; --c-track: rgba(255, 154, 146, .18) }
+
+.subc:empty { display: none }
+.subc-top { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: .9rem; line-height: 1.2 }
+.subc-title { font-weight: 800; min-width: 0 }
+.subc-end { margin-left: auto; flex: none; font-size: .78rem; font-weight: 600; opacity: .85 }
+
+/* le point respire doucement : c'est le seul mouvement du bloc */
+.subc-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--c); animation: subpulse 2.4s ease-out infinite }
+.subc.bad .subc-dot { animation: none }
+@keyframes subpulse {
+  0%   { box-shadow: 0 0 0 0 var(--c-track) }
+  70%  { box-shadow: 0 0 0 7px transparent }
+  100% { box-shadow: 0 0 0 0 transparent }
+}
+
+.subc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px }
+.subc-grid > div { min-width: 0; padding: 9px 2px 7px; text-align: center; background: var(--surface); border-radius: 10px }
+.subc-grid b {
+  display: block; color: var(--ink);
+  font: 900 1.45rem/1 var(--display); letter-spacing: -.01em;
+  font-variant-numeric: tabular-nums;   /* chiffres de même largeur : rien ne saute à chaque seconde */
+}
+.subc-grid small { display: block; margin-top: 5px; color: var(--muted); font-size: .72rem; font-weight: 700 }
+
+.subc-bar { height: 5px; border-radius: 99px; background: var(--c-track); overflow: hidden }
+.subc-bar i { display: block; height: 100%; border-radius: inherit; background: var(--c); transition: width .6s ease }
+
+@media (max-width: 360px) {
+  .subc-grid b { font-size: 1.25rem }
+  .subc-end { display: none }
+}
+@media (prefers-reduced-motion: reduce) {
+  .subc-dot { animation: none }
+  .subc-bar i { transition: none }
+}
+
+
+/* Installation : feuille qui glisse au-dessus de la barre du bas (ne pousse plus le contenu) */
+.instsheet {
+  position: fixed; left: 12px; right: 12px; z-index: 60;
+  bottom: calc(86px + env(safe-area-inset-bottom, 0px));
+  max-width: 460px; margin: 0 auto; padding: 16px 16px 14px;
+  background: var(--surface); color: var(--ink); border-radius: 18px;
+  border: 1px solid rgba(127, 127, 127, .25);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, .35), 0 0 0 1px rgba(255, 106, 0, .25);
+  transform: translateY(24px); opacity: 0; transition: transform .28s ease, opacity .28s ease
+}
+.instsheet.in { transform: none; opacity: 1 }
+.instsheet[hidden] { display: none }
+.instsheet-top { display: flex; align-items: center; gap: 14px; padding-right: 22px }
+.instsheet-ic { width: 56px; height: 56px; flex: none; object-fit: contain; padding: 6px; border-radius: 16px; background: #03060d }
+.instsheet-tx { display: flex; flex-direction: column; gap: 3px; min-width: 0 }
+.instsheet-tx b { font-size: 1.02rem; color: var(--ink) }
+.instsheet-tx small { font-size: .8rem; line-height: 1.35; color: var(--muted) }
+.instsheet-go { width: 100%; margin-top: 14px }
+.instsheet-x { position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; border: 0; background: transparent; color: var(--muted); font-size: 1.5rem; line-height: 1; cursor: pointer; border-radius: 50% }
+
+/* Nouvelle version disponible */
+.updtoast {
+  position: fixed; left: 12px; right: 12px; z-index: 70;
+  bottom: calc(86px + env(safe-area-inset-bottom, 0px)); max-width: 460px; margin: 0 auto;
+  display: flex; align-items: center; gap: 10px; padding: 10px 8px 10px 14px;
+  background: #1b1b1f; color: #fff; border-radius: 14px; box-shadow: 0 10px 30px rgba(0, 0, 0, .4);
+  transform: translateY(20px); opacity: 0; transition: transform .25s ease, opacity .25s ease
+}
+.updtoast.in { transform: none; opacity: 1 }
+.updtoast > span { flex: 1; display: flex; flex-direction: column; min-width: 0 }
+.updtoast small { font-size: .76rem; opacity: .7 }
+.updtoast .btn { flex: none; width: auto; white-space: nowrap }
+.updtoast-x { flex: none; width: 30px; height: 30px; border: 0; background: transparent; color: #fff; opacity: .7; font-size: 1.4rem; cursor: pointer }
+
+/* Accueil épuré : le titre est déjà dans le logo ; recherche et région déjà sur la page */
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap }
+body[data-page=home] .hero { padding-top: 6px }
+body[data-page=home] .top .nav a[href="recherche.html"] { display: none }
+
+
+/* ===== Pastille d'abonnement + feuille « Mon abonnement » ===== */
+.subpill {
+  --c: #14803c; --c-bg: #eaf7ef; --c-line: #c4e8d1;
+  display: inline-flex; align-items: center; gap: 8px; max-width: 100%; margin-top: 6px; padding: 8px 10px 8px 12px;
+  background: var(--c-bg); color: var(--c); border: 1px solid var(--c-line); border-radius: 99px;
+  font: 700 .84rem var(--body, inherit); cursor: pointer; text-align: left
+}
+.subpill[hidden] { display: none }
+.subpill.warn { --c: #8a5200; --c-bg: #fff4dc; --c-line: #f2d899 }
+.subpill.bad { --c: #b3261e; --c-bg: #fdecea; --c-line: #f4c3be }
+:root[data-theme=dark] .subpill { --c: #7ee8a6; --c-bg: #10281b; --c-line: #1f4a32 }
+:root[data-theme=dark] .subpill.warn { --c: #ffc766; --c-bg: #2e2208; --c-line: #5a4414 }
+:root[data-theme=dark] .subpill.bad { --c: #ff9a92; --c-bg: #2e1311; --c-line: #5c2723 }
+.subpill b { font-weight: 800 }
+.subpill .sp-left { font-weight: 600; opacity: .85; padding-left: 8px; border-left: 1px solid currentColor; border-left-color: color-mix(in srgb, currentColor 35%, transparent) }
+.subpill .sp-go { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; opacity: .7 }
+
+dialog.subsheet {
+  position: fixed; inset: auto 0 0 0; margin: 0 auto; width: 100%; max-width: 520px; max-height: 88dvh; padding: 0; overflow: hidden;
+  background: var(--surface); color: var(--ink); border: 1px solid rgba(127, 127, 127, .25); border-bottom: 0; border-radius: 22px 22px 0 0;
+  flex-direction: column
+}
+dialog.subsheet[open] { display: flex; animation: ssUp .26s ease }
+dialog.subsheet::backdrop { background: rgba(0, 0, 0, .55) }
+@keyframes ssUp { from { transform: translateY(40px); opacity: 0 } to { transform: none; opacity: 1 } }
+.ss-bar { display: flex; align-items: center; gap: 10px; padding: 16px 16px 8px 20px; flex: none }
+.ss-bar h2 { flex: 1; margin: 0; font: 800 1.15rem var(--display, inherit) }
+.ss-x { width: 36px; height: 36px; border: 0; border-radius: 50%; background: rgba(127, 127, 127, .16); color: inherit; font-size: 1.4rem; line-height: 1; cursor: pointer }
+.ss-body { display: grid; gap: 14px; padding: 6px 16px calc(20px + env(safe-area-inset-bottom, 0px)); overflow-y: auto }
+.ss-list { margin: 0; border: 1px solid rgba(127, 127, 127, .22); border-radius: 14px; overflow: hidden }
+.ss-list > div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 11px 14px; font-size: .88rem }
+.ss-list > div + div { border-top: 1px solid rgba(127, 127, 127, .18) }
+.ss-list dt { color: var(--muted); flex: none }
+.ss-list dd { margin: 0; font-weight: 700; text-align: right }
+.ss-list dd small { font-weight: 500; color: var(--muted) }
+.ss-cert { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: 14px; border: 1px solid rgba(127, 127, 127, .22) }
+.ss-cert > div { display: grid; gap: 2px; min-width: 0 }
+.ss-cert small { color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .04em }
+.ss-cert b { font-size: .95rem }
+.ss-cert span { font-size: .8rem; color: var(--muted) }
+.ss-cert.ok b { color: #14803c }
+:root[data-theme=dark] .ss-cert.ok b { color: #7ee8a6 }
+.ss-cert.warn b { color: #b97500 }
+.ss-cert.bad b { color: #d4372c }
+.ss-cta { width: 100%; text-align: center }
+.ss-note { margin: 0; text-align: center; font-size: .76rem }
+
+/* ===== Prix barré et avis « Nouveau tarif » ===== */
+.pr-old { opacity: .6; text-decoration-thickness: 2px; margin-right: 2px }
+.pr-now { font-weight: 800 }
+.pr-off { font-style: normal; font-weight: 800; font-size: .72rem; padding: 2px 7px; border-radius: 99px; background: #ff6a00; color: #fff; margin-left: 4px; white-space: nowrap }
+.ss-list dd small { font-weight: 500 }
+.pricenote { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; padding: 12px 14px; border-radius: 14px; background: rgba(255, 106, 0, .1); border: 1px solid rgba(255, 106, 0, .35) }
+.pricenote > div { display: grid; gap: 3px; min-width: 0; font-size: .86rem }
+.pricenote b { font-size: .9rem }
+.pricenote .btn { flex: none; width: auto }
+
+/* Image du tarif côté vendeur */
+.ss-pricepic { display: block; border-radius: 14px; overflow: hidden; border: 1px solid rgba(127, 127, 127, .25) }
+.ss-pricepic img { display: block; width: 100%; max-height: 240px; object-fit: cover }
+.pricenote .pn-pic { flex: none; width: 56px; height: 56px; border-radius: 12px; overflow: hidden }
+.pricenote .pn-pic img { width: 100%; height: 100%; object-fit: cover; display: block }
+.pricenote > div { flex: 1 }

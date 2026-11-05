@@ -811,3 +811,15 @@
   margin-bottom: 10px;
   font-size: .92rem;
 }
+.a-id .pill { display: inline-block; margin-top: 4px; font-size: .72rem }
+
+/* Annonces (admin) et petit œil des vues */
+.a-eye { margin-top: 2px }
+.a-ann .a-pic span { display: grid; place-items: center; color: var(--blue); width: 100%; height: 100% }
+.a-ann .a-pic .ic { width: 26px; height: 26px }
+.a-ann .a-info > div { display: flex; flex-wrap: wrap; gap: 8px; align-items: center }
+.an-pics { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 }
+.an-pic { position: relative; width: 78px; height: 78px; border: var(--bw) solid var(--line); border-radius: 12px; overflow: hidden }
+.an-pic img { width: 100%; height: 100%; object-fit: cover; display: block }
+.an-pic button { position: absolute; top: 3px; right: 3px; width: 22px; height: 22px; border-radius: 99px; border: 0; background: #081a3dcc; color: #fff; line-height: 1; font-size: 1rem }
+#annDlg textarea, #annDlg input:not([type=file]), #annDlg select { width: 100% }

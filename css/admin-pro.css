@@ -189,3 +189,67 @@ body.ad-in .cfgbanner { position: relative; z-index: 5 }
   .ad-card > header { flex-wrap: wrap }
 }
 @media (prefers-reduced-motion: reduce) { .ad-kpi, .ad-card, .ad-l1, .ad-l2, .ad .a-live i { animation: none } .ad-side { transition: none } }
+
+/* ===== Menu latéral : logo complet, rubriques, sans bloc décoratif ===== */
+.ad-brand { flex-direction: column; align-items: flex-start; gap: 6px; padding: 2px 6px 14px; border-bottom: 1px solid #ffffff14 }
+.ad-brand img { width: min(190px, 100%); height: auto; object-fit: contain }
+.ad-brand small { margin: 0 0 0 2px; font: 700 .68rem var(--body); letter-spacing: .14em; text-transform: uppercase; color: #8fa6dd }
+.ad-grp { margin: 14px 10px 4px; font: 700 .68rem var(--body); letter-spacing: .12em; text-transform: uppercase; color: #6f87c4 }
+.ad-nav .ad-grp:first-child { margin-top: 4px }
+.ad-nav button { padding: 11px 14px; border-radius: 12px; font-weight: 600 }
+.ad-nav button[aria-selected="true"] { background: #ffffff1a; color: #fff; box-shadow: inset 3px 0 0 #ff7a00 }
+.ad-nav button[aria-selected="true"] .ic { color: #ffb02e }
+.ad-out { margin-top: auto; border-top: 1px solid #ffffff14; border-radius: 0 0 12px 12px; padding-top: 16px }
+
+/* ===== Formulaire « Nouvelle annonce » ===== */
+#annDlg .dlg { gap: 16px }
+#annDlg .dlg-head h2 { font: 800 1.3rem var(--display) }
+.an-sub { margin: 4px 0 0; font-size: .84rem; color: var(--muted, #5b6784); line-height: 1.4; max-width: 34ch }
+#annDlg .field { font-weight: 700; font-size: .86rem; gap: 7px }
+#annDlg .an-opt { font-weight: 500; color: var(--muted, #5b6784) }
+#annDlg input:not([type=file]), #annDlg textarea { border-radius: 12px }
+.an-kinds { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px }
+.an-kinds button { display: grid; justify-items: start; gap: 2px; padding: 11px 12px; border-radius: 14px; border: 1.5px solid rgba(127, 127, 127, .3); background: transparent; color: inherit; text-align: left; font: inherit; cursor: pointer }
+.an-kinds i { width: 9px; height: 9px; border-radius: 50%; background: var(--k); margin-bottom: 4px }
+.an-kinds b { font-size: .88rem }
+.an-kinds small { font-weight: 500; font-size: .7rem; color: var(--muted, #5b6784) }
+.an-kinds .k-a { --k: #1470ff } .an-kinds .k-c { --k: #0f9d8a } .an-kinds .k-i { --k: #ff6a00 }
+.an-kinds button[aria-checked="true"] { border-color: var(--k); background: color-mix(in srgb, var(--k) 11%, transparent); box-shadow: 0 0 0 1px var(--k) inset }
+.an-life { display: inline-flex; padding: 3px; gap: 2px; border-radius: 12px; background: rgba(127, 127, 127, .14); width: fit-content; max-width: 100% }
+.an-life button { padding: 8px 14px; border: 0; border-radius: 10px; background: transparent; color: inherit; font: 600 .84rem var(--body); cursor: pointer }
+.an-life button[aria-checked="true"] { background: #fff; color: #081a3d; box-shadow: 0 1px 4px rgba(0, 0, 0, .18) }
+.an-add { width: 100%; padding: 14px; border: 1.5px dashed rgba(127, 127, 127, .5); border-radius: 14px; background: transparent; color: var(--blue, #1470ff); font: 700 .88rem var(--body); cursor: pointer }
+.an-add[hidden] { display: none }
+.an-actions { display: grid; grid-template-columns: 1.4fr 1fr; gap: 10px; margin-top: 2px }
+.an-actions .btn { width: 100%; justify-content: center }
+
+/* ===== Tarifs (admin) ===== */
+.pr-pane { display: grid; gap: 14px; max-width: 560px }
+.pr-card { display: grid; gap: 12px; padding: 16px; border-radius: 16px; background: var(--surface, #fff); border: 1px solid rgba(127, 127, 127, .25) }
+.pr-card h3 { margin: 0; font: 800 1.05rem var(--display) }
+.pr-card .field { font-weight: 700; font-size: .86rem; gap: 7px }
+.pr-card .an-opt { font-weight: 500; color: var(--muted, #5b6784) }
+.pr-row { display: grid; grid-template-columns: 1.3fr 1fr; gap: 10px }
+.pr-prev { background: linear-gradient(135deg, #0a2570, #1470ff); color: #fff; border: 0 }
+.pr-prev small { opacity: .75; text-transform: uppercase; letter-spacing: .08em; font-size: .68rem }
+.pr-big { font-size: 1.15rem; font-weight: 600 }
+.pr-delta { margin: 0; font-size: .82rem; opacity: .9 }
+.pr-chk { display: flex; gap: 10px; align-items: flex-start; font-size: .9rem; line-height: 1.35; cursor: pointer }
+.pr-chk input { width: 20px; height: 20px; flex: none; margin-top: 1px; accent-color: #1470ff }
+.pr-pane textarea, .pr-pane input:not([type=checkbox]), .pr-pane select { width: 100%; border-radius: 12px }
+
+.pr-pic { display: grid; place-items: center; min-height: 120px; border-radius: 14px; border: 1.5px dashed rgba(127, 127, 127, .45); overflow: hidden; color: var(--muted, #5b6784); font-size: .86rem }
+.pr-pic img { display: block; width: 100%; max-height: 240px; object-fit: contain }
+.pr-picbtns { display: flex; gap: 8px }
+.pr-picbtns .btn { width: auto }
+
+/* Ambiance de fêtes : choix clair dans le menu */
+.ad-fest { display: grid; gap: 8px; margin: 2px 0; padding: 10px 12px; border-radius: 12px; color: inherit }
+.ad-fest.on { background: #ff9a0026 }
+.ad-fest-h { display: flex; align-items: center; gap: 12px; font-weight: 600 }
+.ad-fest .mtx { display: grid; line-height: 1.2 }
+.ad-fest .mtx small { font-size: .74rem; color: #8fa6dd; font-weight: 500 }
+.ad-seg { display: grid; grid-template-columns: 1fr 1.3fr .8fr; gap: 3px; padding: 3px; border-radius: 10px; background: #ffffff12 }
+.ad-seg button { padding: 8px 4px; border: 0; border-radius: 8px; background: transparent; color: #c9d6f5; font: 600 .76rem var(--body); cursor: pointer; white-space: nowrap }
+.ad-seg button[aria-pressed="true"] { background: #fff; color: #081a3d }
+.ad-seg button:disabled { opacity: .6 }

@@ -1,10 +1,11 @@
 /* Données du marché (temps réel ou démo), cartes, favoris, recherche et fiche article : partagés par toutes les pages. */
-import { db, collection, query, orderBy, limit, onSnapshot, addDoc, serverTimestamp } from "./fb.js";
+import { db, collection, query, orderBy, limit, onSnapshot, getDocs, addDoc, serverTimestamp } from "./fb.js";
 import { SITE, configured, configBanner, $, $$, esc, store, money, waLink, prettyPhone, toast, ago, thumb, tileColor, isNetErr, needNet, NET_MSG } from "./common.js";
 import { svg, favBadge } from "./ui.js";
 import { icon as ic } from "./icons.js";
 import { countryOf, countryName, toUsd } from "./pays.js";
 import { renderReviews } from "./avis.js";
+import { countView, viewsOf, eyeHTML } from "./vues.js";
 
 export const items = new Map();
 export const favs = new Set(store.get("favs", []));
@@ -47,8 +48,12 @@ export function load(onChange) {
   addEventListener("offline", fire); addEventListener("online", fire);   // les pages réaffichent leur message quand le réseau part ou revient
   if (configured) {
     if (navigator.onLine === false) { loadError = "net"; fire(); }       // pas besoin d'attendre 10 s pour le savoir
+    let live = false;
+    // Affichage rapide : les 24 plus récents arrivent dans une petite requête, sans attendre le flux complet (150).
+    try { getDocs(query(collection(db, "items"), orderBy("createdAt", "desc"), limit(24))).then(snap => { if (live || snap.empty) return; snap.forEach(d => { if (!items.has(d.id)) items.set(d.id, { id: d.id, ...d.data() }); }); loadError = ""; fire(); }).catch(() => {}); } catch { /* le flux ci-dessous prend le relais */ }
     try {
       onSnapshot(query(collection(db, "items"), orderBy("createdAt", "desc"), limit(150)), snap => {
+        if (!snap.metadata.fromCache) live = true;
         // Sans réseau, Firestore renvoie une liste vide « du cache » sans erreur : ce n'est pas « aucun article », c'est « pas de connexion ».
         if (snap.metadata.fromCache && snap.empty && !items.size) { loadError = "net"; fire(); return; }
         snap.docChanges().forEach(ch => {
@@ -131,7 +136,7 @@ function announce(it) {
   fresh.add(it.id); unseen++; document.title = `(${unseen}) SokoPlus`;
   toast(`Nouveau : ${it.title} · ${it.shopName}`, { onClick: () => openDetail(it.id) });
   if (document.hidden && "Notification" in window && Notification.permission === "granted") {
-    try { new Notification("Nouveau sur SokoPlus", { body: `${it.title} · ${it.shopName}`, icon: "icons/icon-192.png" }); } catch { /* ignoré */ }
+    try { new Notification("Nouveau sur SokoPlus", { body: `${it.title} · ${it.shopName}`, icon: "icons/icon-any-192.png" }); } catch { /* ignoré */ }
   }
 }
 document.addEventListener("visibilitychange", () => { if (!document.hidden) { unseen = 0; document.title = document.title.replace(/^\(\d+\)\s*/, ""); } });
@@ -283,6 +288,7 @@ export function openDetail(id) {
       <div class="pdp-info">
         <h2 class="pd-title">${esc(it.title)}</h2>
         <div class="pdp-rate" id="pdRate"><span>Publié ${ago(ms(it))}</span></div>
+        <div class="pdp-views" id="pdViews" hidden></div>
         <div class="pdp-price${off ? " promo" : ""}">
           ${off ? `<div class="pdp-band"><b>Promo</b><span>-${off}% maintenant</span></div>` : ""}
           <div class="pdp-pbody"><div class="dprice">${priceHTML(it)}${sold ? ' <span class="pill bad">Vendu</span>' : ""}</div>${off ? `<p class="pdp-save">Tu économises ${money(it.oldPrice - it.price, it.currency)}</p>` : ""}</div>
@@ -333,6 +339,7 @@ export function openDetail(id) {
     r.innerHTML = (n ? `<span class="st">${"★".repeat(k)}${"☆".repeat(5 - k)}</span><b>${avg.toFixed(1).replace(".", ",")}</b><a href="#pdRev" data-gorev>${n} avis</a>` : "<span>Pas encore d'avis</span>") + `<span>· publié ${ago(ms(it))}</span>`;
   });
   renderReviews(rb, id, it.ownerId, it.title);
+  countView("i", id).then(() => viewsOf(id)).then(n => { const e = d.querySelector("#pdViews"); if (e && current && current.id === id) { e.innerHTML = eyeHTML(n) + `<small>${n > 1 ? "personnes ont vu" : "personne a vu"} cet article</small>`; e.hidden = false; } });
   if (!d.open) d.showModal();
   d.scrollTop = 0;
   const u = new URL(location.href); u.searchParams.set("item", id); history.replaceState(null, "", u.pathname + u.search + u.hash);
