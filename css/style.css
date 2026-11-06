@@ -3961,3 +3961,45 @@ a.search::after,
 .a-meta2 .annc-kind { position: static }
 .a-title2 { margin: 0; font: 900 1.5rem/1.15 var(--display) }
 .a-text2 { font-size: 1rem; line-height: 1.6; overflow-wrap: anywhere }
+
+
+/* En-tête : sac + texte « SokoPlus » (même style que l'en-tête de Paramètres) */
+.top .logo .wm {
+  font: 800 1.5rem var(--display);
+  font-style: normal;
+  letter-spacing: -.03em;
+  color: #fff;
+  overflow: hidden
+}
+
+@media(max-width:380px) {
+  .top .logo .wm {
+    font-size: 1.28rem
+  }
+}
+
+
+/* Mascotte SokoPlus (états vides, erreurs, compte) */
+.mascot {
+  display: block;
+  width: auto;
+  height: 168px;
+  max-width: 70vw;
+  margin: 0 auto 4px;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 12px rgba(8, 26, 61, .22))
+}
+
+.mascot.sm {
+  height: 110px
+}
+
+p.empty .mascot {
+  margin-bottom: 10px
+}
+
+@media(prefers-reduced-motion:no-preference) {
+  .mascot {
+    animation: float 4s ease-in-out infinite
+  }
+}

@@ -18,6 +18,7 @@ function css() {
 #mt::before{content:"";position:fixed;inset:0;background-image:radial-gradient(var(--soft,#e4ebfa) 2px,transparent 2.5px);background-size:22px 22px;pointer-events:none}
 #mt .mt-in{position:relative;z-index:1;width:min(420px,100%);display:grid;gap:18px;justify-items:center}
 #mt .mt-logo{height:42px;width:auto;max-width:70%;object-fit:contain}
+#mt .mt-mascot{height:150px;width:auto;margin:6px 0 2px;filter:drop-shadow(0 8px 14px rgba(0,0,0,.25))}
 #mt .mt-stage{position:relative;width:min(300px,86%);height:150px;margin:6px 0 2px}
 #mt .mt-stage i{position:absolute;display:grid;place-items:center;border:var(--bw,2px) solid var(--line,#081a3d);box-shadow:0 4px 0 var(--line,#081a3d);color:var(--line,#081a3d)}
 #mt .mt-stage i svg{width:55%;height:55%}
@@ -52,10 +53,7 @@ function show() {
     ov = document.createElement("div"); ov.id = "mt"; ov.setAttribute("role", "alertdialog"); ov.setAttribute("aria-live", "polite");
     ov.innerHTML = `<div class="mt-in">
       <img class="mt-logo" src="icons/logo-full.png" alt="SokoPlus">
-      <div class="mt-stage" aria-hidden="true">
-        <i class="mt-a">${icon("tag")}</i><i class="mt-b">${icon("box")}</i><i class="mt-c">${icon("shop")}</i>
-        <i class="mt-main">${icon("tools")}</i>
-      </div>
+      <img class="mt-mascot" src="icons/mascotte.png" alt="" aria-hidden="true">
       <h1>On range les <span>rayons</span></h1>
       <p class="mt-msg"></p>
       <div class="mt-clock"><div data-u="d"><b>0</b><small>jours</small></div><div data-u="h"><b>00</b><small>h</small></div><div data-u="n"><b>00</b><small>min</small></div><div data-u="s"><b>00</b><small>sec</small></div></div>

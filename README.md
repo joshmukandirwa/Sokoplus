@@ -114,12 +114,12 @@ Crée un 2ᵉ compte vendeur (autre email, autre téléphone), publie un article
 ## Mise en ligne sur Vercel (adresse provisoire) et référencement (SEO)
 
 1. **Vercel** : https://vercel.com, **Add New > Project**, importe le dépôt GitHub `Sokoplus`, laisse tous les réglages par défaut (pas de commande de build), puis **Deploy**. Chaque `git push` republie le site tout seul.
-2. **Adresse** : le site est servi sur `https://sokoplus-rdc.vercel.app` (si Vercel a donné une autre adresse, remplace-la partout, voir plus bas).
-3. **Firebase** : Authentication > Paramètres > Domaines autorisés : ajoute `sokoplus-rdc.vercel.app` (sinon la connexion Google est refusée en ligne).
-4. **Apps Script** : dans ton script déployé, mets `SITE_URL = "https://sokoplus-rdc.vercel.app"`.
-5. **Google Search Console** : ajoute le site, puis envoie `https://sokoplus-rdc.vercel.app/sitemap.xml`.
+2. **Adresse** : le site est servi sur `https://sokoplus-africa.vercel.app` (si Vercel a donné une autre adresse, remplace-la partout, voir plus bas).
+3. **Firebase** : Authentication > Paramètres > Domaines autorisés : ajoute `sokoplus-africa.vercel.app` (sinon la connexion Google est refusée en ligne).
+4. **Apps Script** : dans ton script déployé, mets `SITE_URL = "https://sokoplus-africa.vercel.app"`.
+5. **Google Search Console** : ajoute le site, puis envoie `https://sokoplus-africa.vercel.app/sitemap.xml`.
 
-**Le jour où tu achètes `sokoplus.store`** : dans Vercel, Settings > Domains > ajoute le domaine et recopie les enregistrements DNS demandés chez ton vendeur. Puis, dans VS Code, Ctrl + Maj + H : remplace `sokoplus-rdc.vercel.app` par `sokoplus.store` dans tout le projet, republie, ajoute `sokoplus.store` dans les domaines autorisés de Firebase et renvoie le sitemap à la Search Console.
+**Le jour où tu achètes `sokoplus.store`** : dans Vercel, Settings > Domains > ajoute le domaine et recopie les enregistrements DNS demandés chez ton vendeur. Puis, dans VS Code, Ctrl + Maj + H : remplace `sokoplus-africa.vercel.app` par `sokoplus.store` dans tout le projet, republie, ajoute `sokoplus.store` dans les domaines autorisés de Firebase et renvoie le sitemap à la Search Console.
 
 Le projet contient : titres et descriptions par page, adresses canoniques, balises de partage (Open Graph et Twitter) avec `icons/og-image.png`, données structurées sur l'accueil, `robots.txt`, `sitemap.xml` et `vercel.json`. Les pages Recherche, Favoris, Paramètres et Admin sont en `noindex`.
 ---

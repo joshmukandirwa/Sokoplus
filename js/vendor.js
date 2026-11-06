@@ -671,7 +671,7 @@ function renderMine() {
       <div class="acts"><button class="btn small ghost" data-a="edit">Modifier</button>
         <button class="btn small ghost" data-a="sold">${it.status === "sold" ? "Remettre en vente" : "Marquer vendu"}</button>
         <button class="btn small ghost" data-a="del">Supprimer</button></div></div>`;
-  }).join("") : `<p class="empty">Ta boutique est prête. Publie ton premier article ci-dessus pour commencer à vendre.</p>`;
+  }).join("") : `<p class="empty"><img class="mascot sm" src="icons/mascotte.png" alt="" width="103" height="110" draggable="false">Ta boutique est prête. Publie ton premier article ci-dessus pour commencer à vendre.</p>`;
 }
 $("#mine").addEventListener("click", async e => {
   const b = e.target.closest("[data-a]"); if (!b) return;

@@ -4,7 +4,7 @@
    Chaque demande doit porter le jeton de connexion Firebase (Authorization: Bearer ...). Variable Vercel requise : FIREBASE_SERVICE_ACCOUNT. */
 const admin = require("firebase-admin");
 
-const SITE = (process.env.SITE_URL || "https://sokoplus-rdc.vercel.app").replace(/\/$/, "");
+const SITE = (process.env.SITE_URL || "https://sokoplus-africa.vercel.app").replace(/\/$/, "");
 const ADMIN_EMAIL = "joshmukandirwa@gmail.com";
 const FRESH_MS = 15 * 60 * 1000; // on ne notifie que du contenu créé il y a moins de 15 minutes
 

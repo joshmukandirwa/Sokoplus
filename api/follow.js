@@ -3,7 +3,7 @@
    Variable Vercel requise : FIREBASE_SERVICE_ACCOUNT (la même que pour api/push.js). */
 const admin = require("firebase-admin");
 
-const SITE = (process.env.SITE_URL || "https://sokoplus-rdc.vercel.app").replace(/\/$/, "");
+const SITE = (process.env.SITE_URL || "https://sokoplus-africa.vercel.app").replace(/\/$/, "");
 const MAX_FOLLOWS = 300;
 const MILESTONES = [10, 50, 100, 500, 1000, 5000, 10000, 50000, 100000];
 

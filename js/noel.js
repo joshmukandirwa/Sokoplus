@@ -8,7 +8,7 @@ if (!document.getElementById("noelCss")) {
 /* Logos de fête (l'icône de l'app installée, elle, ne change pas) */
 const swap = () => {
   document.querySelectorAll('img[src$="icons/logo-full.png"]').forEach(i => { i.src = "icons/noel-logo.png"; });
-  document.querySelectorAll('.instsheet-ic[src$="icons/logo-mark.png"]').forEach(i => { i.src = "icons/noel-mark.png"; });
+  document.querySelectorAll('.instsheet-ic[src$="icons/logo-mark.png"], .top .logo .mark[src$="icons/logo-mark.png"]').forEach(i => { i.src = "icons/noel-mark.png"; });
 };
 swap(); new MutationObserver(swap).observe(document.body, { childList: true, subtree: true });
 

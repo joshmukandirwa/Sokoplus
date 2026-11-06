@@ -88,7 +88,7 @@ function mount() {
   const city = store.get("city", "");
   document.body.insertAdjacentHTML("afterbegin", `
   <header class="top"><div class="wrap bar">
-    <a class="logo" href="index.html" aria-label="SokoPlus"><img class="logo-img" src="icons/logo-full.png" alt="SokoPlus, tous vos achats, un seul endroit" width="150" height="49" draggable="false"></a>
+    <a class="logo" href="index.html" aria-label="SokoPlus"><img class="mark" src="icons/logo-mark.png" alt="" width="43" height="44" draggable="false"><span class="wm">SokoPlus</span></a>
     <nav class="dnav" aria-label="Navigation">
       <a href="index.html" data-p="home" data-i18n="nav.home">Accueil</a><a href="categories.html" data-p="categories" data-i18n="nav.cats">Catégories</a>
       <a href="favoris.html" data-p="favoris" data-i18n="nav.favs">Favoris</a><a href="vendeur.html" data-p="vendeur" data-i18n="nav.shop">Ma boutique</a><a href="parametres.html" data-p="parametres" data-i18n="nav.settings">Paramètres</a>

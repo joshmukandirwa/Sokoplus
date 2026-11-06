@@ -20,7 +20,7 @@
   d.classList.add("noel");
   try { document.write('<link id="noelCss" rel="stylesheet" href="css/noel.css">'); } catch (e) { /* js/noel.js la chargera */ }
   function swap() {
-    var a = document.querySelectorAll('img[src$="icons/logo-full.png"]'), b = document.querySelectorAll('.instsheet-ic[src$="icons/logo-mark.png"]'), i;
+    var a = document.querySelectorAll('img[src$="icons/logo-full.png"]'), b = document.querySelectorAll('.instsheet-ic[src$="icons/logo-mark.png"], .top .logo .mark[src$="icons/logo-mark.png"]'), i;
     for (i = 0; i < a.length; i++) a[i].src = "icons/noel-logo.png";
     for (i = 0; i < b.length; i++) b[i].src = "icons/noel-mark.png";
   }
