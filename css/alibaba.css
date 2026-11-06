@@ -1665,3 +1665,21 @@ dialog.subsheet::backdrop { background: rgba(0, 0, 0, .55) }
 .ph-btns { display: flex; gap: 8px; flex-wrap: wrap }
 .ph-btns .btn { width: auto }
 .ph-btns [hidden] { display: none }
+
+/* ---- Fiche article : carte vendeur (nom lisible, boutons sur leur propre ligne) ---- */
+.pdp-side .pd-shop { flex-wrap: wrap; row-gap: 10px; }
+.pdp-side .pd-shop .sav { flex: none; }
+.pdp-side .pd-shop > div { flex: 1 1 calc(100% - 54px); min-width: 0; }
+.pdp-side .pd-shop > div b { display: flex; align-items: center; gap: 5px; line-height: 1.25; overflow-wrap: anywhere; }
+.pdp-side .pd-shop > div small { white-space: normal; }
+.pdp-side .pd-shop .btn { flex: 1 1 calc(50% - 5px); min-width: 0; justify-content: center; text-align: center; white-space: nowrap; }
+
+/* ---- Avis « Nouvelle version » (PWA) : pastille compacte au-dessus de la barre du bas ---- */
+.updtoast { max-width: 340px; padding: 7px 6px 7px 16px; border-radius: 99px; bottom: calc(84px + env(safe-area-inset-bottom, 0px)) }
+.updtoast > span { flex-direction: row; align-items: center }
+.updtoast b { font-size: .88rem }
+@media (min-width: 960px) { .updtoast { bottom: 20px } }
+
+/* ---- Message hors connexion : pastille flottante, ne pousse plus la page et ne bloque aucun bouton ---- */
+.offbar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(84px + env(safe-area-inset-bottom, 0px)); z-index: 65; width: max-content; max-width: calc(100vw - 24px); padding: 8px 16px; border-radius: 99px; font-size: .82rem; box-shadow: 0 6px 20px rgba(0, 0, 0, .35); pointer-events: none }
+@media (min-width: 960px) { .offbar { bottom: 20px } }

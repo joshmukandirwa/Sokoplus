@@ -10,7 +10,7 @@ if (HAS_ITEMS) import("./follow.js").catch(() => { /* hors connexion : pas d'abo
 
 /* ---------- Langue (interface) ---------- */
 const EN = {
-  "net.off": "No internet connection. Some actions won't work until the network is back.", "net.on": "Back online",
+  "net.off": "No internet connection. Some actions are unavailable.", "net.on": "Back online",
   "nav.home": "Home", "nav.cats": "Categories", "nav.sell": "Sell", "nav.favs": "Favorites", "nav.shop": "My shop", "nav.settings": "Settings",
   "strip.1": "Order on WhatsApp", "strip.2": "Deal directly with the seller", "strip.3": "Live listings from across the DRC", "strip.4": "Free 30-day trial for sellers",
   "home.h1a": "All your shopping,", "home.h1b": "one place.", "search.ph": "Search a product or a shop",
@@ -279,17 +279,23 @@ if ("serviceWorker" in navigator && location.protocol !== "file:") {
 }
 export const applyUpdate = () => { sessionStorage.setItem("soko-reload", "1"); reg && reg.waiting && reg.waiting.postMessage("SKIP_WAITING"); setTimeout(() => location.reload(), 800); };
 
-/* Avis « Nouvelle version » (toutes les pages) : l'app installée se met à jour en un geste */
+/* Avis « Nouvelle version » : seulement dans l'app installée (PWA), discret, une fois toutes les 6 h au plus */
 (function updateToast() {
   if (!("serviceWorker" in navigator) || location.protocol === "file:") return;
-  let box;
+  if (!(matchMedia("(display-mode: standalone)").matches || navigator.standalone === true)) return;
+  let box, hideT;
+  const quiet = () => { try { return Date.now() - Number(localStorage.getItem("soko-upd-seen") || 0) < 216e5; } catch (e) { return false; } };
+  const mark = () => { try { localStorage.setItem("soko-upd-seen", String(Date.now())); } catch (e) { /* sans importance */ } };
+  const close = () => { clearTimeout(hideT); if (box) { box.remove(); box = null; } };
   const show = () => {
-    if (box || !document.body) return;
+    if (box || !document.body || quiet()) return;
+    mark();
     box = document.createElement("div"); box.className = "updtoast"; box.setAttribute("role", "status");
-    box.innerHTML = '<span><b>Nouvelle version</b><small>Logo et améliorations prêts.</small></span><button type="button" class="btn small">Mettre à jour</button><button type="button" class="updtoast-x" aria-label="Plus tard">&times;</button>';
-    box.querySelector(".btn").onclick = () => { box.querySelector(".btn").textContent = "Mise à jour…"; applyUpdate(); };
-    box.querySelector(".updtoast-x").onclick = () => { box.remove(); box = null; };
-    document.body.append(box); requestAnimationFrame(() => box.classList.add("in"));
+    box.innerHTML = '<span><b>Nouvelle version</b></span><button type="button" class="btn small">Mettre à jour</button><button type="button" class="updtoast-x" aria-label="Plus tard">&times;</button>';
+    box.querySelector(".btn").onclick = () => { clearTimeout(hideT); box.querySelector(".btn").textContent = "Mise à jour…"; applyUpdate(); };
+    box.querySelector(".updtoast-x").onclick = close;
+    document.body.append(box); requestAnimationFrame(() => box && box.classList.add("in"));
+    hideT = setTimeout(close, 10000);
   };
   document.addEventListener("sw-update", show);
   navigator.serviceWorker.getRegistration().then(r => { if (r && r.waiting && navigator.serviceWorker.controller) show(); }).catch(() => {});
@@ -308,9 +314,9 @@ addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = 
   const show = (txt, ok) => {
     if (!bar) { bar = document.createElement("div"); bar.className = "offbar"; bar.setAttribute("role", "status"); bar.setAttribute("aria-live", "polite"); document.body.prepend(bar); }
     clearTimeout(timer); bar.textContent = txt; bar.classList.toggle("ok", !!ok); bar.hidden = false;
-    if (ok) timer = setTimeout(() => { bar.hidden = true; }, 2500);
+    timer = setTimeout(() => { bar.hidden = true; }, ok ? 2500 : 7000);
   };
-  const off = () => show(t("net.off", "Pas de connexion internet. Certaines actions ne marcheront pas tant que le réseau n'est pas revenu."), false);
+  const off = () => show(t("net.off", "Pas de connexion internet. Certaines actions sont indisponibles."), false);
   addEventListener("offline", off);
   addEventListener("online", () => show(t("net.on", "Connexion retrouvée"), true));
   if (navigator.onLine === false) off();
