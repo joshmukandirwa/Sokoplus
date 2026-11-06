@@ -68,14 +68,21 @@ if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
   document.addEventListener("pointerdown", e => { if (sprites.length) burst(e.clientX, e.clientY); }, { passive: true });
 }
 
-/* Le Père Noël traverse l'écran 1,4 s après l'ouverture de l'accueil ; un toucher dessus fait jaillir des étincelles (comme ailleurs) */
+/* Le Père Noël traverse l'écran de façon aléatoire (sens, hauteur, taille, vitesse, délai) ; un toucher dessus fait jaillir des étincelles (comme ailleurs) */
 (function sleigh() {
   if (matchMedia("(prefers-reduced-motion: reduce)").matches || document.body.dataset.page !== "home") return;
+  const r = (min, max) => min + Math.random() * (max - min);
+  /* Passage aléatoire : pas à chaque visite, dans un sens ou dans l'autre, à une hauteur, une taille et une vitesse différentes */
+  if (Math.random() < 0.2) return;
+  const ltr = Math.random() < 0.5, name = ltr ? "noelFlyLR" : "noelFlyRL";
   const w = document.createElement("div"); w.className = "noel-sleigh"; w.setAttribute("aria-hidden", "true");
-  w.style.top = (14 + Math.random() * 12).toFixed(1) + "vh";
-  w.innerHTML = '<img src="icons/noel-traineau.gif" alt="" draggable="false">';
-  w.addEventListener("animationend", e => { if (e.animationName === "noelFly") w.remove(); });
-  setTimeout(() => document.body.append(w), 1400);
+  w.style.top = r(10, 62).toFixed(1) + "vh";
+  w.style.width = Math.round(r(88, 135)) + "px";
+  w.style.animationName = name;
+  w.style.animationDuration = r(7, 12).toFixed(1) + "s";
+  w.innerHTML = '<div class="noel-flip' + (ltr ? ' ltr' : '') + '"><img src="icons/noel-traineau.gif" alt="" draggable="false"></div>';
+  w.addEventListener("animationend", e => { if (e.animationName === name) w.remove(); });
+  setTimeout(() => document.body.append(w), r(1200, 6000));
 })();
 
 /* ---------- Bandeau de fêtes (accueil) : vœux + compte à rebours jusqu'à Noël, puis jusqu'au Nouvel An ---------- */

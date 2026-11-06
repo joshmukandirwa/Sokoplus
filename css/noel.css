@@ -76,9 +76,11 @@ html.noel body::before { content: ""; position: fixed; z-index: -1; left: -10%; 
   html.noel .card::before, .noel-strip .ns-ic img { animation: none }
 }
 
-/* Père Noël en traîneau : traverse l'écran de droite à gauche en se balançant (accueil, à chaque ouverture) */
-.noel-sleigh { position: fixed; left: 0; z-index: 45; width: 115px; animation: noelFly 9s linear forwards; will-change: transform; -webkit-tap-highlight-color: transparent }
+/* Père Noël en traîneau : traverse l'écran au hasard, dans un sens ou dans l'autre, en se balançant (accueil) */
+.noel-sleigh { position: fixed; left: 0; z-index: 45; width: 115px; animation: noelFlyRL 9s linear forwards; will-change: transform; -webkit-tap-highlight-color: transparent }
 .noel-sleigh img { display: block; width: 100%; height: auto; pointer-events: none; filter: drop-shadow(0 0 10px rgba(190, 225, 255, .6)); animation: noelBob 1.6s ease-in-out infinite alternate }
-@keyframes noelFly { from { transform: translateX(105vw) } to { transform: translateX(-140px) } }
+@keyframes noelFlyRL { from { transform: translateX(105vw) } to { transform: translateX(-160px) } }
+@keyframes noelFlyLR { from { transform: translateX(-160px) } to { transform: translateX(105vw) } }
+.noel-flip.ltr { transform: scaleX(-1) }
 @keyframes noelBob { from { transform: translateY(-9px) rotate(-2deg) } to { transform: translateY(9px) rotate(2deg) } }
 @media (prefers-reduced-motion: reduce) { .noel-sleigh { display: none } }
