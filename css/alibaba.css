@@ -1690,3 +1690,153 @@ dialog.subsheet::backdrop { background: rgba(0, 0, 0, .55) }
   .annrow.one .annc-img { flex: 0 0 300px; aspect-ratio: auto; min-height: 169px; border-bottom: 0; border-right: var(--bw) solid var(--line) }
   .annrow.one .annc-in { justify-content: center; padding: 16px 20px }
 }
+
+/* « Propose ton prix » */
+.pdp-neg { display: flex; align-items: center; gap: 12px; width: 100%; margin: 12px 0 0; padding: 12px 14px; text-align: left; border: 2px dashed var(--orange); border-radius: 16px; background: rgba(255, 106, 0, .08); color: var(--ink); font: inherit; cursor: pointer }
+.pdp-neg .ic { flex: none; width: 26px; height: 26px; color: var(--orange-d) }
+.pdp-neg span { display: grid; gap: 1px }
+.pdp-neg b { font-size: 1rem }
+.pdp-neg small { color: var(--muted, #666); font-size: .82rem }
+.pdp-firm { margin: 10px 0 0; font-size: .85rem; font-weight: 700; color: var(--muted, #666) }
+.pdp-negbox { margin-top: 10px; padding: 14px; border: 2px solid var(--ink); border-radius: 16px; background: var(--surface) }
+.pdp-negbox[hidden] { display: none }
+.pdp-negbox h4 { margin: 0 0 4px; font-size: 1.05rem }
+.pdp-negbox .nsub { margin: 0 0 10px; font-size: .88rem; color: var(--muted, #666) }
+.pdp-negbox .nchips { display: flex; gap: 8px; margin-bottom: 10px }
+.pdp-negbox .nchips button { flex: 1; min-height: 40px; border: 2px solid var(--ink); border-radius: 999px; background: transparent; color: var(--ink); font: inherit; font-weight: 800; cursor: pointer }
+.pdp-negbox .nchips button:active { background: var(--orange); color: #fff; border-color: var(--orange) }
+.pdp-negbox .nfield { display: grid; gap: 4px; font-weight: 700; font-size: .9rem }
+.pdp-negbox .nfield input { min-height: 46px; padding: 0 12px; border: 2px solid var(--ink); border-radius: 12px; font: inherit; font-size: 1.1rem; background: var(--surface); color: var(--ink) }
+.pdp-negbox .nline { margin: 8px 0; min-height: 1.3em; font-size: .88rem; color: var(--muted, #666) }
+.pdp-negbox .nline.ok { color: #13a04a; font-weight: 700 }
+.pdp-negbox .nsend { display: flex; width: 100%; box-sizing: border-box }
+.pdp-negbox .nsend[aria-disabled="true"] { opacity: .45; pointer-events: none }
+.pdp-negbox .nnote { display: block; margin-top: 8px; color: var(--muted, #666); font-size: .78rem }
+.negchk { display: flex; gap: 12px; align-items: flex-start; margin: 4px 0 12px; padding: 12px; border: 2px solid var(--line, #222); border-radius: 14px; cursor: pointer }
+.negchk input { flex: none; width: 22px; height: 22px; margin-top: 2px; accent-color: var(--orange, #ff6a00) }
+.negchk span { display: grid; gap: 2px }
+.negchk small { color: var(--muted, #666); font-size: .82rem }
+
+/* « Je cherche… » */
+.wn-bar { display: flex; gap: 10px; align-items: center; margin: 4px 0 12px }
+.wn-bar .btn { flex: none; width: auto }
+.wn-bar input { flex: 1; min-width: 0; min-height: 44px; padding: 0 14px; border: 2px solid var(--ink); border-radius: 999px; font: inherit; background: var(--surface); color: var(--ink) }
+.wn-chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 8px; scrollbar-width: none }
+.wn-chips button { flex: none; padding: 7px 14px; border: 2px solid var(--ink); border-radius: 999px; background: transparent; color: var(--ink); font: inherit; font-weight: 700; font-size: .85rem; cursor: pointer }
+.wn-chips button[aria-pressed="true"] { background: var(--orange); border-color: var(--orange); color: #fff }
+.wn-list { display: grid; gap: 12px }
+.wn-card { display: flex; gap: 12px; padding: 14px; border: 2px solid var(--ink); border-radius: 18px; background: var(--surface) }
+.wn-card.done { opacity: .6 }
+.wn-av { flex: none; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 800 }
+.wn-body { min-width: 0; flex: 1 }
+.wn-top { display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: baseline }
+.wn-top small { color: var(--muted, #666); font-size: .78rem }
+.wn-body h3 { margin: 4px 0; font-size: 1.05rem; overflow-wrap: anywhere }
+.wn-body p { margin: 0 0 6px; font-size: .9rem; color: var(--muted, #666); overflow-wrap: anywhere }
+.wn-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px }
+.wn-tags span { padding: 3px 10px; border-radius: 999px; background: var(--soft, #eee); font-size: .78rem; font-weight: 700 }
+.wn-tags .bud { background: rgba(255, 106, 0, .14); color: var(--orange-d) }
+.wn-tags .ok { background: rgba(19, 160, 74, .15); color: #13a04a }
+.wn-acts { display: flex; flex-wrap: wrap; gap: 8px }
+.wn-wa { background: #13a04a; border-color: #13a04a; color: #fff; text-decoration: none }
+.wn-foot { margin-top: 18px }
+.wn-form { display: grid; gap: 10px }
+
+.swap-go { display: inline-block; margin-top: 4px; font-weight: 800; color: var(--orange-d); text-decoration: underline }
+
+/* Note vocale */
+.voicebox { padding: 12px; border: 2px dashed var(--line, #222); border-radius: 14px }
+.vrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 6px 0 }
+.vtime { font-weight: 700; font-size: .85rem; color: var(--muted, #666) }
+#vRec.rec { background: #e2342d; border-color: #e2342d; color: #fff; animation: vpulse 1s infinite }
+@keyframes vpulse { 50% { opacity: .65 } }
+#vPlay, .pdp-voice { width: 100%; max-width: 100%; margin-top: 6px }
+@media (prefers-reduced-motion: reduce) { #vRec.rec { animation: none } }
+
+/* Achat groupé */
+.grp { margin-top: 12px; padding: 14px; border: 2px solid var(--ink); border-radius: 16px; background: var(--surface) }
+.grp:empty { display: none }
+.grp h4 { margin: 0 0 4px; font-size: 1.02rem }
+.grp h4 s { color: var(--muted, #666); font-weight: 500; font-size: .9rem }
+.grp h4 em { font-style: normal; color: #fff; background: #e2342d; border-radius: 999px; padding: 1px 8px; font-size: .8rem }
+.grp .gtxt { margin: 4px 0; font-size: .88rem; color: var(--muted, #666) }
+.grp .gbar { height: 12px; margin: 10px 0 4px; border: 2px solid var(--ink); border-radius: 999px; overflow: hidden; background: var(--soft, #eee) }
+.grp .gbar i { display: block; height: 100%; background: var(--orange); border-radius: 999px }
+.grp .gcount { margin: 0 0 4px; font-size: .95rem }
+.grp .btn { width: 100%; margin-top: 8px }
+.grp .gform { display: grid; gap: 8px; margin-top: 8px }
+.grp .gform[hidden] { display: none }
+.gmembers { display: grid; gap: 8px; margin: 10px 0 }
+.gm { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 2px solid var(--ink); border-radius: 14px }
+.gm span { display: grid; min-width: 0 }
+.gm small { color: var(--muted, #666) }
+
+/* Bandeau « Je cherche… » (accueil et catégories) */
+.wn-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 14px 0; padding: 14px 16px; border: 2px solid var(--ink); border-radius: 18px; background: rgba(255, 106, 0, .08); color: var(--ink); text-decoration: none }
+.wn-banner > span:first-child { display: grid; gap: 2px; min-width: 0 }
+.wn-banner small { color: var(--muted, #666); font-size: .84rem }
+.wn-banner .go { flex: none; padding: 8px 14px; border-radius: 999px; background: var(--orange); color: #fff; font-weight: 800; font-size: .9rem }
+
+/* ---- Lecteur de la note vocale ---- */
+.vp { display: flex; align-items: center; gap: 10px; margin-top: 6px; padding: 8px 12px 8px 8px; border: 2px solid var(--ink); border-radius: 999px; background: var(--surface) }
+.vp-btn { flex: none; width: 42px; height: 42px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: var(--orange); color: #fff; cursor: pointer }
+.vp-btn svg { width: 20px; height: 20px; fill: currentColor }
+.vp .i-pause { display: none }
+.vp.on .i-play { display: none }
+.vp.on .i-pause { display: block }
+.vp-bar { flex: 1; min-width: 40px; height: 10px; border-radius: 999px; background: var(--soft, #e4ebfa); overflow: hidden; cursor: pointer }
+.vp-bar i { display: block; height: 100%; width: 0; border-radius: 999px; background: var(--orange) }
+.vp-t { flex: none; font-size: .8rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--muted, #666) }
+.vp.err { border-color: #e2342d }
+.vp.err .vp-t { color: #e2342d }
+
+/* ---- Cartes : même hauteur, textes coupés proprement avec « … » ---- */
+.card { display: flex; flex-direction: column }
+.card .in { flex: 1 }
+.card h3 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; min-height: 2.6em }
+.card .vend.sh { display: flex; align-items: center; gap: 5px; min-width: 0 }
+.card .vend.sh > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.card .vend.loc { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; line-height: 1.3; min-height: 2.6em }
+.rail .price { min-height: 2.7em; align-content: flex-start }
+.rail .hrow { align-items: stretch }
+
+/* ---- Message de certification : on peut le masquer ---- */
+.cstate.has-x { position: relative; padding-right: 40px }
+.cstate-x { position: absolute; top: 6px; right: 6px; width: 30px; height: 30px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: rgba(0, 0, 0, .08); color: inherit; font-size: 1.3rem; line-height: 1; cursor: pointer }
+
+/* ---- Favoris : avatar des boutiques suivies, bien centré ---- */
+.shrow .sh-av { margin: 0; border: 0; font-size: 1.1rem }
+.shrow .sh-av img { object-position: center }
+
+/* ---- Annonces et communiqués : images sans coins arrondis ---- */
+.annc, .agal, .agal img, .annc-img, .annc-img img { border-radius: 0 }
+
+/* ---- Je cherche… ---- */
+.wn-sw { position: relative; flex: 1; min-width: 0 }
+.wn-sw input { width: 100%; box-sizing: border-box; padding-right: 40px }
+.wn-sw input::-webkit-search-cancel-button { display: none }
+.wn-sw button { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 30px; height: 30px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: var(--soft, #e4ebfa); color: var(--ink); font-size: 1.2rem; line-height: 1; cursor: pointer }
+.wn-sw button[hidden] { display: none }
+.wn-av { overflow: hidden }
+.wn-av img { width: 100%; height: 100%; object-fit: cover; object-position: center; display: block }
+.wn-tags .near { background: rgba(20, 112, 255, .14); color: var(--blue-d, #0b4fd1) }
+
+/* ---- Accueil : disposition plus compacte ---- */
+/* Le bouton région de l'en-tête fait le même travail que la pastille « Toute l'Afrique » sous la recherche : on garde la pastille, qui affiche la région choisie */
+body[data-page=home] #cityBtn { display: none }
+body[data-page=home] .regionchip { margin-top: 8px }
+body[data-page=home] .ann { margin-top: 14px }
+/* Cartes d'annonces plus serrées : l'image reste en grand, le texte prend moins de place */
+.annc { flex-basis: min(86%, 340px) }
+.annc-in { padding: 10px 12px 12px; gap: 4px }
+.annc-in h3 { font-size: .98rem }
+.annc-in p { font-size: .84rem }
+
+/* ---- Accueil : annonces et bannières alignées sur la même ligne que la recherche et les titres ---- */
+/* Sans scroll-padding, le défilement collait la première carte au bord de l'écran, malgré la marge de la page */
+.annrow, .promos { scroll-padding-inline: max(16px, env(safe-area-inset-left, 0px)) }
+
+/* ---- Annonce ouverte : partager à côté de la croix ---- */
+.a-hbtns { display: flex; gap: 8px; flex: none }
+.a-hbtns .x { display: grid; place-items: center; padding: 0; cursor: pointer }
+.a-hbtns .x .ic { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round }

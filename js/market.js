@@ -1,5 +1,6 @@
 /* Données du marché (temps réel ou démo), cartes, favoris, recherche et fiche article : partagés par toutes les pages. */
 import { db, collection, query, orderBy, limit, onSnapshot, getDocs, addDoc, serverTimestamp } from "./fb.js";
+import { paintGroup } from "./groupbuy.js";
 import { SITE, configured, configBanner, $, $$, esc, store, money, waLink, prettyPhone, toast, ago, thumb, tileColor, isNetErr, needNet, NET_MSG } from "./common.js";
 import { svg, favBadge } from "./ui.js";
 import { icon as ic } from "./icons.js";
@@ -219,13 +220,77 @@ export function bind(el, onFav) {
 }
 
 /* ---------- Fiche article ---------- */
+/* ---------------- Lecteur de la note vocale ---------------- */
+const fmtSec = n => `${Math.floor(n / 60)}:${String(Math.floor(n % 60)).padStart(2, "0")}`;
+function paintVoice(el) {
+  const a = el._a, tot = a && Number.isFinite(a.duration) && a.duration > 0 ? a.duration : Number(el.dataset.sec) || 0, cur = a ? a.currentTime : 0;
+  el.classList.toggle("on", !!a && !a.paused);
+  el.querySelector(".vp-bar i").style.width = (tot ? Math.min(100, cur / tot * 100) : 0) + "%";
+  el.querySelector(".vp-t").textContent = fmtSec(cur) + (tot ? " / " + fmtSec(tot) : "");
+}
+function toggleVoice(el) {
+  let a = el._a;
+  if (!a) {
+    a = el._a = new Audio(el.dataset.src); a.preload = "auto";
+    ["timeupdate", "play", "pause", "loadedmetadata"].forEach(ev => a.addEventListener(ev, () => paintVoice(el)));
+    a.addEventListener("ended", () => { a.currentTime = 0; paintVoice(el); });
+    a.addEventListener("error", () => { el.classList.remove("on"); el.classList.add("err"); el.querySelector(".vp-t").textContent = "Lecture impossible"; });
+  }
+  document.querySelectorAll("[data-vp]").forEach(o => { if (o !== el && o._a) o._a.pause(); });
+  if (a.paused) a.play().catch(() => { el.classList.add("err"); el.querySelector(".vp-t").textContent = "Lecture impossible"; }); else a.pause();
+}
+function seekVoice(el, e) {
+  const a = el._a, bar = el.querySelector(".vp-bar"), tot = a && Number.isFinite(a.duration) && a.duration > 0 ? a.duration : Number(el.dataset.sec) || 0;
+  if (!a || !tot) return;
+  const r = bar.getBoundingClientRect(); a.currentTime = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * tot; paintVoice(el);
+}
+/* ---------------- « Propose ton prix » : le marchandage, sans intermédiaire ---------------- */
+const niceRound = (v, ref) => ref >= 100 ? Math.round(v) : Math.round(v * 100) / 100;
+function toggleNeg(d) {
+  const box = d.querySelector("#negBox"); if (!box) return;
+  if (!box.hidden) { box.hidden = true; return; }
+  const it = current;
+  box.innerHTML = `<h4>Propose ton prix</h4>
+    <p class="nsub">Prix affiché : <b>${money(it.price, it.currency)}</b>. Le vendeur te répond sur WhatsApp, il peut accepter, refuser ou te proposer un autre prix.</p>
+    <div class="nchips">${[5, 10, 15, 20].map(p => `<button type="button" data-negpct="${p}">-${p} %</button>`).join("")}</div>
+    <label class="nfield">Mon prix (${esc(it.currency === "FC" ? "FC" : it.currency || "USD")})<input id="negIn" type="number" inputmode="decimal" min="0" step="any" placeholder="Ex : ${niceRound(it.price * 0.9, it.price)}"></label>
+    <p class="nline" id="negLine" aria-live="polite"></p>
+    <a class="pdp-wa nsend" data-neggo target="_blank" rel="noopener" aria-disabled="true" href="#">${ic("chat")}<span>Envoyer mon offre sur WhatsApp</span></a>
+    <small class="nnote">Reste poli et réaliste : un prix juste a plus de chances d'être accepté. Ne paie jamais avant d'avoir vu l'article.</small>`;
+  box.hidden = false; paintNeg(box); box.querySelector("#negIn").focus({ preventScroll: true });
+}
+function paintNeg(box) {
+  if (!box) return;
+  const it = current, v = Number(box.querySelector("#negIn").value), line = box.querySelector("#negLine"), go = box.querySelector("[data-neggo]");
+  let ok = false, text = "";
+  if (!(v > 0)) text = "Choisis une réduction ou écris ton prix.";
+  else if (v >= it.price) text = "C'est le prix affiché ou plus : commande directement, sans négocier.";
+  else {
+    ok = true; const cut = Math.round((1 - v / it.price) * 100);
+    text = `Tu proposes ${money(v, it.currency)} : ${money(it.price - v, it.currency)} de moins (-${cut} %).${cut > 40 ? " Offre très basse, le vendeur risque de refuser." : ""}`;
+  }
+  line.textContent = text; line.className = "nline" + (ok ? " ok" : "");
+  go.setAttribute("aria-disabled", ok ? "false" : "true");
+  if (ok) {
+    const msg = `Bonjour ${it.shopName}, ton article « ${it.title} » est affiché à ${money(it.price, it.currency)} sur SokoPlus. Est-ce que tu peux me le laisser à ${money(v, it.currency)} ? Dis-moi si ça te convient ou si tu me proposes un autre prix. Merci ! ${shareUrl(it.id)}`;
+    go.href = waLink(it.phone, msg);
+  } else go.href = "#";
+}
 function dialog() {
   let d = $("#detail"); if (d) return d;
   d = document.createElement("dialog"); d.id = "detail"; d.innerHTML = '<div class="dlg" id="dBody"></div>'; document.body.append(d);
   d.addEventListener("close", () => { const u = new URL(location.href); u.searchParams.delete("item"); history.replaceState(null, "", u.pathname + u.search + u.hash); });
+  d.addEventListener("close", () => d.querySelectorAll("[data-vp]").forEach(o => o._a && o._a.pause()));
+  d.addEventListener("input", e => { if (e.target.id === "negIn") paintNeg(d.querySelector("#negBox")); });
   d.addEventListener("click", async e => {
     if (e.target === d || e.target.closest("[data-close]")) return d.close();
     if (e.target.closest("[data-gorev]")) { e.preventDefault(); d.querySelector("#pdRev")?.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
+    const vpb = e.target.closest("[data-vpbtn]"); if (vpb) { toggleVoice(vpb.closest("[data-vp]")); return; }
+    const vpr = e.target.closest("[data-vpbar]"); if (vpr) { seekVoice(vpr.closest("[data-vp]"), e); return; }
+    if (e.target.closest("[data-neg]")) { toggleNeg(d); return; }
+    const negChip = e.target.closest("[data-negpct]");
+    if (negChip) { const box = d.querySelector("#negBox"), p = Number(negChip.dataset.negpct); box.querySelector("#negIn").value = niceRound(current.price * (1 - p / 100), current.price); paintNeg(box); return; }
+    const negGo = e.target.closest("[data-neggo]"); if (negGo && negGo.getAttribute("aria-disabled") === "true") { e.preventDefault(); return; }
     const f = e.target.closest("[data-dfav]");
     if (f) { const on = toggleFav(current.id); f.setAttribute("aria-pressed", on); return; }
     const g = d.querySelector(".gal");
@@ -293,10 +358,16 @@ export function openDetail(id) {
           ${off ? `<div class="pdp-band"><b>Promo</b><span>-${off}% maintenant</span></div>` : ""}
           <div class="pdp-pbody"><div class="dprice">${priceHTML(it)}${sold ? ' <span class="pill bad">Vendu</span>' : ""}</div>${off ? `<p class="pdp-save">Tu économises ${money(it.oldPrice - it.price, it.currency)}</p>` : ""}</div>
         </div>
+        ${sold ? "" : it.negotiable === false ? '<p class="pdp-firm">Prix ferme</p>' : `<button type="button" class="pdp-neg" data-neg>${ic("chat")}<span><b>Propose ton prix</b><small>Prix négociable : discute comme au marché</small></span></button><div class="pdp-negbox" id="negBox" hidden></div>`}
+        ${it.groupPrice && !sold ? '<div class="grp" id="grpBox"></div>' : ""}
         <ul class="pdp-svc">
           <li>${ic("chat")}<span><b>Commande directe</b>Discute avec le vendeur sur WhatsApp ou par appel.</span></li>
           <li>${ic("card")}<span><b>Paiement</b>${pay}Ne paie jamais avant d'avoir vérifié l'article.</span></li>
           <li>${ic("pin")}<span><b>Lieu</b>${esc(where(it))}</span></li>
+          ${it.meetPlace ? `<li>${ic("pin")}<span><b>Rencontre sûre</b>Remise en main propre : ${esc(it.meetPlace)}. Rencontrez-vous en journée, dans un lieu public.</span></li>` : ""}
+          ${it.delivery ? `<li>${ic("shop")}<span><b>Livraison possible</b>Demande les frais et le délai au vendeur sur WhatsApp.</span></li>` : ""}
+          ${it.voice ? `<li>${ic("chat")}<span><b>Écoute le vendeur</b><div class="vp" data-vp data-src="${esc(it.voice)}" data-sec="${Number(it.voiceSec) || 0}"><button type="button" class="vp-btn" data-vpbtn aria-label="Écouter la note vocale"><svg class="i-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg><svg class="i-pause" viewBox="0 0 24 24"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg></button><div class="vp-bar" data-vpbar role="slider" aria-label="Position"><i></i></div><span class="vp-t">0:00${it.voiceSec ? " / " + fmtSec(it.voiceSec) : ""}</span></div></span></li>` : ""}
+          ${it.swapFor && !sold ? `<li>${ic("chat")}<span><b>Échange accepté</b>Le vendeur accepte d'échanger contre : ${esc(it.swapFor)}. <a class="swap-go" target="_blank" rel="noopener" href="${esc(waLink(it.phone, `Bonjour ${it.shopName}, ton article « ${it.title} » m'intéresse. J'ai quelque chose à te proposer en échange. Je peux t'envoyer des photos ? ${shareUrl(it.id)}`))}">Proposer un échange</a></span></li>` : ""}
         </ul>
       </div>
       <aside class="pdp-side">
@@ -341,6 +412,7 @@ export function openDetail(id) {
   renderReviews(rb, id, it.ownerId, it.title);
   countView("i", id).then(() => viewsOf(id)).then(n => { const e = d.querySelector("#pdViews"); if (e && current && current.id === id) { e.innerHTML = eyeHTML(n) + `<small>${n > 1 ? "personnes ont vu" : "personne a vu"} cet article</small>`; e.hidden = false; } });
   if (!d.open) d.showModal();
+  paintGroup(d, it);
   d.scrollTop = 0;
   const u = new URL(location.href); u.searchParams.set("item", id); history.replaceState(null, "", u.pathname + u.search + u.hash);
 }

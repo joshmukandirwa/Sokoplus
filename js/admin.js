@@ -281,6 +281,7 @@ function annCard(a) {
     <div class="a-info"><b>${esc(a.title)}</b><small>${esc(KINDS[k])} · ${ago(when(a.createdAt))}${a.images?.length ? ` · ${a.images.length} image${a.images.length > 1 ? "s" : ""}` : ""}</small>
       <div>${state} ${eyeHTML(a.views || 0)}</div></div>
     <div class="a-actions"><a class="btn small ghost" href="./?annonce=${encodeURIComponent(a.id)}" target="_blank" rel="noopener">Voir</a>
+      <button class="btn small ghost" data-a="anedit">Modifier</button>
       <button class="btn small ghost" data-a="andel">Supprimer</button></div></article>`;
 }
 function annView(q) {
@@ -333,6 +334,7 @@ function priceView() {
     <section class="pr-card"><h3>Prévenir les vendeurs</h3>
       <label class="pr-chk"><input type="checkbox" id="prNotify" checked><span>Afficher un avis « Nouveau tarif » dans leur espace vendeur</span></label>
       <label class="pr-chk"><input type="checkbox" id="prAnn"><span>Publier aussi une annonce sur l'accueil</span></label>
+      <button type="button" class="btn small ghost" id="prNoteOff" hidden>Retirer l'avis « Nouveau tarif » chez les vendeurs</button>
       <label class="field" id="prMsgW" hidden>Message de l'annonce<textarea id="prMsg" rows="4" maxlength="600"></textarea></label>
     </section>
     <p class="msg" id="prSay" hidden></p>
@@ -350,6 +352,8 @@ function prFill() {
   prFile = null; prRemove = false; prPicPaint();
   $("#prNow").value = d.price ?? ""; $("#prCur").value = d.currency || "USD"; $("#prPer").value = d.per || "par mois";
   $("#prOld").value = d.oldPrice ?? "";
+  $("#prNotify").checked = pricingDoc ? pricingDoc.notify !== false : true;   // reflète l'état réel enregistré
+  $("#prNoteOff").hidden = !(pricingDoc && pricingDoc.notify);               // bouton visible seulement si un avis est encore affiché
   const e = d.endsAt?.toMillis?.() ?? d.endsAt; $("#prEnd").value = e ? new Date(e).toISOString().slice(0, 10) : "";
   delete pane.dataset.dirty; $("#prMsg").dataset.dirty = ""; prPaint();
 }
@@ -382,6 +386,12 @@ document.addEventListener("change", e => {
 });
 document.addEventListener("click", ev => {
   if (ev.target.closest("#prReset")) return prFill();
+  if (ev.target.closest("#prNoteOff")) {
+    if (!window.confirm("Retirer l'avis « Nouveau tarif » ? Il disparaît tout de suite de l'espace de tous les vendeurs. Le prix, lui, ne change pas.")) return;
+    return run(btnOf(ev), async () => { await updateDoc(doc(db, "config", "pricing"), { notify: false }); }, { busy: "Retrait…", done: "Avis retiré", hold: 700 })
+      .then(() => { $("#prNoteOff").hidden = true; $("#prNotify").checked = false; toast("Avis retiré : il disparaît de l'espace des vendeurs."); })
+      .catch(err => toast(isNetErr(err) ? NET_MSG : failText(err)));
+  }
   if (ev.target.closest("#prPick")) return $("#prFile").click();
   if (ev.target.closest("#prDrop")) { prFile = null; prRemove = true; $("#pricePane").dataset.dirty = "1"; return prPicPaint(); }
   const bt = ev.target.closest("#prSave"); if (!bt) return;
@@ -401,35 +411,61 @@ document.addEventListener("click", ev => {
     .catch(err => say(isNetErr(err) ? NET_MSG : failText(err), "err"));
 });
 
-const ad = $("#annDlg"); let anFiles = [];
+const ad = $("#annDlg"); let anItems = [], anEditId = null, anRepl = -1;   // anItems : images gardées ({ url }) et nouvelles ({ file }), dans l'ordre d'affichage
+const anSrc = it => it.url ? thumb(it.url, 200) : (it.src ||= URL.createObjectURL(it.file));
 function anPaint() {
-  $("#anPics").innerHTML = anFiles.map((f, n) => `<span class="an-pic"><img src="${esc(URL.createObjectURL(f))}" alt=""><button type="button" data-rm="${n}" aria-label="Retirer l'image">×</button></span>`).join("");
-  $("#anAdd").hidden = anFiles.length >= 4;
+  $("#anPics").innerHTML = anItems.map((it, n) => `<span class="an-pic"><img src="${esc(anSrc(it))}" alt=""><button type="button" data-rm="${n}" aria-label="Retirer l'image">×</button><button type="button" class="an-rp" data-rp="${n}" aria-label="Remplacer cette image">↻</button>${n ? `<button type="button" class="an-up" data-up="${n}" aria-label="Avancer d'une place">◀</button>` : '<em class="an-first">1re</em>'}</span>`).join("");
+  $("#anAdd").hidden = anItems.length >= 4;
 }
 const anSeg = () => { for (const [g, sel] of [["#anKinds", "#anKind"], ["#anLifes", "#anLife"]]) $$(g + " button").forEach(b => b.setAttribute("aria-checked", String(b.dataset.v === $(sel).value))); };
 document.addEventListener("click", e => { const b = e.target.closest("#anKinds button, #anLifes button"); if (!b) return; $(b.closest("#anKinds") ? "#anKind" : "#anLife").value = b.dataset.v; anSeg(); });
-function anOpen() { anFiles = []; $("#anKind").value = "annonce"; $("#anTitle").value = ""; $("#anText").value = ""; $("#anLife").value = "30"; $("#anMsg").hidden = true; $("#anFiles").value = ""; anPaint(); anSeg(); ad.showModal(); }
+function anOpen(a = null) {   // sans argument : nouvelle annonce ; avec une annonce : on la modifie
+  anEditId = a ? a.id : null; anRepl = -1;
+  anItems = (a?.images || []).map(url => ({ url }));
+  $("#anKind").value = a ? (KINDS[a.kind] ? a.kind : "annonce") : "annonce";
+  $("#anTitle").value = a ? a.title || "" : ""; $("#anText").value = a ? a.text || "" : "";
+  $("#anLife").value = a ? "keep" : "30"; $("#anLifeKeep").hidden = !a;
+  $("#anMsg").hidden = true; $("#anFiles").value = "";
+  $("#anH").textContent = a ? "Modifier l'annonce" : "Nouvelle annonce";
+  $("#anSend").textContent = a ? "Enregistrer les modifications" : "Publier l'annonce";
+  anPaint(); anSeg(); ad.showModal();
+}
 document.addEventListener("click", e => { if (e.target.closest("#anNew")) anOpen(); });
 ad.addEventListener("click", e => {
   if (e.target === ad || e.target.closest("[data-close]")) return ad.close();
-  if (e.target.closest("#anAdd")) return $("#anFiles").click();
-  const r = e.target.closest("[data-rm]"); if (r) { anFiles.splice(Number(r.dataset.rm), 1); anPaint(); }
+  if (e.target.closest("#anAdd")) { anRepl = -1; $("#anFiles").multiple = true; return $("#anFiles").click(); }
+  const r = e.target.closest("[data-rm]"); if (r) { anItems.splice(Number(r.dataset.rm), 1); return anPaint(); }
+  const rp = e.target.closest("[data-rp]"); if (rp) { anRepl = Number(rp.dataset.rp); $("#anFiles").multiple = false; return $("#anFiles").click(); }
+  const up = e.target.closest("[data-up]"); if (up) { const n = Number(up.dataset.up); [anItems[n - 1], anItems[n]] = [anItems[n], anItems[n - 1]]; anPaint(); }
 });
-$("#anFiles").addEventListener("change", e => { anFiles = [...anFiles, ...e.target.files].filter(f => f.type.startsWith("image/")).slice(0, 4); e.target.value = ""; anPaint(); });
+$("#anFiles").addEventListener("change", e => {
+  const fs = [...e.target.files].filter(f => f.type.startsWith("image/")); e.target.value = "";
+  if (anRepl >= 0 && fs[0]) anItems[anRepl] = { file: fs[0] };   // remplace l'image touchée, à la même place
+  else anItems = [...anItems, ...fs.map(file => ({ file }))].slice(0, 4);
+  anRepl = -1; anPaint();
+});
 $("#anSend").addEventListener("click", ev => {
   const m = $("#anMsg"), say = (t, k = "") => { m.hidden = !t; m.className = "msg " + k; m.textContent = t || ""; };
-  const title = $("#anTitle").value.trim().replace(/\s+/g, " "), text = $("#anText").value.trim();
+  const title = $("#anTitle").value.trim().replace(/\s+/g, " "), text = $("#anText").value.trim(), editing = anEditId;
   if (title.length < 2) return say("Écris un titre (au moins 2 lettres).", "warn");
-  if (!text && !anFiles.length) return say("Ajoute un message ou au moins une image.", "warn");
+  if (!text && !anItems.length) return say("Ajoute un message ou au moins une image.", "warn");
   run(btnOf(ev), async () => {
-    say("Envoi des images…");
+    if (anItems.some(i => i.file)) say("Envoi des images…");
     const images = [];
-    for (const f of anFiles) images.push(await uploadImage(await compress(f, 1400)));
-    say("Publication…");
-    const days = Number($("#anLife").value), data = { kind: $("#anKind").value, title, text, images, views: 0, createdAt: serverTimestamp() };
-    if (days) data.expiresAt = Timestamp.fromMillis(Date.now() + days * DAY);
-    await addDoc(collection(db, "announcements"), data);
-  }, { busy: "Publication…", done: "Publiée", hold: 700 }).then(() => { say(""); ad.close(); toast("Annonce publiée : elle apparaît déjà sur l'accueil."); }).catch(err => say(isNetErr(err) ? NET_MSG : failText(err), "err"));
+    for (const it of anItems) images.push(it.url || await uploadImage(await compress(it.file, 1400)));
+    say(editing ? "Enregistrement…" : "Publication…");
+    const life = $("#anLife").value, days = life === "keep" ? 0 : Number(life);
+    if (editing) {
+      const upd = { kind: $("#anKind").value, title, text, images, editedAt: serverTimestamp() };
+      if (life !== "keep") upd.expiresAt = days ? Timestamp.fromMillis(Date.now() + days * DAY) : deleteField();
+      await updateDoc(doc(db, "announcements", editing), upd);
+    } else {
+      const data = { kind: $("#anKind").value, title, text, images, views: 0, createdAt: serverTimestamp() };
+      if (days) data.expiresAt = Timestamp.fromMillis(Date.now() + days * DAY);
+      await addDoc(collection(db, "announcements"), data);
+    }
+    return editing;
+  }, { busy: "Enregistrement…", done: "Enregistré", hold: 700 }).then(editing => { say(""); ad.close(); toast(editing ? "Annonce modifiée : les changements sont déjà visibles sur l'accueil." : "Annonce publiée : elle apparaît déjà sur l'accueil."); }).catch(err => say(isNetErr(err) ? NET_MSG : failText(err), "err"));
 });
 async function loadViews() {
   try { const s = await getDocs(query(collection(db, "itemViews"), limit(1000))); viewsMap = new Map(s.docs.map(d => [d.id, Number(d.data().n) || 0])); if (tab === "items") render(); } catch { /* compteurs indisponibles : on affiche 0 */ }
@@ -597,6 +633,34 @@ $("#mStop").onclick = async e => {
   } catch (err) { toast("Échec : " + failText(err)); }
 };
 
+/* Fenêtre « motif » : le motif est obligatoire, il est envoyé au vendeur */
+const REASONS = ["Contenu interdit ou illégal", "Article en double", "Photos ou description trompeuses", "Prix ou informations incorrects", "Mauvaise catégorie", "Signalé par des acheteurs"];
+function askReason({ title, sub = "", ok = "Confirmer" }) {
+  return new Promise(resolve => {
+    const d = document.createElement("dialog"); d.className = "a-reason";
+    d.innerHTML = `<h3>${esc(title)}</h3>${sub ? `<p class="rsub">${esc(sub)}</p>` : ""}
+      <p class="rhint">Le vendeur recevra ce motif dans son espace et par notification.</p>
+      <div class="rchips">${REASONS.map(r => `<button type="button" class="rchip">${esc(r)}</button>`).join("")}</div>
+      <textarea rows="3" maxlength="200" placeholder="Écris le motif (obligatoire)"></textarea>
+      <p class="rerr" hidden>Le motif est obligatoire (3 caractères minimum).</p>
+      <div class="racts"><button type="button" class="btn ghost" data-c>Annuler</button><button type="button" class="btn warn" data-ok>${esc(ok)}</button></div>`;
+    document.body.append(d);
+    const ta = d.querySelector("textarea"), err = d.querySelector(".rerr");
+    let out = null;
+    d.addEventListener("click", e => {
+      const chip = e.target.closest(".rchip");
+      if (chip) { ta.value = chip.textContent; err.hidden = true; ta.focus(); return; }
+      if (e.target.closest("[data-c]")) return d.close();
+      if (e.target.closest("[data-ok]")) {
+        const v = ta.value.trim().slice(0, 200);
+        if (v.length < 3) { err.hidden = false; return ta.focus(); }
+        out = v; d.close();
+      }
+    });
+    d.addEventListener("close", () => { d.remove(); resolve(out); });
+    d.showModal(); ta.focus();
+  });
+}
 const onAction = async e => {
   const b = e.target.closest("[data-a]"); if (!b) return;
   const row = b.closest("[data-row]"), a = b.dataset.a;
@@ -696,6 +760,7 @@ const onAction = async e => {
       toast(on ? `Numéro de ${u.shopName} confirmé.` : "Confirmation retirée.");
       return;
     }
+    if (a === "anedit") { const n = anns.find(x => x.id === row.dataset.nid); if (n) anOpen(n); return; }
     if (a === "andel") {
       const n = anns.find(x => x.id === row.dataset.nid); if (!n) return;
       if (!b.dataset.sure) { b.dataset.sure = "1"; b.textContent = "Confirmer ?"; return setTimeout(() => { delete b.dataset.sure; b.textContent = "Supprimer"; }, 3000); }
@@ -719,9 +784,15 @@ const onAction = async e => {
     }
     if (a === "feat") { const i = items.find(x => x.id === row.dataset.iid); await updateDoc(doc(db, "items", i.id), { featured: !i.featured }); }
     if (a === "del" || a === "delitem") {
-      if (!b.dataset.sure) { b.dataset.sure = "1"; b.textContent = "Confirmer ?"; return setTimeout(() => { delete b.dataset.sure; b.textContent = a === "del" ? "Supprimer" : "Supprimer l'article"; }, 3000); }
-      await deleteDoc(doc(db, "items", row.dataset.iid));
-      if (row.dataset.rid) await deleteDoc(doc(db, "reports", row.dataset.rid));
+      const iid = row.dataset.iid, it = items.find(x => x.id === iid);
+      const why = await askReason({ title: "Supprimer cet article ?", sub: it ? `« ${it.title} » · ${it.shopName}` : "", ok: "Supprimer et prévenir" });
+      if (!why) return;
+      await run(b, async () => {
+        if (it?.ownerId) await tell(it.ownerId, "item_removed", "Ton article a été retiré", `SokoPlus a retiré ton article « ${it.title} ». Motif : ${why}. Si tu penses que c'est une erreur, écris-nous sur WhatsApp.`);
+        await deleteDoc(doc(db, "items", iid));
+        if (row.dataset.rid) await deleteDoc(doc(db, "reports", row.dataset.rid));
+      }, { busy: "Suppression…", done: "Supprimé", hold: 500 });
+      toast(it?.ownerId ? "Article supprimé. Le vendeur a reçu le motif." : "Article supprimé.");
     }
     if (a === "dismiss") await deleteDoc(doc(db, "reports", row.dataset.rid));
   } catch (err) { toast("Échec : " + failText(err)); }

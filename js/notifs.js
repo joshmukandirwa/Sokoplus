@@ -29,7 +29,7 @@ function fill() {
   const all = live(), seen = seenAt(), latest = all.slice(0, 10), sug = [];
   const mine = myNotifs().slice(0, 5);
   $("#nBody").innerHTML =
-    (mine.length ? `<h3 class="nh">Pour ta boutique</h3><div class="nlist">${mine.map(n => `<div class="nrow mn${n.read ? "" : " new"}"><span class="nimg mn-ic ${n.kind === "cert_rejected" ? "bad" : "ok"}">${n.kind === "cert_rejected" ? "!" : '<img src="icons/certifie.png" alt="" width="28" height="28" draggable="false">'}</span><span class="ntx"><b>${esc(n.title || "Message de SokoPlus")}</b><small>${esc(n.text || "")}</small><small>${ago(nms(n))}</small></span>${n.read ? "" : '<em class="ntag">Nouveau</em>'}</div>`).join("")}</div>` : "") +
+    (mine.length ? `<h3 class="nh">Pour ta boutique</h3><div class="nlist">${mine.map(n => `<div class="nrow mn${n.read ? "" : " new"}"><span class="nimg mn-ic ${["cert_rejected", "item_removed"].includes(n.kind) ? "bad" : "ok"}">${["cert_rejected", "item_removed"].includes(n.kind) ? "!" : '<img src="icons/certifie.png" alt="" width="28" height="28" draggable="false">'}</span><span class="ntx"><b>${esc(n.title || "Message de SokoPlus")}</b><small>${esc(n.text || "")}</small><small>${ago(nms(n))}</small></span>${n.read ? "" : '<em class="ntag">Nouveau</em>'}</div>`).join("")}</div>` : "") +
     `<h3 class="nh">Derniers articles</h3><div class="nlist">${latest.map(it => row(it, ms(it) > seen)).join("") || '<p class="note">Pas encore de nouveautés. Les nouveaux articles apparaîtront ici.</p>'}</div>` +
     (sug.length ? `<h3 class="nh">Suggestions pour toi</h3><div class="nlist">${sug.map(it => row(it, false)).join("")}</div>` : "");
   const perm = "Notification" in window ? Notification.permission : "unsupported";

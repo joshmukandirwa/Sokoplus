@@ -823,3 +823,23 @@
 .an-pic img { width: 100%; height: 100%; object-fit: cover; display: block }
 .an-pic button { position: absolute; top: 3px; right: 3px; width: 22px; height: 22px; border-radius: 99px; border: 0; background: #081a3dcc; color: #fff; line-height: 1; font-size: 1rem }
 #annDlg textarea, #annDlg input:not([type=file]), #annDlg select { width: 100% }
+
+/* Fenêtre « motif » de suppression d'un article */
+dialog.a-reason { width: min(92vw, 440px); padding: 20px; border: var(--bw, 2px) solid var(--line); border-radius: 20px; background: var(--surface); color: var(--ink); box-shadow: 6px 6px 0 var(--line) }
+dialog.a-reason::backdrop { background: rgba(3, 6, 13, .55) }
+.a-reason h3 { margin: 0 0 4px; font-size: 1.1rem }
+.a-reason .rsub { margin: 0 0 6px; font-weight: 600; font-size: .9rem; overflow-wrap: anywhere }
+.a-reason .rhint { margin: 0 0 12px; color: var(--muted); font-size: .84rem }
+.a-reason .rchips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px }
+.a-reason .rchip { padding: 6px 11px; border-radius: 999px; border: 1.5px solid var(--line); background: transparent; color: inherit; font: inherit; font-size: .8rem; cursor: pointer }
+.a-reason .rchip:active { background: var(--soft) }
+.a-reason textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 2px solid var(--line); border-radius: 12px; font: inherit; background: var(--surface); color: inherit; resize: vertical }
+.a-reason .rerr { margin: 6px 0 0; color: var(--bad); font-size: .84rem }
+.a-reason .racts { display: flex; gap: 10px; margin-top: 14px }
+.a-reason .racts .btn { flex: 1 }
+
+/* Modifier une annonce : remplacer, avancer ou retirer une image */
+.an-pic .an-rp { top: auto; bottom: 3px; right: 3px }
+.an-pic .an-up { top: auto; bottom: 3px; left: 3px; right: auto; font-size: .7rem }
+.an-pic .an-first { position: absolute; top: 3px; left: 3px; padding: 1px 6px; border-radius: 99px; background: var(--orange, #ff6a00); color: #fff; font: 800 .65rem/1.4 var(--body, sans-serif); font-style: normal }
+.an-pic { width: 88px; height: 88px }

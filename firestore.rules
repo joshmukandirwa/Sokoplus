@@ -17,7 +17,7 @@ service cloud.firestore {
     function profile() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
-    // Un vendeur peut publier s'il n'est pas bloqué, si son numéro est plausible (la confirmation WhatsApp est facultative ; l'email n'est plus exigé : chaque article est validé par l'admin) et son abonnement court encore.
+    // Un vendeur peut publier s'il n'est pas bloqué, si son numéro est plausible (la confirmation WhatsApp est facultative ; l'email n'est plus exigé : les articles sont publiés sans validation) et son abonnement court encore.
     function canPost() {
       return signedIn() && siteOpen()
         && exists(/databases/$(database)/documents/users/$(request.auth.uid))
@@ -66,6 +66,17 @@ service cloud.firestore {
     function currencies() {
       return ['USD', 'EUR', 'FC', 'RWF', 'BIF', 'UGX', 'KES', 'TZS', 'XAF', 'XOF', 'AOA', 'ZMW', 'ZWL', 'MZN', 'MWK', 'ZAR', 'NAD', 'BWP', 'SZL', 'LSL', 'MGA', 'MUR', 'SCR', 'KMF', 'ETB', 'ERN', 'DJF', 'SOS', 'SSP', 'SDG', 'EGP', 'LYD', 'TND', 'DZD', 'MAD', 'MRU', 'GMD', 'GNF', 'SLE', 'LRD', 'GHS', 'NGN', 'STN', 'CVE'];
     }
+    function meetOk(d) { return (!('meetPlace' in d) || (d.meetPlace is string && d.meetPlace.size() <= 80)) && (!('delivery' in d) || d.delivery is bool) && (!('swapFor' in d) || (d.swapFor is string && d.swapFor.size() <= 80))
+      && (!('voice' in d) || (d.voice is string && d.voice.size() <= 300 && d.voice.matches('https://res[.]cloudinary[.]com/dqtu9carq/video/upload/.*')))
+      && (!('voiceSec' in d) || (d.voiceSec is int && d.voiceSec >= 1 && d.voiceSec <= 60)); }
+    // Achat groupé facultatif : prix de groupe plus bas que le prix, minimum de personnes, durée
+    function groupOk(d) {
+      return (!('groupPrice' in d) && !('groupMin' in d) && !('groupDays' in d))
+        || ('groupPrice' in d && 'groupMin' in d && 'groupDays' in d
+            && d.groupPrice is number && d.groupPrice > 0 && d.groupPrice < d.price
+            && d.groupMin is int && d.groupMin >= 2 && d.groupMin <= 50
+            && d.groupDays is int && d.groupDays in [3, 7, 14]);
+    }
     function countryOk(d) { return !('country' in d) || (d.country is string && d.country.size() == 2); }
     // Promotion choisie par le vendeur : ancien prix (facultatif, plus haut que le prix) et type d'annonce (facultatif)
     function promoOk(d) {
@@ -78,7 +89,7 @@ service cloud.firestore {
     // Forme d'un article en ligne (admin, ou boutique certifiée qui publie directement)
     function itemShape() {
       let d = request.resource.data;
-      return d.keys().hasOnly(['title', 'description', 'price', 'category', 'address', 'city', 'currency', 'images', 'ownerId', 'shopName', 'phone', 'shopLogo', 'shopPay', 'status', 'featured', 'createdAt', 'certified', 'oldPrice', 'tag', 'country'])
+      return d.keys().hasOnly(['title', 'description', 'price', 'category', 'address', 'city', 'currency', 'images', 'ownerId', 'shopName', 'phone', 'shopLogo', 'shopPay', 'status', 'featured', 'createdAt', 'certified', 'oldPrice', 'tag', 'country', 'negotiable', 'meetPlace', 'swapFor', 'voice', 'voiceSec', 'groupPrice', 'groupMin', 'groupDays', 'delivery'])
         && d.ownerId is string
         && d.status == 'available'
         && d.featured == false
@@ -89,8 +100,31 @@ service cloud.firestore {
         && (!('city' in d) || (d.city is string && d.city.size() <= 40))
         && (!('shopPay' in d) || (d.shopPay is string && d.shopPay.size() <= 120))
         && (!('currency' in d) || d.currency in currencies())
-        && promoOk(d) && countryOk(d)
+        && promoOk(d) && countryOk(d) && (!('negotiable' in d) || d.negotiable is bool) && meetOk(d) && groupOk(d)
         && imgsOk(d.images);
+    }
+
+    // Modification d'un article par son vendeur (appliquée tout de suite)
+    function editedOk() {
+      let d = request.resource.data;
+      return d.title is string && d.title.size() >= 2 && d.title.size() <= 100
+        && d.description is string && d.description.size() <= 1500
+        && d.category is string && d.category.size() <= 40
+        && d.address is string && d.address.size() <= 150
+        && d.price is number && d.price > 0 && d.price < 100000000
+        && (!('city' in d) || (d.city is string && d.city.size() <= 40))
+        && (!('currency' in d) || d.currency in currencies())
+        && promoOk(d) && countryOk(d) && (!('negotiable' in d) || d.negotiable is bool) && meetOk(d) && groupOk(d) && imgsOk(d.images);
+    }
+
+    // Places de publication de l'essai gratuit : une place par jour et par numéro (uid_AAAAMMJJ_1 ou _2), créée en même temps que l'article. On ne peut ni la supprimer ni la recréer.
+    match /postSlots/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.ownerId == request.auth.uid);
+      allow create: if canPost() && isTrial() && slotOk(id)
+        && request.resource.data.keys().hasOnly(['ownerId', 'createdAt'])
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.createdAt == request.time;
+      allow delete: if isAdmin();
     }
 
     // Administrateurs : documents créés à la main dans la console (README, étape 7)
@@ -259,6 +293,75 @@ service cloud.firestore {
       allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
     }
 
+    // Achats groupés : un groupe par article (groups/{idArticle}), les participants dans groups/{idArticle}/members/{uid}.
+    // Le compteur ne bouge que de 1 à la fois, avec l'arrivée ou le départ du participant dans la même écriture. Le vendeur seul voit les numéros WhatsApp.
+    match /groups/{itemId} {
+      allow read: if true;
+      allow create: if signedIn() && siteOpen()
+        && request.resource.data.keys().hasOnly(['itemId', 'ownerId', 'count', 'min', 'startedAt', 'endsAt'])
+        && request.resource.data.itemId == itemId
+        && request.resource.data.ownerId == get(/databases/$(database)/documents/items/$(itemId)).data.ownerId
+        && request.resource.data.ownerId != request.auth.uid
+        && request.resource.data.min == get(/databases/$(database)/documents/items/$(itemId)).data.groupMin
+        && request.resource.data.count == 1
+        && request.resource.data.startedAt == request.time
+        && request.resource.data.endsAt > request.time + duration.value(get(/databases/$(database)/documents/items/$(itemId)).data.groupDays, 'd') - duration.value(12, 'h')
+        && request.resource.data.endsAt < request.time + duration.value(get(/databases/$(database)/documents/items/$(itemId)).data.groupDays, 'd') + duration.value(12, 'h')
+        && existsAfter(/databases/$(database)/documents/groups/$(itemId)/members/$(request.auth.uid));
+      allow update: if signedIn() && siteOpen()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['count'])
+        && ((request.resource.data.count == resource.data.count + 1 && request.resource.data.count <= 200
+              && resource.data.endsAt > request.time && resource.data.ownerId != request.auth.uid
+              && !exists(/databases/$(database)/documents/groups/$(itemId)/members/$(request.auth.uid))
+              && existsAfter(/databases/$(database)/documents/groups/$(itemId)/members/$(request.auth.uid)))
+            || (request.resource.data.count == resource.data.count - 1 && request.resource.data.count >= 0
+              && exists(/databases/$(database)/documents/groups/$(itemId)/members/$(request.auth.uid))
+              && !existsAfter(/databases/$(database)/documents/groups/$(itemId)/members/$(request.auth.uid))));
+      allow delete: if isAdmin() || (signedIn() && resource.data.ownerId == request.auth.uid);
+
+      match /members/{uid} {
+        allow read: if isAdmin() || (signedIn() && (uid == request.auth.uid || resource.data.ownerId == request.auth.uid));
+        allow create: if signedIn() && siteOpen() && uid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['uid', 'name', 'phone', 'ownerId', 'createdAt'])
+          && request.resource.data.uid == uid
+          && request.resource.data.ownerId == getAfter(/databases/$(database)/documents/groups/$(itemId)).data.ownerId
+          && getAfter(/databases/$(database)/documents/groups/$(itemId)).data.endsAt > request.time
+          && request.resource.data.name is string && request.resource.data.name.size() >= 2 && request.resource.data.name.size() <= 40
+          && validPhone(request.resource.data.phone)
+          && request.resource.data.createdAt == request.time;
+        allow delete: if isAdmin() || (signedIn() && (uid == request.auth.uid || resource.data.ownerId == request.auth.uid));
+      }
+    }
+
+    // « Je cherche… » : un acheteur (ou un vendeur) publie ce qu'il veut acheter, les vendeurs lui répondent sur WhatsApp. Publié tout de suite ; 3 demandes par jour au maximum (identifiant uid_AAAAMMJJ_1 à _3, jamais réutilisable car seul l'admin peut supprimer).
+    match /wants/{id} {
+      allow read: if true;
+      allow create: if signedIn() && siteOpen()
+        && request.resource.data.keys().hasOnly(['title', 'details', 'category', 'budget', 'currency', 'city', 'country', 'name', 'phone', 'avatar', 'ownerId', 'status', 'createdAt'])
+        && request.resource.data.ownerId == request.auth.uid
+        && id in [request.auth.uid + '_' + dayKey() + '_1', request.auth.uid + '_' + dayKey() + '_2', request.auth.uid + '_' + dayKey() + '_3']
+        && request.resource.data.status == 'open'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.title is string && request.resource.data.title.size() >= 2 && request.resource.data.title.size() <= 80
+        && (!('details' in request.resource.data) || (request.resource.data.details is string && request.resource.data.details.size() <= 300))
+        && request.resource.data.category is string && request.resource.data.category.size() <= 40
+        && (!('budget' in request.resource.data) || (request.resource.data.budget is number && request.resource.data.budget > 0 && request.resource.data.budget < 100000000))
+        && (!('currency' in request.resource.data) || request.resource.data.currency in currencies())
+        && (!('city' in request.resource.data) || (request.resource.data.city is string && request.resource.data.city.size() <= 40))
+        && countryOk(request.resource.data)
+        && (!('avatar' in request.resource.data) || (request.resource.data.avatar is string && request.resource.data.avatar.size() <= 400 && request.resource.data.avatar.matches('https://.*')))
+        && request.resource.data.name is string && request.resource.data.name.size() >= 2 && request.resource.data.name.size() <= 40
+        && validPhone(request.resource.data.phone);
+      // le demandeur clôt sa demande (« trouvé »), la réactive si c'était une erreur, ou la supprime (« deleted » : invisible pour tous, définitif).
+      // Le document reste en base pour que son identifiant du jour ne soit pas réutilisable (limite de 3 demandes par jour) ; l'admin peut tout modifier
+      allow update: if isAdmin()
+        || (signedIn() && siteOpen() && resource.data.ownerId == request.auth.uid
+            && resource.data.status != 'deleted'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+            && request.resource.data.status in ['found', 'open', 'deleted']);
+      allow delete: if isAdmin();
+    }
+
     // Propositions d'articles : envoyées par un vendeur actif, visibles seulement par lui et par l'admin.
     // L'admin les valide (elles deviennent alors un article dans /items) ou les refuse.
     match /submissions/{id} {
@@ -294,13 +397,18 @@ service cloud.firestore {
     match /items/{id} {
       allow read: if true;
 
-      // Admin : après validation d'une proposition. Boutique certifiée par l'admin : publie directement, sans validation.
+      // Admin, ou n'importe quel vendeur actif : l'article est en ligne tout de suite, sans validation. L'admin peut le supprimer ensuite (avec un motif envoyé au vendeur).
       allow create: if (isAdmin() && itemShape()
             && (!('certified' in request.resource.data) || request.resource.data.certified is bool))
-        || (canPost() && isCertified() && itemShape()
+        || (canPost() && itemShape()
             && id.matches(request.auth.uid + '_.*')
             && request.resource.data.ownerId == request.auth.uid
-            && request.resource.data.certified == true
+            && request.resource.data.certified == isCertified()
+            // essai gratuit : 2 publications par jour. L'article porte l'identifiant d'une place du jour, créée dans la même écriture (postSlots) et jamais réutilisable.
+            && (isCertified() || !isTrial()
+                || (slotOk(id)
+                    && !exists(/databases/$(database)/documents/postSlots/$(id))
+                    && existsAfter(/databases/$(database)/documents/postSlots/$(id))))
             && request.resource.data.shopName == profile().shopName
             && request.resource.data.phone == profile().phone
             && request.resource.data.shopLogo == (('logo' in profile()) ? profile().logo : '')
@@ -313,12 +421,14 @@ service cloud.firestore {
             && profile().status == 'active'
             // le vendeur change « disponible / vendu », et recopie sur ses articles les infos de sa boutique (nom, numéro, photo, paiements) ;
             // tout autre changement d'article passe par une proposition validée par l'admin
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'shopName', 'phone', 'shopLogo', 'shopPay'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'shopName', 'phone', 'shopLogo', 'shopPay', 'title', 'description', 'price', 'category', 'address', 'city', 'currency', 'images', 'oldPrice', 'tag', 'country', 'negotiable', 'meetPlace', 'swapFor', 'voice', 'voiceSec', 'groupPrice', 'groupMin', 'groupDays', 'delivery'])
             && request.resource.data.status in ['available', 'sold']
             && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['shopName']) || request.resource.data.shopName == profile().shopName)
             && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['phone']) || request.resource.data.phone == profile().phone)
             && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['shopLogo']) || request.resource.data.shopLogo == (('logo' in profile()) ? profile().logo : ''))
-            && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['shopPay']) || request.resource.data.shopPay == (('payments' in profile()) ? profile().payments : '')));
+            && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['shopPay']) || request.resource.data.shopPay == (('payments' in profile()) ? profile().payments : ''))
+            // le vendeur modifie lui-même son article : les nouvelles valeurs respectent les mêmes limites qu'à la publication
+            && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['title', 'description', 'price', 'category', 'address', 'city', 'currency', 'images', 'oldPrice', 'tag', 'country', 'negotiable', 'meetPlace', 'swapFor', 'voice', 'voiceSec', 'groupPrice', 'groupMin', 'groupDays', 'delivery']) || editedOk()));
 
       allow delete: if isAdmin() || (signedIn() && siteOpen() && resource.data.ownerId == request.auth.uid);
     }
@@ -385,9 +495,11 @@ service cloud.firestore {
     // Appareils inscrits aux notifications (le jeton sert d'identifiant)
     match /pushTokens/{token} {
       allow create, update: if token.size() >= 100 && token.size() <= 300
-        && request.resource.data.keys().hasOnly(['cats', 'updatedAt', 'uid'])
+        && request.resource.data.keys().hasOnly(['cats', 'updatedAt', 'uid', 'country', 'city'])
         && request.resource.data.updatedAt == request.time
         && request.resource.data.cats is list && request.resource.data.cats.size() <= 12
+        && (!('country' in request.resource.data) || (request.resource.data.country is string && request.resource.data.country.size() <= 6))
+        && (!('city' in request.resource.data) || (request.resource.data.city is string && request.resource.data.city.size() <= 40))
         && (!('uid' in request.resource.data) || (signedIn() && request.resource.data.uid == request.auth.uid));
       allow delete: if true;
       allow read: if false;

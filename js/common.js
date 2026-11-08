@@ -16,13 +16,16 @@ export async function enablePush(cats) {
   const token = await getToken(getMessaging(app), { vapidKey: VAPID_KEY, serviceWorkerRegistration: reg });
   if (!token) throw new Error("Impossible d'obtenir l'autorisation de notification.");
   const uid = auth && auth.currentUser ? auth.currentUser.uid : null;
-  await setDoc(doc(db, "pushTokens", token), { cats, ...(uid ? { uid } : {}), updatedAt: serverTimestamp() });
+  await setDoc(doc(db, "pushTokens", token), { cats, ...(uid ? { uid } : {}), ...regionOf(), updatedAt: serverTimestamp() });
   store.set("push", { token, cats });
 }
 /* Relie l'appareil déjà inscrit au compte connecté (pour recevoir les messages personnels), ou le délie à la déconnexion. */
+/* Région de l'appareil (pays et ville choisis dans l'en-tête) : permet d'alerter les gens proches d'une demande « Je cherche… ». */
+const regionOf = () => { const k = store.get("country", ""), c = store.get("city", ""); return { ...(typeof k === "string" && k && k.length <= 6 ? { country: k } : {}), ...(typeof c === "string" && c && c.length <= 40 ? { city: c } : {}) }; };
+export const syncPushRegion = () => { try { return linkPush(auth && auth.currentUser ? auth.currentUser : null); } catch { /* pas grave */ } };
 export async function linkPush(user) {
   const p = pushState(); if (!p || !p.token || !db) return;
-  try { await setDoc(doc(db, "pushTokens", p.token), { cats: p.cats || [], ...(user ? { uid: user.uid } : {}), updatedAt: serverTimestamp() }); } catch { /* pas grave */ }
+  try { await setDoc(doc(db, "pushTokens", p.token), { cats: p.cats || [], ...(user ? { uid: user.uid } : {}), ...regionOf(), updatedAt: serverTimestamp() }); } catch { /* pas grave */ }
 }
 export const unlinkPush = () => linkPush(null);
 export async function disablePush() {

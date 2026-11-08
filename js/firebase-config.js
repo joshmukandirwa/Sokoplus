@@ -19,7 +19,8 @@ export const VAPID_KEY = "BNwfyknUe0e3ArpTgxsFQfb4fumLASlRDSnT3cx4fc34gQhTd-Mz6w
 // Photos des articles : compte gratuit sur cloudinary.com (sans carte bancaire)
 export const CLOUDINARY = {
   cloudName: "dqtu9carq",
-  uploadPreset: "sokosplus"
+  uploadPreset: "sokosplus",
+  audioPreset: "sokoplus_audio"   // notes vocales : second préréglage Cloudinary, réservé à l'audio (voir README)
 };
 
 export const SITE = {

@@ -4,7 +4,7 @@
 
 const PROJECT = "sokoplus-6b1a0";
 const SITE = "https://sokoplus-africa.vercel.app";
-const DEFAULT_IMG = SITE + "/icons/og-image.jpg?v=3";
+const DEFAULT_IMG = SITE + "/icons/og-image.jpg?v=4";
 const DEFAULT_TITLE = "SokoPlus - Achetez et vendez partout en Afrique";
 const DEFAULT_DESC = "Le marché en ligne d'Afrique : trouve des articles près de chez toi, contacte le vendeur directement sur WhatsApp. Vends gratuitement 30 jours.";
 
@@ -35,13 +35,22 @@ async function getItem(id) {
   };
 }
 
+/* Annonce officielle : /a/ID  ->  /api/share?id=ID&t=a */
+async function getAnnonce(id) {
+  const r = await fetch(`https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/(default)/documents/announcements/${encodeURIComponent(id)}`);
+  if (!r.ok) return null;
+  const f = (await r.json()).fields || {};
+  return { title: val(f.title), text: val(f.text), image: f.images?.arrayValue?.values?.[0]?.stringValue };
+}
+
 module.exports = async function handler(req, res) {
   const id = String(req.query.id || "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 80);
-  let it = null;
-  try { if (id) it = await getItem(id); } catch { /* on retombe sur l'aperçu SokoPlus */ }
+  const isAnn = req.query.t === "a";
+  let it = null, an = null;
+  try { if (id) { if (isAnn) an = await getAnnonce(id); else it = await getItem(id); } } catch { /* on retombe sur l'aperçu SokoPlus */ }
 
-  const target = id ? `${SITE}/index.html?item=${encodeURIComponent(id)}` : SITE + "/";
-  const pageUrl = id ? `${SITE}/p/${encodeURIComponent(id)}` : SITE + "/";
+  const target = id ? `${SITE}/index.html?${isAnn ? "annonce" : "item"}=${encodeURIComponent(id)}` : SITE + "/";
+  const pageUrl = id ? `${SITE}/${isAnn ? "a" : "p"}/${encodeURIComponent(id)}` : SITE + "/";
 
   let title = DEFAULT_TITLE, desc = DEFAULT_DESC, img = DEFAULT_IMG;
   if (it && it.title) {
@@ -51,6 +60,13 @@ module.exports = async function handler(req, res) {
     const text = String(it.description || "").replace(/\s+/g, " ").trim();
     desc = (text ? text.slice(0, 180) + (text.length > 180 ? "…" : "") : "Disponible sur SokoPlus") + (where ? ` | ${where}` : "");
     img = ogImage(it.image);
+  }
+
+  if (an && an.title) {
+    title = `${an.title} | SokoPlus`;
+    const text = String(an.text || "").replace(/\s+/g, " ").trim();
+    desc = text ? text.slice(0, 180) + (text.length > 180 ? "…" : "") : "Une annonce de l'équipe SokoPlus";
+    img = ogImage(an.image);
   }
 
   const html = `<!doctype html>

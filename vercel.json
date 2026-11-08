@@ -26,7 +26,7 @@
         },
         {
           "key": "Permissions-Policy",
-          "value": "camera=(), microphone=(), geolocation=(), payment=()"
+          "value": "camera=(), microphone=(self), geolocation=(), payment=()"
         },
         {
           "key": "Strict-Transport-Security",
@@ -38,7 +38,7 @@
         },
         {
           "key": "Content-Security-Policy-Report-Only",
-          "value": "default-src 'self'; script-src 'self' https://www.gstatic.com https://apis.google.com https://translate.google.com https://translate.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://www.gstatic.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://translate.googleapis.com https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com https://api.cloudinary.com https://script.google.com https://script.googleusercontent.com; frame-src https://sokoplus-6b1a0.firebaseapp.com https://accounts.google.com; worker-src 'self'"
+          "value": "default-src 'self'; script-src 'self' https://www.gstatic.com https://apis.google.com https://translate.google.com https://translate.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://www.gstatic.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https://res.cloudinary.com; connect-src 'self' https://translate.googleapis.com https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.gstatic.com https://api.cloudinary.com https://script.google.com https://script.googleusercontent.com; frame-src https://sokoplus-6b1a0.firebaseapp.com https://accounts.google.com; worker-src 'self'"
         }
       ]
     }
@@ -69,6 +69,10 @@
     {
       "source": "/p/:id",
       "destination": "/api/share?id=:id"
+    },
+    {
+      "source": "/a/:id",
+      "destination": "/api/share?id=:id&t=a"
     }
   ]
 }

@@ -17,7 +17,7 @@
   <meta property="og:description"
     content="Crée ta boutique en 2 minutes et vends partout en Afrique. 30 jours d'essai gratuit. Tes clients te contactent directement sur WhatsApp.">
   <meta property="og:url" content="https://sokoplus-africa.vercel.app/vendeur.html">
-  <meta property="og:image" content="https://sokoplus-africa.vercel.app/icons/og-image.jpg?v=3">
+  <meta property="og:image" content="https://sokoplus-africa.vercel.app/icons/og-image.jpg?v=4">
   <meta property="og:image:type" content="image/jpeg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
@@ -26,7 +26,7 @@
   <meta name="twitter:title" content="Vendre sur SokoPlus : crée ta boutique gratuitement en Afrique">
   <meta name="twitter:description"
     content="Crée ta boutique en 2 minutes et vends partout en Afrique. 30 jours d'essai gratuit. Tes clients te contactent directement sur WhatsApp.">
-  <meta name="twitter:image" content="https://sokoplus-africa.vercel.app/icons/og-image.jpg?v=3">
+  <meta name="twitter:image" content="https://sokoplus-africa.vercel.app/icons/og-image.jpg?v=4">
   <!-- /SEO -->
   <meta name="theme-color" content="#1b1b1f">
   <link rel="manifest" href="manifest.json">
@@ -185,6 +185,15 @@
               <label class="field">Ancien prix (facultatif)<input id="iOld" type="number" min="1" step="any" inputmode="decimal"
                   placeholder="Prix barré, plus haut"></label>
             </div>
+            <label class="negchk"><input id="iNeg" type="checkbox" checked><span><b>Prix négociable</b><small>Les acheteurs pourront te proposer leur prix. Tu réponds sur WhatsApp et tu décides.</small></span></label>
+            <label class="field">Lieu de rencontre sûr (facultatif)<input id="iMeet" maxlength="80" placeholder="Ex : Marché de Virunga, devant la pharmacie"></label>
+            <label class="field">J'accepte l'échange contre (facultatif)<input id="iSwap" maxlength="80" placeholder="Ex : un téléphone, une moto, un frigo"></label>
+            <div class="field voicebox"><span>Achat groupé (facultatif)</span>
+              <p class="note">Offre un prix plus bas si plusieurs personnes achètent ensemble. Les acheteurs rejoignent le groupe sur ton article. Quand l'objectif est atteint, tu les contactes sur WhatsApp.</p>
+              <div class="cols"><label class="field">Prix de groupe<input id="iGPrice" type="number" min="0" step="any" inputmode="decimal" placeholder="Ex : 40"></label>
+              <label class="field">Minimum de personnes<input id="iGMin" type="number" min="2" max="50" inputmode="numeric" placeholder="Ex : 3"></label></div>
+              <label class="field">Durée du groupe<select id="iGDays"><option value="3">3 jours</option><option value="7" selected>7 jours</option><option value="14">14 jours</option></select></label></div>
+            <label class="negchk"><input id="iDeliv" type="checkbox"><span><b>Livraison possible</b><small>Les acheteurs verront que tu peux livrer. Vous vous mettez d'accord sur les frais sur WhatsApp.</small></span></label>
             <div class="cols">
               <label class="field">Pays<select id="iCountry" required></select></label>
               <label class="field">Ville<select id="iCity" required></select></label>
@@ -204,6 +213,12 @@
             </div>
             <p class="note">Photos nettes, bien éclairées, sur un fond simple : les articles bien photographiés se
               vendent plus vite.</p>
+            <div class="field voicebox" id="vBox"><span>Note vocale (facultatif, 45 secondes maximum)</span>
+              <p class="note">Présente ton article avec ta voix, en français, en lingala, en swahili… Les acheteurs aiment entendre le vendeur.</p>
+              <div class="vrow"><button type="button" class="btn small ghost" id="vRec">Enregistrer</button><span id="vTime" class="vtime"></span><button type="button" class="btn small ghost" id="vDel" hidden>Supprimer</button></div>
+              <audio id="vPlay" controls preload="metadata" hidden></audio>
+              <p class="msg err" id="vMsg" hidden></p>
+            </div>
           </fieldset>
 
           <fieldset class="step" data-step="4" hidden>
@@ -238,7 +253,7 @@
     <form id="fShop" novalidate>
       <header class="pe-bar">
         <button class="pe-back" type="button" data-close aria-label="Fermer" data-ic="back"></button>
-        <h2>Modifier ma boutique</h2>
+        <h2 id="sTitle">Modifier ma boutique</h2>
         <button class="btn small" type="submit" id="sSend">Enregistrer</button>
       </header>
 
@@ -255,6 +270,8 @@
           </div>
           <button class="pe-rmcover" type="button" id="sCoverDel" hidden>Retirer la couverture</button>
         </div>
+
+        <p class="note" id="sIntro" hidden>Ta boutique est créée. Ajoute maintenant une photo de profil, une photo de couverture et quelques informations pour rassurer tes clients. Tout est facultatif : tu peux passer cette étape et le faire plus tard avec « Modifier ma boutique ».</p>
 
         <section class="pe-sec">
           <h3>Ma boutique</h3>
@@ -287,7 +304,7 @@
         <p class="note">Tout ce que tu changes ici est visible tout de suite sur ta boutique, sans attendre de validation.</p>
         <p class="msg" id="sMsg" hidden></p>
         <div class="wnav"><button class="btn" type="submit" id="sSend2">Enregistrer</button><button class="btn ghost"
-            type="button" data-close>Annuler</button></div>
+            type="button" id="sCancel" data-close>Annuler</button></div>
       </div>
     </form>
   </dialog>

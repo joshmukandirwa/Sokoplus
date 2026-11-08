@@ -2,7 +2,7 @@ import { priceText, priceHtml, struck, watchPricing } from "./pricing.js";
 import {
   auth, db, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
   sendEmailVerification, sendPasswordResetEmail, GoogleAuthProvider, signInWithPopup, signInWithRedirect, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc,
-  collection, query, where, onSnapshot, serverTimestamp, Timestamp, getDocs
+  collection, query, where, onSnapshot, serverTimestamp, Timestamp, getDocs, writeBatch, deleteField
 } from "./fb.js";
 import { bindLogout } from "./logout.js";
 import {
@@ -17,6 +17,9 @@ import { watchMyFollowers, fmtCount } from "./follow.js";
 import { onMyNotifs, myNotifs, unread, markRead, removeNotifs, ms as nms } from "./mesnotifs.js";
 import { COUNTRIES, DEFAULT_COUNTRY, citiesOf, currenciesOf, curName, ALL_CURRENCIES, decimalsOf } from "./pays.js";
 import { run, btnOf } from "./feedback.js";
+import { initVoice } from "./voice.js";
+import { openSellerGroup } from "./groupbuy.js";
+import { uploadAudio } from "./util.js";
 
 configBanner();
 let priceTxt = SITE.subscriptionText, priceNow = null;
@@ -153,6 +156,7 @@ $("#fComplete").addEventListener("submit", e => {
     if ((await getDoc(doc(db, "phoneIndex", phone))).exists()) throw { message: "Ce numéro est déjà utilisé par une boutique." };
     await setDoc(doc(db, "users", pending.uid), { shopName, phone, email, status: "active", plan: "essai", activeUntil: Timestamp.fromMillis(Date.now() + 30 * DAY), createdAt: serverTimestamp() });
     await setDoc(doc(db, "phoneIndex", phone), { uid: pending.uid, email });
+    setup = true;
     await enter(pending);
   }, { busy: "Création…", done: "Boutique créée" }).then(() => say(m, "")).catch(err => say(m, nice(err), "err"));
 });
@@ -179,6 +183,7 @@ $("#fSignup").addEventListener("submit", e => {
     await setDoc(doc(db, "phoneIndex", phone), { uid: cred.user.uid, email });
     if (!isFake(email)) { try { await sendEmailVerification(cred.user); } catch { /* il pourra le renvoyer */ } }
     signingUp = false;
+    setup = true;
     await enter(cred.user);
   }, { busy: "Création…", done: "Boutique créée" }).then(() => say(m, "")).catch(err => { signingUp = false; welcome = false; say(m, nice(err), "err"); });
 });
@@ -201,7 +206,7 @@ function leave() {
 bindLogout($("#logout"), async () => { await unlinkPush().catch(() => { }); return signOut(auth); }, () => ($("#dShop")?.textContent || "").trim());
 addEventListener("hashchange", hashTab);   // les boutons « J'ai déjà un compte » / « Créer ma boutique » de la fenêtre Vendre
 
-let welcome = false;
+let welcome = false, setup = false;   // setup : boutique tout juste créée, on propose de la personnaliser avant d'ouvrir l'espace
 async function enter(u) {
   user = u;
   const snap = await getDoc(doc(db, "users", u.uid));
@@ -216,17 +221,21 @@ async function enter(u) {
   }
   profile = snap.data();
   if (welcome) { welcome = false; toast(`Bienvenue ${profile.shopName}, content de te voir.`); }
-  $("#complete").hidden = true; $("#auth").hidden = true; $("#dash").hidden = false; $("#logout").hidden = false;
+  const first = setup; setup = false;
+  $("#complete").hidden = true; $("#auth").hidden = true; $("#dash").hidden = first; $("#logout").hidden = false;   // à la création, l'espace reste fermé le temps de la personnalisation
   renderStatus();
   paintPriceNote();
   watchMine();
+  if (first && openShop(true)) return;
+  $("#dash").hidden = false;
   if (location.hash === "#publier") setTimeout(() => $("#fItem").scrollIntoView({ behavior: "smooth" }), 150);
 }
 
 const MAX_MB = 4;                                   // poids maximum d'une photo
 const isTrial = () => (profile.plan || "essai") === "essai";
 const dayKey = () => new Date(Date.now() + 2 * 3600e3).toISOString().slice(0, 10).replace(/-/g, "");   // jour en RDC (UTC+2)
-const usedToday = () => waiting.filter(x => x.id.startsWith(`${user.uid}_${dayKey()}_`)).length;
+const slotIds = () => new Set([...waiting.map(x => x.id), ...slots.map(x => x.id)]);   // anciennes propositions + places prises par des articles publiés
+const usedToday = () => [...slotIds()].filter(id => id.startsWith(`${user.uid}_${dayKey()}_`)).length;
 const quotaText = () => `${profile.shopName}, tu as déjà publié tes 2 articles d'aujourd'hui avec l'essai gratuit. Reviens demain pour en publier d'autres, ou passe à la version complète pour publier sans limite.`;
 function fmtLeft(ms) {
   const d = Math.floor(ms / DAY), h = Math.floor(ms % DAY / 3600e3), m = Math.floor(ms % 3600e3 / 60e3), s = Math.floor(ms % 60e3 / 1e3);
@@ -342,7 +351,7 @@ function renderPushAsk() {
   if (!ok) { if (el) el.remove(); return; }
   if (el || !$("#certBox")) return;
   el = document.createElement("section"); el.id = "pushAsk"; el.className = "pushask";
-  el.innerHTML = '<div><b>Reçois les alertes SokoPlus</b><span>Certification, articles validés… même quand l\'app est fermée.</span></div><div class="pa"><button class="btn small" id="paYes" type="button">Activer</button><button class="btn small ghost" id="paNo" type="button">Plus tard</button></div>';
+  el.innerHTML = '<div><b>Reçois les alertes SokoPlus</b><span>Certification, messages de SokoPlus… même quand l\'app est fermée.</span></div><div class="pa"><button class="btn small" id="paYes" type="button">Activer</button><button class="btn small ghost" id="paNo" type="button">Plus tard</button></div>';
   $("#certBox").before(el);
   $("#paYes").onclick = async () => { try { await enablePush([]); toast("Alertes activées"); } catch (e) { toast(e.message || "Impossible d'activer les alertes."); } renderPushAsk(); };
   $("#paNo").onclick = () => { store.set("pushLater", Date.now() + 7 * 864e5); renderPushAsk(); };
@@ -352,17 +361,18 @@ function renderCert() {
   renderPushAsk();
   b.hidden = false;
   const msgs = myNotifs().slice(0, 3), nu = unread().length;
-  const inbox = msgs.length ? `<div class="cmsgs"><h3>Messages de SokoPlus${nu ? ` <em>${nu} nouveau${nu > 1 ? "x" : ""}</em>` : ""}</h3>${msgs.map(n => `<div class="cmsg ${n.kind === "cert_rejected" ? "bad" : "ok"}${n.read ? "" : " new"}"><b>${esc(n.title || "Message de SokoPlus")}</b><span>${esc(n.text || "")}</span><small>${ago(nms(n))}</small><button class="cdel" type="button" data-del="${esc(n.id)}" aria-label="Supprimer ce message">✕</button></div>`).join("")}<div class="cacts">${nu ? '<button class="btn small ghost" type="button" id="cRead">Marquer comme lu</button>' : ""}<button class="btn small ghost cdelall" type="button" id="cDelAll">Tout supprimer</button></div></div>` : "";
+  const inbox = msgs.length ? `<div class="cmsgs"><h3>Messages de SokoPlus${nu ? ` <em>${nu} nouveau${nu > 1 ? "x" : ""}</em>` : ""}</h3>${msgs.map(n => `<div class="cmsg ${["cert_rejected", "item_removed"].includes(n.kind) ? "bad" : "ok"}${n.read ? "" : " new"}"><b>${esc(n.title || "Message de SokoPlus")}</b><span>${esc(n.text || "")}</span><small>${ago(nms(n))}</small><button class="cdel" type="button" data-del="${esc(n.id)}" aria-label="Supprimer ce message">✕</button></div>`).join("")}<div class="cacts">${nu ? '<button class="btn small ghost" type="button" id="cRead">Marquer comme lu</button>' : ""}<button class="btn small ghost cdelall" type="button" id="cDelAll">Tout supprimer</button></div></div>` : "";
   let body;
   if (profile.certified) {
-    body = `<div class="cstate ok"><b>Ta boutique est certifiée SokoPlus.</b> Le badge s'affiche à côté de son nom, et tes nouveaux articles sont publiés tout de suite.</div>`;
+    let hid = false; try { hid = localStorage.getItem("soko.certok." + user.uid) === "1"; } catch { /* stockage indisponible */ }
+    body = hid ? "" : `<div class="cstate ok has-x"><button type="button" class="cstate-x" data-cokx aria-label="Masquer ce message pour toujours">×</button><b>Ta boutique est certifiée SokoPlus.</b> Le badge s'affiche à côté de son nom.</div>`;
   } else {
     const st = creq?.status;
     const guide = `<details class="cguide"${st ? "" : " open"}><summary>Comment ça marche</summary>
       <div class="cg"><h4>C'est quoi ?</h4><p>Un badge bleu à côté du nom de ta boutique, accordé par SokoPlus après vérification.</p>
       <h4>Pourquoi le demander ?</h4><p>Les acheteurs te font plus confiance, donc ils te contactent plus facilement.</p>
       <h4>Comment ça se passe ?</h4><ol><li>Tu cliques sur « Demander la certification ».</li><li>SokoPlus vérifie ta boutique : nom, numéro WhatsApp, articles et avis.</li><li>Tu reçois la réponse ici et dans la cloche de notifications.</li></ol>
-      <h4>Ce que tu gagnes</h4><ul><li>Le badge sur ta boutique et sur tous tes articles</li><li>Ta boutique dans la rangée « boutiques certifiées » de l'accueil</li><li>Tes articles publiés sans attendre de validation</li></ul>
+      <h4>Ce que tu gagnes</h4><ul><li>Le badge sur ta boutique et sur tous tes articles</li><li>Ta boutique dans la rangée « boutiques certifiées » de l'accueil</li><li>Plus de confiance chez tes acheteurs</li></ul>
       <p class="note">Conseil : une photo de profil et quelques articles bien décrits aident beaucoup.</p></div></details>`;
     let state;
     if (st === "pending") state = `<div class="cstate warn"><b>Demande envoyée.</b> SokoPlus la vérifie. Réponse généralement sous 24 à 48 h.${creq.createdAt?.toMillis ? ` Envoyée ${esc(ago(creq.createdAt.toMillis()))}.` : ""}</div><button class="btn" type="button" disabled>Demande en attente</button>`;
@@ -370,7 +380,9 @@ function renderCert() {
     else state = `<p class="note">Réponse généralement sous 24 à 48 h.</p><button class="btn" type="button" id="cAsk"${creqSeen ? "" : " disabled"}>Demander la certification</button>`;
     body = guide + state;
   }
+  if (profile.certified && !body && !inbox) { b.hidden = true; b.innerHTML = ""; return; }
   b.innerHTML = `<h2>Certification SokoPlus</h2>${body}${inbox}`;
+  const ckx = $("#certBox [data-cokx]"); if (ckx) ckx.onclick = () => { try { localStorage.setItem("soko.certok." + user.uid, "1"); } catch { /* pas grave */ } renderCert(); };
   const ask = $("#cAsk"); if (ask) ask.onclick = () => askCert(ask);
   const rd = $("#cRead"); if (rd) rd.onclick = () => markRead(unread().map(n => n.id));
   $$("#certBox [data-del]").forEach(x => x.onclick = async () => {
@@ -486,8 +498,9 @@ $("#iImgs").addEventListener("change", e => {
 });
 paintPics();
 
+const voice = initVoice($("#vBox"));
 function resetForm() {
-  editing = null; $("#fItem").reset(); picked = []; editImgs = []; paintPics();
+  voice.reset(); editing = null; $("#fItem").reset(); picked = []; editImgs = []; paintPics();
   $("#fTitle").textContent = "Publier un article"; $("#iSubmit").textContent = "Publier"; $("#iCancel").hidden = true;
   fillPlace(DEFAULT_COUNTRY); showStep(1); renderStatus();
 }
@@ -524,9 +537,8 @@ function recap() {
     <dl class="rlist"><div><dt>Catégorie</dt><dd>${esc($("#iCat").value)}</dd></div>
       <div><dt>Lieu</dt><dd>${esc($("#iCity").value)}, ${esc($("#iAddr").value.trim())}</dd></div>
       ${desc ? `<div><dt>Description</dt><dd>${esc(desc)}</dd></div>` : ""}</dl>
-    <p class="note">${editing ? "SokoPlus vérifie tes modifications avant de les mettre en ligne."
-      : profile.certified ? "Boutique certifiée : ton article sera en ligne tout de suite."
-      : `SokoPlus vérifie ton article avant de le mettre en ligne, puis te prévient.${after === null ? "" : ` Après cet envoi, il te restera ${after} publication${after > 1 ? "s" : ""} aujourd'hui.`}`}</p>`;
+    <p class="note">${editing ? "Tes modifications seront en ligne tout de suite."
+      : `Ton article sera en ligne tout de suite.${after === null ? "" : ` Après cette publication, il te restera ${after} publication${after > 1 ? "s" : ""} aujourd'hui.`}`}</p>`;
 }
 $("#iNext").onclick = () => { if (validStep(step)) showStep(step + 1); };
 $("#iBack").onclick = () => showStep(step - 1);
@@ -544,7 +556,7 @@ $("#fItem").addEventListener("submit", e => {
     if (big) throw { message: `La photo « ${big.name} » fait ${(big.size / 1048576).toFixed(1).replace(".", ",")} Mo. Maximum ${MAX_MB} Mo par photo : choisis-en une plus légère.` };
     let slot = null;                                   // essai : 2 publications par jour, chaque place ne sert qu'une fois
     if (!editing && isTrial() && !profile.certified) {
-      const taken = new Set(waiting.map(x => x.id)), p = `${user.uid}_${dayKey()}_`;
+      const taken = slotIds(), p = `${user.uid}_${dayKey()}_`;
       slot = [1, 2].map(n => p + n).find(id => !taken.has(id));
       if (!slot) throw { message: quotaText() };
     }
@@ -564,36 +576,46 @@ $("#fItem").addEventListener("submit", e => {
     if ($("#iOld").value && !(oldRaw > usd)) throw { message: "L'ancien prix doit être plus haut que le nouveau prix." };
     if ($("#iOld").value) data.oldPrice = Math.round(oldRaw * dec) / dec;
     if (tag === "promo" || tag === "offre") data.tag = tag;
-    say(m, editing ? "Enregistrement…" : "Envoi pour validation…");
+    data.negotiable = $("#iNeg").checked; data.delivery = $("#iDeliv").checked;
+    const meet = $("#iMeet").value.trim().slice(0, 80); if (meet) data.meetPlace = meet;
+    const swap = $("#iSwap").value.trim().slice(0, 80); if (swap) data.swapFor = swap;
+    const gpRaw = Number($("#iGPrice").value);
+    if ($("#iGPrice").value) {
+      const gm = Math.round(Number($("#iGMin").value) || 3);
+      if (!(gpRaw > 0 && gpRaw < usd)) throw { message: "Le prix de groupe doit être plus bas que le prix de l'article." };
+      if (gm < 2 || gm > 50) throw { message: "Le minimum de personnes doit être entre 2 et 50." };
+      data.groupPrice = Math.round(gpRaw * dec) / dec; data.groupMin = gm; data.groupDays = Number($("#iGDays").value) || 7;
+    }
+    let vUrl = voice.existing();
+    if (voice.blob()) {
+      say(m, "Envoi de la note vocale…");
+      try { vUrl = await uploadAudio(voice.blob()); }
+      catch (err) { throw { message: (err && err.code === "auth/network-request-failed" ? err.message : "La note vocale n'a pas pu être envoyée (" + (err && err.message || "erreur") + "). Supprime-la ou réessaie.") }; }
+    }
+    if (vUrl) { data.voice = vUrl; const vs = Math.round(voice.seconds()); if (vs >= 1 && vs <= 60) data.voiceSec = vs; }
+    say(m, editing ? "Enregistrement…" : "Publication…");
     if (editing) {
-      // une modification n'est plus appliquée directement : SokoPlus la vérifie avant de la mettre en ligne
-      const eid = `${user.uid}_edit_${editing.id}`, old = waiting.find(x => x.id === eid);
-      if (old && old.status === "pending") throw { message: "Une modification de cet article attend déjà la validation de SokoPlus. Patiente un instant." };
-      if (old) await deleteDoc(doc(db, "submissions", eid));   // ancienne demande refusée
-      await setDoc(doc(db, "submissions", eid), {
-        ...data, images: urls.length ? urls : editing.images, replaces: editing.id,
-        ownerId: user.uid, shopName: profile.shopName, phone: profile.phone, status: "pending", createdAt: serverTimestamp()
+      // la modification est appliquée tout de suite, sans validation
+      await updateDoc(doc(db, "items", editing.id), {
+        ...data, images: urls.length ? urls : editing.images,
+        oldPrice: data.oldPrice ?? deleteField(), tag: data.tag ?? deleteField(), meetPlace: data.meetPlace ?? deleteField(), swapFor: data.swapFor ?? deleteField(), voice: data.voice ?? deleteField(), voiceSec: data.voiceSec ?? deleteField(), groupPrice: data.groupPrice ?? deleteField(), groupMin: data.groupMin ?? deleteField(), groupDays: data.groupDays ?? deleteField()
       });
-      notify("new_submission", { title: data.title, shopName: profile.shopName });
-      toast("Modification envoyée. Elle sera en ligne dès que SokoPlus l'aura vérifiée."); 
-    } else if (profile.certified) {
-      // boutique certifiée par SokoPlus : l'article est en ligne tout de suite, sans validation
-      const iid = `${user.uid}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
-      await setDoc(doc(db, "items", iid), {
-        ...data, images: urls, ownerId: user.uid, shopName: profile.shopName, phone: profile.phone, shopLogo: profile.logo || "", ...(profile.payments ? { shopPay: profile.payments } : {}),
-        certified: true, status: "available", featured: false, createdAt: serverTimestamp()
-      });
-      pingPush({ type: "item", itemId: iid });
-      toast("Ton article est en ligne tout de suite. Boutique certifiée.");
+      toast("Modification enregistrée. Elle est déjà en ligne.");
     } else {
-      const sub = {
-        ...data, images: urls, ownerId: user.uid, shopName: profile.shopName, phone: profile.phone,
-        status: "pending", createdAt: serverTimestamp()
+      // publication gratuite : l'article est en ligne tout de suite, sans validation de SokoPlus
+      const iid = slot || `${user.uid}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;   // l'identifiant commence toujours par ton uid
+      const item = {
+        ...data, images: urls, ownerId: user.uid, shopName: profile.shopName, phone: profile.phone, shopLogo: profile.logo || "", ...(profile.payments ? { shopPay: profile.payments } : {}),
+        certified: !!profile.certified, status: "available", featured: false, createdAt: serverTimestamp()
       };
-      const sid = slot || `${user.uid}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;   // l'identifiant commence toujours par ton uid
-      await setDoc(doc(db, "submissions", sid), sub);
-      notify("new_submission", { title: data.title, shopName: profile.shopName });
-      toast("C'est parti ! Ton article est entre nos mains. Dès qu'il est validé, on te prévient.");
+      if (slot) {                                      // essai : la place du jour et l'article s'écrivent ensemble
+        const bt = writeBatch(db);
+        bt.set(doc(db, "postSlots", slot), { ownerId: user.uid, createdAt: serverTimestamp() });
+        bt.set(doc(db, "items", iid), item);
+        await bt.commit();
+      } else await setDoc(doc(db, "items", iid), item);
+      pingPush({ type: "item", itemId: iid });
+      toast(profile.certified ? "Ton article est en ligne tout de suite. Boutique certifiée." : "Ton article est en ligne. Bonne vente !");
     }
     resetForm();
   }, { busy: editing ? "Enregistrement…" : "Envoi…", done: editing ? "Enregistré" : "Envoyé", hold: 1300 })
@@ -601,7 +623,7 @@ $("#fItem").addEventListener("submit", e => {
 });
 
 /* ---------------- Mes articles ---------------- */
-let mine = [], waiting = [], creq = null, creqSeen = false, offMsgs = null;
+let mine = [], waiting = [], slots = [], creq = null, creqSeen = false, offMsgs = null;
 const when = it => it.createdAt?.toMillis?.() ?? Date.now();
 function watchMine() {
   unsub && unsub();
@@ -629,6 +651,7 @@ function watchMine() {
     pub = snap.exists() ? snap.data() : {};
     if (profile) paintCard();
   }, () => { });
+  const u6 = onSnapshot(query(collection(db, "postSlots"), where("ownerId", "==", user.uid)), snap => { slots = snap.docs.map(d => ({ id: d.id })); renderStatus(); });
   const u5 = onSnapshot(doc(db, "certRequests", user.uid), snap => {   // demande de certification
     creq = snap.exists() ? snap.data() : null; creqSeen = true; renderCert();
   }, () => { creqSeen = true; renderCert(); });
@@ -642,7 +665,7 @@ function watchMine() {
     if (seenPlan && st !== profile.status) toast(profile.status === "blocked" ? "Ton compte a été suspendu." : "Ton compte est de nouveau actif.");
     seenPlan = true;
   });
-  unsub = () => { u1(); u2(); u3(); u4(); u5(); offMsgs && offMsgs(); offMsgs = null; };
+  unsub = () => { u1(); u2(); u3(); u4(); u5(); u6(); offMsgs && offMsgs(); offMsgs = null; };
 }
 function renderMine() {
   const shown = waiting.filter(it => it.status !== "approved");   // les validées sont déjà dans « mine »
@@ -668,13 +691,14 @@ function renderMine() {
       <div class="txt"><b>${esc(it.title)}</b><div class="note">${money(it.price, it.currency)} · ${ago(it.createdAt?.toMillis?.() ?? Date.now())}
         ${it.status === "sold" ? '<span class="pill bad">Vendu</span>' : it.featured ? '<span class="pill warn">À la une</span>' : '<span class="pill ok">En ligne</span>'}</div>
 </div>
-      <div class="acts"><button class="btn small ghost" data-a="edit">Modifier</button>
+      <div class="acts">${it.groupPrice ? '<button class="btn small" data-a="group">Achat groupé</button>' : ""}<button class="btn small ghost" data-a="edit">Modifier</button>
         <button class="btn small ghost" data-a="sold">${it.status === "sold" ? "Remettre en vente" : "Marquer vendu"}</button>
         <button class="btn small ghost" data-a="del">Supprimer</button></div></div>`;
   }).join("") : `<p class="empty"><img class="mascot sm" src="icons/mascotte.png" alt="" width="103" height="110" draggable="false">Ta boutique est prête. Publie ton premier article ci-dessus pour commencer à vendre.</p>`;
 }
 $("#mine").addEventListener("click", async e => {
   const b = e.target.closest("[data-a]"); if (!b) return;
+  if (b.dataset.a === "group") { const gi = mine.find(x => x.id === b.closest("[data-id]")?.dataset.id); if (gi) openSellerGroup(gi); return; }
   if (b.dataset.a === "delsub") {
     if (!b.dataset.sure) { b.dataset.sure = "1"; b.textContent = "Confirmer ?"; setTimeout(() => { delete b.dataset.sure; b.textContent = "Supprimer"; }, 3000); return; }
     const sid = b.closest("[data-sid]").dataset.sid;
@@ -692,7 +716,7 @@ $("#mine").addEventListener("click", async e => {
     }
     if (b.dataset.a === "edit") {
       editing = it;
-      $("#iTitle").value = it.title; $("#iCat").value = it.category; $("#iPrice").value = it.price; $("#iCur").value = it.currency || "USD"; $("#iTag").value = it.tag || ""; $("#iOld").value = it.oldPrice || "";
+      $("#iTitle").value = it.title; $("#iCat").value = it.category; $("#iPrice").value = it.price; $("#iCur").value = it.currency || "USD"; $("#iTag").value = it.tag || ""; $("#iOld").value = it.oldPrice || ""; $("#iNeg").checked = it.negotiable !== false; $("#iDeliv").checked = !!it.delivery; $("#iMeet").value = it.meetPlace || ""; $("#iSwap").value = it.swapFor || ""; voice.setExisting(it.voice, it.voiceSec); $("#iGPrice").value = it.groupPrice || ""; $("#iGMin").value = it.groupMin || ""; $("#iGDays").value = String(it.groupDays || 7);
       $("#iDesc").value = it.description || ""; $("#iAddr").value = it.address; fillPlace(it.country || DEFAULT_COUNTRY, it.city || "", it.currency || "USD");
       picked = []; editImgs = it.images || []; paintPics();
       $("#fTitle").textContent = "Modifier l'article"; $("#iSubmit").textContent = "Enregistrer"; $("#iCancel").hidden = false;
@@ -713,17 +737,29 @@ function paintCover(src) {
   $("#sCover").style.cssText = src ? `background-image:url(${esc(src)})` : coverCss("", $("#sName").value || profile.shopName);
   $("#sCoverDel").hidden = !src;
 }
-function openShop() {
-  if (!needNet("Pas de connexion : tu ne peux pas modifier ta boutique pour l'instant.")) return;
+let setupMode = false;
+function openShop(first = false) {
+  if (!needNet("Pas de connexion : tu ne peux pas modifier ta boutique pour l'instant.")) return false;
+  setupMode = first === true;
+  $("#sTitle").textContent = setupMode ? "Personnalise ta boutique" : "Modifier ma boutique";
+  $("#sIntro").hidden = !setupMode;
+  $("#sCancel").textContent = setupMode ? "Passer pour l'instant" : "Annuler";
   newLogo = newCover = null; coverGone = false; $("#sLogo").value = ""; $("#sCoverFile").value = ""; say($("#sMsg"), "");
   $("#sName").value = profile.shopName; $("#sPhone").value = prettyPhone(profile.phone); $("#sPay").value = profile.payments || "";
   $("#sAbout").value = pub.about || ""; $("#sAddr").value = pub.address || ""; $("#sMail").value = pub.email || "";
   $("#sWeb").value = pub.website || ""; $("#sFb").value = pub.facebook || ""; $("#sIg").value = pub.instagram || "";
   paintLogo(profile.logo ? thumb(profile.logo, 160) : ""); paintCover(pub.cover ? thumb(pub.cover, 900) : "");
   injectIcons(shopDlg); shopDlg.showModal();
+  $(".pe-scroll", shopDlg).scrollTop = 0;
+  return true;
 }
-$("#editShop").onclick = openShop;
+$("#editShop").onclick = () => openShop();
 shopDlg.addEventListener("click", e => { if (e.target.closest("[data-close]")) shopDlg.close(); });
+shopDlg.addEventListener("close", () => {   // fin de l'étape de personnalisation (enregistrée ou passée) : on ouvre l'espace
+  if (!profile || !$("#dash").hidden) return;
+  $("#dash").hidden = false; paintPriceNote();
+  if (location.hash === "#publier") setTimeout(() => $("#fItem").scrollIntoView({ behavior: "smooth" }), 150);
+});
 function pickPhoto(e, set) {
   const f = e.target.files[0]; if (!f) return;
   if (f.size > MAX_MB * 1048576) { e.target.value = ""; return toast(`Cette photo fait ${(f.size / 1048576).toFixed(1).replace(".", ",")} Mo. Maximum ${MAX_MB} Mo.`); }
@@ -782,6 +818,6 @@ $("#fShop").addEventListener("submit", e => {
     profile = { ...profile, ...patch }; pub = { ...sd }; delete pub.updatedAt;
     renderStatus();
   }, { busy: "Enregistrement…", done: "Enregistré", hold: 700 })
-    .then(() => { say(m, ""); shopDlg.close(); toast("Ta boutique est à jour. Les changements sont déjà visibles."); })
+    .then(() => { say(m, ""); shopDlg.close(); toast(setupMode ? "Ta boutique est prête. Tu peux publier ton premier article." : "Ta boutique est à jour. Les changements sont déjà visibles."); })
     .catch(err => say(m, nice(err), "err"));
 });

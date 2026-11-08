@@ -91,7 +91,7 @@ function mount() {
     <a class="logo" href="index.html" aria-label="SokoPlus"><img class="mark" src="icons/logo-mark.png" alt="" width="43" height="44" draggable="false"><span class="wm">SokoPlus</span></a>
     <nav class="dnav" aria-label="Navigation">
       <a href="index.html" data-p="home" data-i18n="nav.home">Accueil</a><a href="categories.html" data-p="categories" data-i18n="nav.cats">Catégories</a>
-      <a href="favoris.html" data-p="favoris" data-i18n="nav.favs">Favoris</a><a href="vendeur.html" data-p="vendeur" data-i18n="nav.shop">Ma boutique</a><a href="parametres.html" data-p="parametres" data-i18n="nav.settings">Paramètres</a>
+      <a href="cherche.html" data-p="cherche">Je cherche</a><a href="favoris.html" data-p="favoris" data-i18n="nav.favs">Favoris</a><a href="vendeur.html" data-p="vendeur" data-i18n="nav.shop">Ma boutique</a><a href="parametres.html" data-p="parametres" data-i18n="nav.settings">Paramètres</a>
     </nav>
     <div class="nav">
       <button class="iconbtn" id="cityBtn" type="button" aria-label="Choisir ma région">${svg("pin")}<i class="cnt dot" id="cityDot"${city ? "" : " hidden"}></i></button>
@@ -121,6 +121,7 @@ function cityLabel() {
 }
 function citySet(k, c) {   // les pages réaffichent leurs listes grâce à l'événement « cur »
   store.set("country", k); store.set("city", c); cityLabel();
+  if (store.get("push", null)) import("./common.js").then(m => m.syncPushRegion()).catch(() => { /* hors connexion */ });
   document.dispatchEvent(new CustomEvent("cur"));
 }
 let cityEl, pickC = null;   // pickC : pays choisi, on affiche alors ses villes

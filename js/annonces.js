@@ -12,7 +12,13 @@ let list = [], sig = "", dlg = null, io = null;
 const ms = a => a.createdAt?.toMillis?.() ?? Date.now();
 const live = a => { const e = a.expiresAt?.toMillis?.(); return !e || e > Date.now(); };
 const kind = a => KINDS[a.kind] ? a.kind : "annonce";
-const snippet = t => { const s = String(t || "").replace(/\s+/g, " ").trim(); return s.length > 120 ? s.slice(0, 117).trimEnd() + "…" : s; };
+/* Résumé de la carte : si le message est une liste (lignes commençant par - ou •), on affiche les titres des points ; sinon le début du texte */
+const snippet = t => {
+  const lines = String(t || "").split("\n").map(l => l.trim()).filter(Boolean);
+  const items = lines.filter(l => /^[-•*]\s+/.test(l)).map(l => l.replace(/^[-•*]\s+/, "").split(/\s*:\s*/)[0].trim()).filter(Boolean);
+  const s = (items.length >= 2 ? items.join(" · ") : lines.join(" ")).replace(/\s+/g, " ").trim();
+  return s.length > 120 ? s.slice(0, 117).trimEnd() + "…" : s;
+};
 /* Texte de l'annonce : retours à la ligne conservés, liens https cliquables (le reste est échappé) */
 export const fmtText = t => esc(t || "").replace(/\n/g, "<br>").replace(/(https:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
 
@@ -20,7 +26,7 @@ function cardHTML(a) {
   const img = a.images?.[0] ? thumb(a.images[0], 700) : "";
   const k = kind(a);
   return `<article class="annc k-${k}" data-id="${esc(a.id)}" tabindex="0" role="button" aria-label="${esc(KINDS[k] + " : " + a.title)}">
-    <div class="annc-img">${img ? `<img src="${esc(img)}" alt="" loading="lazy" draggable="false">` : `<img class="annc-mark" src="icons/logo-mark.png" alt="" draggable="false">`}<em class="annc-kind">${esc(KINDS[k])}</em></div>
+    <div class="annc-img">${img ? `<img src="${esc(img)}" alt="" loading="lazy" draggable="false">` : `<img class="annc-mark" src="icons/logo-mark.png" alt="" draggable="false">`}</div>
     <div class="annc-in"><h3>${esc(a.title)}</h3>${a.text ? `<p>${esc(snippet(a.text))}</p>` : ""}
       <div class="annc-foot"><span>${esc(ago(ms(a)))}</span><span data-eye="${esc(a.id)}">${eyeHTML(a.views || 0)}</span></div></div></article>`;
 }
@@ -56,6 +62,7 @@ function dialog() {
   dlg = document.createElement("dialog"); dlg.id = "annDlg"; dlg.innerHTML = '<div class="dlg" id="annBody"></div>'; document.body.append(dlg);
   dlg.addEventListener("click", e => {
     if (e.target === dlg || e.target.closest("[data-close]")) { dlg.close(); return; }
+    if (e.target.closest("[data-ashare]")) { shareAnnonce(); return; }
     const g = dlg.querySelector(".agal"), nav = e.target.closest("[data-anav]");
     if (nav && g) g.scrollBy({ left: Number(nav.dataset.anav) * g.clientWidth, behavior: "smooth" });
   });
@@ -63,11 +70,18 @@ function dialog() {
   return dlg;
 }
 
+let openId = "";
+async function shareAnnonce() {   // lien /a/ID : WhatsApp y lit l'affiche et le titre de l'annonce
+  const a = list.find(x => x.id === openId); if (!a) return;
+  const url = new URL("/a/" + encodeURIComponent(a.id), location.origin).href;
+  try { if (navigator.share) await navigator.share({ title: a.title, url }); else { await navigator.clipboard.writeText(url); toast("Lien copié"); } } catch { /* partage annulé */ }
+}
 export function openAnnonce(id) {
   const a = list.find(x => x.id === id); if (!a) return;
+  openId = id;
   const d = dialog(), imgs = (a.images || []).map(u => thumb(u, 1000)).filter(Boolean), k = kind(a);
   countView("a", id).then(added => { if (added) { a.views = (a.views || 0) + 1; const s = d.querySelector("[data-eyebox]"); if (s) s.innerHTML = eyeHTML(a.views); } });
-  $("#annBody").innerHTML = `<div class="dlg-head"><span class="annc-official"><img src="icons/certifie.png" width="16" height="16" alt="" draggable="false"> Publié par l'équipe SokoPlus</span><button class="x" type="button" data-close aria-label="Fermer">×</button></div>
+  $("#annBody").innerHTML = `<div class="dlg-head"><span class="annc-official"><img src="icons/certifie.png" width="16" height="16" alt="" draggable="false"> Publié par l'équipe SokoPlus</span><span class="a-hbtns"><button class="x" type="button" data-ashare aria-label="Partager cette annonce">${icon("link")}</button><button class="x" type="button" data-close aria-label="Fermer">×</button></span></div>
     ${imgs.length ? `<div class="agal-w"><div class="agal">${imgs.map(u => `<img src="${esc(u)}" alt="" draggable="false">`).join("")}</div>${imgs.length > 1 ? `<button class="pd-nav prev" data-anav="-1" aria-label="Image précédente">‹</button><button class="pd-nav next" data-anav="1" aria-label="Image suivante">›</button>` : ""}</div>` : ""}
     <div class="a-meta2"><em class="annc-kind k-${k}">${esc(KINDS[k])}</em><span>${esc(ago(ms(a)))}</span><span data-eyebox>${eyeHTML(a.views || 0)}</span></div>
     <h2 class="a-title2">${esc(a.title)}</h2>

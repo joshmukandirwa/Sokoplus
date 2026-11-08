@@ -141,7 +141,7 @@
   <dialog id="annDlg" class="anform">
     <div class="dlg">
       <div class="dlg-head">
-        <div><h2>Nouvelle annonce</h2><p class="an-sub">S'affiche en haut de l'accueil, avec la mention « SokoPlus officiel ».</p></div>
+        <div><h2 id="anH">Nouvelle annonce</h2><p class="an-sub">S'affiche en haut de l'accueil, avec la mention « SokoPlus officiel ».</p></div>
         <button class="x" type="button" data-close aria-label="Fermer">×</button>
       </div>
       <div class="field an-grp">Type
@@ -160,9 +160,9 @@
         <div class="an-pics" id="anPics"></div>
         <button class="an-add" type="button" id="anAdd">+ Ajouter des images</button></div>
       <div class="field an-grp">Visible pendant
-        <select id="anLife" hidden><option value="7">7 jours</option><option value="30" selected>30 jours</option><option value="0">Jusqu'à suppression</option></select>
+        <select id="anLife" hidden><option value="7">7 jours</option><option value="30" selected>30 jours</option><option value="0">Jusqu'à suppression</option><option value="keep">Garder</option></select>
         <div class="an-life" id="anLifes" role="radiogroup" aria-label="Durée d'affichage">
-          <button type="button" role="radio" data-v="7">7 jours</button><button type="button" role="radio" data-v="30">30 jours</button><button type="button" role="radio" data-v="0">Sans fin</button>
+          <button type="button" role="radio" data-v="7">7 jours</button><button type="button" role="radio" data-v="30">30 jours</button><button type="button" role="radio" data-v="0">Sans fin</button><button type="button" role="radio" data-v="keep" id="anLifeKeep" hidden>Garder</button>
         </div></div>
       <p class="msg" id="anMsg" hidden></p>
       <div class="an-actions"><button class="btn" type="button" id="anSend">Publier l'annonce</button><button class="btn ghost" type="button" data-close>Annuler</button></div>

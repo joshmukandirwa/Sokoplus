@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="fr">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Je cherche - SokoPlus</title>
+  <!-- SEO -->
+  <meta name="description"
+    content="Dis ce que tu cherches : les vendeurs de toute l'Afrique te répondent sur WhatsApp.">
+  <meta name="robots" content="index,follow">
+  <!-- /SEO -->
+  <meta name="theme-color" content="#1b1b1f">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icons/logo-mark.png">
+  <link rel="apple-touch-icon" href="icons/icon-any-192.png">
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+  <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js">
+  <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js">
+  <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,700;0,800;0,900;1,900&family=Figtree:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/alibaba.css">
+  <script src="js/boot.js"></script>
+</head>
+
+<body data-page="cherche">
+  <main class="wrap">
+    <section class="pagehead" data-reveal>
+      <h1>Je cherche…</h1>
+      <p class="note">Tu ne trouves pas ce qu'il te faut ? Dis-le ici. Les vendeurs voient ta demande et te répondent
+        directement sur WhatsApp.</p>
+    </section>
+    <div class="wn-bar">
+      <button class="btn" id="wnNew" type="button">Publier ma demande</button>
+      <div class="wn-sw"><input id="wnQ" type="search" placeholder="Chercher une demande…"
+          aria-label="Chercher une demande"><button type="button" id="wnX" aria-label="Effacer" hidden>×</button></div>
+    </div>
+    <div class="wn-chips" id="wnChips"></div>
+    <div class="wn-list" id="wnList">
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+    </div>
+    <div class="emptyst" id="wnEmpty" hidden>
+      <img class="mascot" src="icons/mascotte.png" alt="" width="158" height="168" draggable="false">
+      <h2>Aucune demande pour l'instant</h2>
+      <p class="note">Sois le premier : dis ce que tu cherches et un vendeur te répondra.</p>
+    </div>
+    <p class="note wn-foot">Tu vends ce que quelqu'un cherche ? Écris-lui sur WhatsApp, puis <a
+        href="vendeur.html">publie ton article</a> sur SokoPlus pour que tout le monde le voie. Ne paie jamais avant
+      d'avoir vu l'article.</p>
+  </main>
+  <script type="module" src="js/ui.js"></script>
+  <script type="module" src="js/maintenance.js"></script>
+  <script type="module" src="js/cherche.js"></script>
+</body>
+
+</html>

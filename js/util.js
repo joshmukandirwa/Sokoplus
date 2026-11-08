@@ -126,6 +126,19 @@ export async function uploadImage(blob) {
   return j.secure_url;
 }
 
+/* Note vocale : Cloudinary range l'audio dans « video/upload » (même préréglage que les photos). */
+export async function uploadAudio(blob) {
+  if (!cloudinaryReady) throw new Error("Cloudinary n'est pas configuré (voir README, étape 5).");
+  const fd = new FormData();
+  fd.append("file", blob, "note." + (/mp4/.test(blob.type) ? "m4a" : "webm"));
+  fd.append("upload_preset", CLOUDINARY.audioPreset || CLOUDINARY.uploadPreset);
+  let r, j;
+  try { r = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY.cloudName}/video/upload`, { method: "POST", body: fd }); j = await r.json(); }
+  catch { throw Object.assign(new Error("La note vocale n'a pas pu partir : la connexion est coupée ou trop faible."), { code: "auth/network-request-failed" }); }
+  if (!r.ok || !j.secure_url) throw new Error(j.error?.message || "Échec de l'envoi de la note vocale.");
+  return j.secure_url;
+}
+
 /* ---------- Notifications : état local (sans Firebase) ---------- */
 export const pushAvailable = () => !!VAPID_KEY && "Notification" in window && "serviceWorker" in navigator;
 export const pushState = () => store.get("push", null); // { token, cats }

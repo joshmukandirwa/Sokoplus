@@ -74,7 +74,72 @@ Crée un 2ᵉ compte vendeur (autre email, autre téléphone), publie un article
 
 ---
 
-## Validation des articles et notifications
+## Publication directe et suppression avec motif (étape 33)
+
+- **Plus de validation** : tout vendeur actif publie son article en ligne tout de suite, et ses modifications aussi. Les règles de l'essai restent (2 publications par jour, places `postSlots` créées avec l'article, jamais réutilisables, même si l'article est supprimé).
+- **Suppression par l'admin** : une fenêtre demande un **motif obligatoire** (choix rapides ou texte libre). Le vendeur reçoit un message « Ton article a été retiré » dans Ma boutique et dans la cloche, plus la notification push.
+- Les anciennes propositions encore « en attente » restent visibles dans l'onglet « À valider » de l'admin.
+- **Republie `firestore.rules`** après cette livraison (nouvelle collection `postSlots`, modification directe des articles par leur vendeur).
+
+## Fonctionnalités uniques (étape 34) : « Propose ton prix »
+
+- Chaque article a une case **Prix négociable** (cochée par défaut, champ `negotiable`). Les anciens articles restent négociables ; décoche la case pour afficher « Prix ferme ».
+- Sur la page article, le bouton **Propose ton prix** ouvre un petit encart : réductions rapides (-5, -10, -15, -20 %) ou prix libre, calcul de l'économie, avertissement si l'offre est très basse. Le bouton envoie une offre polie, déjà rédigée, au vendeur sur WhatsApp. Aucun intermédiaire, aucune règle Firestore à ajouter pour ça.
+- Republie `firestore.rules` : le champ `negotiable` y est autorisé.
+
+## « Je cherche… » (étape 35)
+
+- Nouvelle page `cherche.html` : un acheteur (ou un vendeur) connecté publie ce qu'il veut acheter (titre, détails, catégorie, ville, budget facultatif, prénom, numéro WhatsApp). La demande est en ligne tout de suite, sans validation, pendant 30 jours. 3 demandes par jour au maximum.
+- Les vendeurs voient la liste (filtres par catégorie, recherche) et appuient sur « J'ai ça, je lui écris » : WhatsApp s'ouvre avec un message déjà rédigé. Le demandeur peut fermer sa demande avec « Je l'ai trouvé ».
+- Admin : sur la page, le bouton « Supprimer » demande un motif obligatoire, envoyé au demandeur.
+- Accès : lien « Je cherche » dans le menu du haut (ordinateur) et bouton dans la page de recherche quand rien n'est trouvé.
+- **Alerte aux vendeurs** : à la publication, une notification push part aux vendeurs qui ont déjà des articles dans la même catégorie et le même pays (`/api/push`, type `want`). Les vendeurs doivent avoir activé les alertes dans Ma boutique. Redéploie sur Vercel pour mettre à jour `api/push.js`.
+- Republie `firestore.rules` (nouvelle collection `wants`).
+
+## Rencontre sûre et livraison (étape 37)
+
+- Dans le formulaire d'article : **Lieu de rencontre sûr** (texte, 80 caractères) et case **Livraison possible**. Sur la page de l'article, l'acheteur voit « Rencontre sûre » (avec le conseil de se voir en journée dans un lieu public) et « Livraison possible ».
+- Champs `meetPlace` et `delivery` : republie `firestore.rules`.
+
+## Le troc (étape 38)
+
+- Champ facultatif **« J'accepte l'échange contre… »** dans le formulaire article (`swapFor`, 80 caractères). La page article affiche « Échange accepté » avec un bouton **Proposer un échange** qui ouvre WhatsApp avec un message déjà rédigé.
+- Republie `firestore.rules` (champ `swapFor` autorisé).
+
+## La note vocale (étape 39)
+
+- À l'étape « photos » du formulaire article, le vendeur enregistre jusqu'à 45 s avec son micro (bouton Enregistrer / Arrêter / Réécouter / Supprimer). Sur la page article, l'acheteur voit « Écoute le vendeur » avec un lecteur audio.
+- L'audio part sur **Cloudinary** (`video/upload`) avec un **second préréglage `sokoplus_audio`**, pour que le préréglage des photos `sokosplus` reste limité aux images. **À créer dans Cloudinary** : Settings > Upload > Upload presets > Add upload preset. Nom : `sokoplus_audio`. Signing mode : **Unsigned**. Dossier conseillé : `notes-vocales`. Allowed formats : `webm, m4a, mp4, ogg, mp3, wav` (android et ordinateur enregistrent en webm, iPhone en m4a). Si l'envoi échoue, le message d'erreur de Cloudinary s'affiche chez le vendeur.
+- `vercel.json` : le micro est maintenant autorisé (`microphone=(self)`), il était bloqué. Redéploie.
+- Republie `firestore.rules` (champ `voice`, lien Cloudinary uniquement).
+
+## Les achats groupés (étape 40)
+
+- Formulaire article, bloc **Achat groupé** (facultatif) : prix de groupe, minimum de personnes (2 à 50), durée (3, 7 ou 14 jours). Champs `groupPrice`, `groupMin`, `groupDays`.
+- Page article : encart avec la barre de progression (« 2 / 5 personnes »), le temps restant et le bouton **Je rejoins l'achat groupé** (compte gratuit, prénom et WhatsApp). Le premier qui rejoint lance le groupe. On peut quitter tant que le groupe est ouvert.
+- Collection `groups/{idArticle}` (compteur) et `groups/{idArticle}/members/{uid}` (participants). **Seul le vendeur voit les numéros WhatsApp.**
+- Ma boutique : bouton **Achat groupé** sur l'article, avec la liste des participants, un bouton WhatsApp par personne et **Relancer un nouveau groupe**.
+- Le vendeur reçoit un message et une notification quand quelqu'un rejoint, et « Objectif atteint » quand le minimum est là (`/api/push`, type `group`).
+- Le paiement et la remise restent entre le vendeur et les acheteurs, sur WhatsApp, comme le reste de SokoPlus.
+- Republie `firestore.rules` et redéploie sur Vercel (`api/push.js`).
+
+## Retouches (étape 43)
+
+- **Note vocale** : vrai lecteur SokoPlus (bouton lecture/pause, barre de progression qu'on peut toucher pour avancer, durée). La durée enregistrée est stockée (`voiceSec`) parce que les fichiers webm enregistrés par le téléphone n'indiquent pas leur durée.
+- **Cartes (promotions et listes)** : même hauteur, titre sur 2 lignes maximum, nom de boutique sur 1 ligne, lieu sur 2 lignes, avec « … » quand c'est trop long.
+- **Certification** : le message vert a une croix qui le masque pour toujours sur cet appareil (`soko.certok.<uid>`). La boîte entière disparaît s'il n'y a rien d'autre dedans.
+- **Favoris, boutiques suivies** : la photo de la boutique est recentrée (une marge négative venait de l'en-tête de boutique).
+- **Je cherche…** : bouton pour effacer la recherche, photo de la boutique (ou du compte) sur la demande, bouton « Réactiver ma demande » si on a cliqué sur « Je l'ai trouvé » par erreur, demandes de ta ville d'abord (puis ton pays) avec l'étiquette « Près de toi », et alerte push aux appareils de la même ville (et aux vendeurs de la catégorie).
+- Les appareils enregistrent maintenant leur pays et leur ville (`pushTokens.country` et `city`). Ils sont mis à jour quand la personne change de ville.
+- **Annonces et communiqués** : images sans coins arrondis.
+- Republie `firestore.rules` et redéploie sur Vercel.
+
+## Modifier une annonce (étape 44)
+
+- Admin > Annonces : bouton **Modifier** sur chaque annonce. On change le type, le titre, le message et **les images** : remplacer une image (↻), la retirer (×), la faire avancer (◀, la première est l'affiche principale) ou en ajouter (4 au maximum). La durée peut rester la même (« Garder ») ou repartir de zéro.
+- Les compteurs de vues sont conservés. Aucune règle Firestore à changer (l'admin peut déjà modifier les annonces).
+
+## Validation des articles et notifications (ancien fonctionnement)
 
 - Un vendeur qui publie envoie une **proposition** (collection `submissions`). Elle n'est visible que par lui et par l'admin.
 - L'admin ouvre `admin.html`, onglet **À valider**, et clique **Valider** (l'article apparaît pour tout le monde) ou **Refuser** (avec un motif que le vendeur voit).
