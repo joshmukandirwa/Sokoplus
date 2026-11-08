@@ -6,6 +6,57 @@ import { initAnnonces } from "./annonces.js";
 let sort = "recent", opened = false, shown = 0;
 const LIMIT = 18;
 
+/* Rangées en boucle (catégories, et promotions à partir de 10 articles) : une seule ligne qui avance toute seule
+   de droite à gauche, en boucle (la liste est présente en double). Elle s'arrête quand on la touche, la survole
+   ou la fait glisser, puis repart ; le doigt peut aussi la faire défiler. */
+const still = matchMedia("(prefers-reduced-motion: reduce)");
+function loopRow(el, speed) {
+  const st = { on: false, paused: false, resumeAt: 0, pos: 0, last: 0 };   // pos décimale : le navigateur arrondit scrollLeft, ce qui bloquerait les petits pas
+  const pause = () => { st.paused = true; };
+  const later = () => { st.paused = false; st.resumeAt = performance.now() + 2500; };
+  ["pointerenter", "pointerdown", "touchstart", "focusin"].forEach(ev => el.addEventListener(ev, pause, { passive: true }));
+  ["pointerleave", "pointerup", "pointercancel", "touchend", "touchcancel", "focusout"].forEach(ev => el.addEventListener(ev, later, { passive: true }));
+  el.addEventListener("wheel", () => { st.resumeAt = performance.now() + 2500; }, { passive: true });
+  const period = () => { const n = el.children.length / 2; return n >= 1 && Number.isInteger(n) ? el.children[n].offsetLeft - el.children[0].offsetLeft : 0; };
+  const tick = t => {
+    const dt = Math.min(64, t - (st.last || t)); st.last = t;
+    if (st.on) {
+      const half = period(), auto = half > el.clientWidth && !st.paused && t >= st.resumeAt && !still.matches && !document.hidden;
+      if (auto) { st.pos += speed * dt / 1000; if (st.pos >= half) st.pos -= half; el.scrollLeft = st.pos; }
+      else { st.pos = el.scrollLeft; if (half > 0) { if (st.pos >= half) el.scrollLeft = st.pos -= half; else if (st.pos <= 0) el.scrollLeft = st.pos = half; } }
+    }
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+  return st;
+}
+
+const catsEl = $("#cats"); let catsHTML = "";
+const catsLoop = loopRow(catsEl, 30);   // ~30 px par seconde
+function paintCats(html) {
+  if (html === catsHTML) return; catsHTML = html;
+  const keep = catsEl.scrollLeft;
+  catsEl.innerHTML = html + html.replace(/<a class="chipc"/g, '<a tabindex="-1" aria-hidden="true" class="chipc"');
+  catsEl.scrollLeft = keep; catsLoop.on = true;
+}
+
+/* Promotions : défilement normal sous 10 articles, boucle automatique à partir de 10 */
+const LOOP_MIN = 10, PROMO_MAX = 24;
+const promoEl = $("#promoRow"); let promoHTML = "";
+const promoLoop = loopRow(promoEl, 24);
+function paintPromos(list) {
+  const tmp = document.createElement("div"); paint(tmp, list);
+  const loop = list.length >= LOOP_MIN, html = (loop ? "L" : "N") + tmp.innerHTML;
+  if (html === promoHTML) return; promoHTML = html;
+  const keep = promoEl.scrollLeft;
+  promoEl.innerHTML = tmp.innerHTML;
+  if (loop) {
+    [...promoEl.children].forEach(c => { const k = c.cloneNode(true); k.setAttribute("aria-hidden", "true"); k.tabIndex = -1; k.querySelectorAll("a,button,[tabindex]").forEach(x => { x.tabIndex = -1; }); promoEl.appendChild(k); });
+    promoEl.scrollLeft = keep;
+  } else promoEl.scrollLeft = 0;
+  promoEl.classList.toggle("loop", loop); promoLoop.on = loop; promoLoop.pos = promoEl.scrollLeft;
+}
+
 function render() {
   const grid = $("#grid"), empty = $("#empty");
   const list = filter({ sort });
@@ -14,8 +65,8 @@ function render() {
   $("#moreBtn").hidden = list.length <= LIMIT;
   /* Rayons choisis par les vendeurs (promotion, offre du jour) : rien ne s'affiche s'il n'y en a pas */
   const avail = filter({ sort: "recent", avail: true });
-  const pr = avail.filter(isPromo).slice(0, 10), dl = avail.filter(isDeal).slice(0, 10);
-  $("#promoSec").hidden = !pr.length; if (pr.length) paint($("#promoRow"), pr);
+  const pr = avail.filter(isPromo).slice(0, PROMO_MAX), dl = avail.filter(isDeal).slice(0, 10);
+  $("#promoSec").hidden = !pr.length; if (pr.length) paintPromos(pr);
   $("#dealSec").hidden = !dl.length; if (dl.length) paint($("#dealRow"), dl);
   /* Rayons automatiques : meilleures ventes, produits près de chez toi (seulement si une ville est choisie) */
   const best = bestSellers(10);
@@ -25,7 +76,8 @@ function render() {
   if (items.size !== shown) { countUp($("#todayCount"), items.size); shown = items.size; }
 
   const c = counts();
-  $("#cats").innerHTML = catList().map(k => `<a class="chipc" href="categories.html?c=${encodeURIComponent(k)}">${catIcon(k)}<span>${esc(k)}</span><small>${c[k] || 0}</small></a>`).join("");
+  const chips = catList().map(k => `<a class="chipc" href="categories.html?c=${encodeURIComponent(k)}">${catIcon(k)}<span>${esc(k)}</span><small>${c[k] || 0}</small></a>`).join("");
+  paintCats(chips);
   /* Une seule ligne : les boutiques certifiées d'abord, chaque boutique une seule fois */
   const sh = shops().sort((a, b) => Number(!!b.cert) - Number(!!a.cert)).slice(0, 20);
   $("#shopsec").hidden = !sh.length;
