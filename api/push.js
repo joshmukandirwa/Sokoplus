@@ -40,6 +40,11 @@ const wrap = (title, body, link) => ({
 
 const fresh = ts => { const t = ts && ts.toMillis ? ts.toMillis() : 0; return t && Date.now() - t < FRESH_MS; };
 
+// Anciens noms de catégories (articles publiés avant la nouvelle liste) → nouveau nom
+const LEGACY = { "Alimentation": "Alimentation & Boissons", "Mode": "Mode & Habillement", "Électronique": "Téléphones & Accessoires", "Maison": "Maison & Décoration", "Beauté": "Beauté & Soins personnels", "Artisanat": "Cadeaux & Artisanat", "Immobilier": "Bâtiment & Construction" };
+const canon = c => LEGACY[c] || c;
+const namesOf = c => [c, ...Object.keys(LEGACY).filter(k => LEGACY[k] === c)];
+
 module.exports = async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
   if (req.method !== "POST") { res.setHeader("Allow", "POST"); return res.status(405).json({ ok: false, error: "POST seulement" }); }
@@ -88,7 +93,7 @@ module.exports = async function handler(req, res) {
         const x = d.data(), cats = x.cats || [];
         if (x.uid && x.uid === item.ownerId) return;                    // le vendeur ne reçoit pas sa propre annonce
         if (x.uid && fol.has(x.uid)) { folTokens.push(d.id); return; }  // abonnés : message personnel, pas de doublon avec l'alerte générale
-        if (!cats.length || cats.includes(item.category)) tokens.push(d.id);
+        if (!cats.length || cats.includes(canon(item.category))) tokens.push(d.id);
       });
       const price = Number(item.price) || 0, cur = item.currency === "FC" ? " FC" : " $", link = `${SITE}/?item=${ref.id}`;
       let sent = 0;
@@ -110,7 +115,7 @@ module.exports = async function handler(req, res) {
       });
       if (!want) return res.status(200).json({ ok: true, sent: 0 });
       // 1) les gens de sa ville (ou de son pays si leur ville n'est pas connue), 2) les vendeurs qui ont déjà publié dans cette catégorie, dans le même pays
-      const its = await db.collection("items").where("category", "==", want.category).limit(500).get();
+      const its = await db.collection("items").where("category", "in", namesOf(want.category)).limit(500).get();
       const vendors = new Set();
       its.forEach(d => { const x = d.data(); if ((x.country || "CD") === (want.country || "CD") && x.ownerId && x.ownerId !== want.ownerId) vendors.add(x.ownerId); });
       const snap = await db.collection("pushTokens").get();

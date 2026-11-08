@@ -716,7 +716,7 @@ $("#mine").addEventListener("click", async e => {
     }
     if (b.dataset.a === "edit") {
       editing = it;
-      $("#iTitle").value = it.title; $("#iCat").value = it.category; $("#iPrice").value = it.price; $("#iCur").value = it.currency || "USD"; $("#iTag").value = it.tag || ""; $("#iOld").value = it.oldPrice || ""; $("#iNeg").checked = it.negotiable !== false; $("#iDeliv").checked = !!it.delivery; $("#iMeet").value = it.meetPlace || ""; $("#iSwap").value = it.swapFor || ""; voice.setExisting(it.voice, it.voiceSec); $("#iGPrice").value = it.groupPrice || ""; $("#iGMin").value = it.groupMin || ""; $("#iGDays").value = String(it.groupDays || 7);
+      $("#iTitle").value = it.title; { const cv = canonCat(it.category); if (![...$("#iCat").options].some(o => o.value === cv)) $("#iCat").add(new Option(cv)); $("#iCat").value = cv; } $("#iPrice").value = it.price; $("#iCur").value = it.currency || "USD"; $("#iTag").value = it.tag || ""; $("#iOld").value = it.oldPrice || ""; $("#iNeg").checked = it.negotiable !== false; $("#iDeliv").checked = !!it.delivery; $("#iMeet").value = it.meetPlace || ""; $("#iSwap").value = it.swapFor || ""; voice.setExisting(it.voice, it.voiceSec); $("#iGPrice").value = it.groupPrice || ""; $("#iGMin").value = it.groupMin || ""; $("#iGDays").value = String(it.groupDays || 7);
       $("#iDesc").value = it.description || ""; $("#iAddr").value = it.address; fillPlace(it.country || DEFAULT_COUNTRY, it.city || "", it.currency || "USD");
       picked = []; editImgs = it.images || []; paintPics();
       $("#fTitle").textContent = "Modifier l'article"; $("#iSubmit").textContent = "Enregistrer"; $("#iCancel").hidden = false;

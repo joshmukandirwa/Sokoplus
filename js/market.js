@@ -1,7 +1,7 @@
 /* Données du marché (temps réel ou démo), cartes, favoris, recherche et fiche article : partagés par toutes les pages. */
 import { db, collection, query, orderBy, limit, onSnapshot, getDocs, addDoc, serverTimestamp } from "./fb.js";
 import { paintGroup } from "./groupbuy.js";
-import { SITE, configured, configBanner, $, $$, esc, store, money, waLink, prettyPhone, toast, ago, thumb, tileColor, isNetErr, needNet, NET_MSG } from "./common.js";
+import { SITE, canonCat, configured, configBanner, $, $$, esc, store, money, waLink, prettyPhone, toast, ago, thumb, tileColor, isNetErr, needNet, NET_MSG } from "./common.js";
 import { svg, favBadge } from "./ui.js";
 import { icon as ic } from "./icons.js";
 import { countryOf, countryName, toUsd } from "./pays.js";
@@ -28,16 +28,28 @@ const shareUrl = id => new URL("/p/" + encodeURIComponent(id), location.origin).
 /* ---------- Icônes de catégories ---------- */
 export const CAT_ICON = {
   "Tous": '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
-  "Mode": '<path d="M8 3 3 6l2 4 3-1v12h8V9l3 1 2-4-5-3a4 4 0 0 1-8 0z"/>',
-  "Alimentation": '<path d="M7 3v7a2 2 0 0 0 2 2v9"/><path d="M5 3v6M11 3v6"/><path d="M17 21V3c-2 1-4 4-4 8h4"/>',
-  "Électronique": '<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/>',
-  "Maison": '<path d="M3 11 12 3l9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/>',
-  "Beauté": '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/>',
-  "Artisanat": '<path d="M12 3a9 9 0 1 0 0 18c1.5 0 2-1 2-2 0-1.5-1-1.5-1-3s1-2 2.5-2H18a3 3 0 0 0 3-3c0-5-4-8-9-8z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7" r="1"/>',
-  "Immobilier": '<rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2"/>',
-  "Services": '<path d="M14.7 6.3a4 4 0 0 0-5 5L3 18l3 3 6.7-6.7a4 4 0 0 0 5-5l-2.5 2.5-2.2-.5-.5-2.2z"/>',
+  "Mode & Habillement": '<path d="M8 3 3 6l2 4 3-1v12h8V9l3 1 2-4-5-3a4 4 0 0 1-8 0z"/>',
+  "Téléphones & Accessoires": '<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/>',
+  "Informatique & Bureautique": '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
+  "Maison & Décoration": '<path d="M3 11 12 3l9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/>',
+  "Beauté & Soins personnels": '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/>',
+  "Bijoux & Accessoires": '<path d="M6 3h12l3 6-9 12L3 9z"/><path d="M3 9h18M9 3l3 6 3-6M12 21 9 9M12 21l3-12"/>',
+  "Chaussures & Sacs": '<rect x="4" y="9" width="16" height="12" rx="2"/><path d="M9 9V6a3 3 0 0 1 6 0v3"/>',
+  "Sports & Loisirs": '<circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18M5.6 5.6c3 3 3 9.8 0 12.8M18.4 5.6c-3 3-3 9.8 0 12.8"/>',
+  "Enfants & Jouets": '<rect x="4" y="11" width="16" height="9" rx="1.5"/><path d="M3 7h18v4H3zM12 7v13M12 7c-1-3-5-4-5-1.5S10 7 12 7zM12 7c1-3 5-4 5-1.5S14 7 12 7z"/>',
+  "Automobile & Moto": '<path d="M5 16V11l2-5h10l2 5v5"/><path d="M3 16h18v3H3zM7 11h10"/><circle cx="7.5" cy="16" r=".6"/><circle cx="16.5" cy="16" r=".6"/>',
+  "Électricité & Éclairage": '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>',
+  "Meubles & Ameublement": '<path d="M5 11V8a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v3"/><path d="M3 13a2 2 0 0 1 4 0v2h10v-2a2 2 0 0 1 4 0v5H3zM6 18v2M18 18v2"/>',
+  "Alimentation & Boissons": '<path d="M12 7c-1-2-3-3-5-3-3 0-4 3-4 6 0 4 3 9 6 9 1 0 2-.5 3-.5s2 .5 3 .5c3 0 6-5 6-9 0-3-1-6-4-6-2 0-4 1-5 3z"/><path d="M12 7c0-2 1-3.500 3-4"/>',
+  "Cuisine & Ustensiles": '<path d="M7 3v7a2 2 0 0 0 2 2v9"/><path d="M5 3v6M11 3v6"/><path d="M17 21V3c-2 1-4 4-4 8h4"/>',
+  "Agriculture & Jardinage": '<path d="M12 21v-8"/><path d="M12 13c0-4 2.5-7 7-7 0 4-2.500 7-7 7zM12 15c0-3-2-5-6-5 0 3 2 5 6 5z"/>',
+  "Livres & Fournitures scolaires": '<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5M8 7h7"/>',
+  "Bâtiment & Construction": '<rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2"/>',
+  "Animaux & Accessoires": '<circle cx="6" cy="10" r="1.8"/><circle cx="10" cy="6" r="1.8"/><circle cx="14" cy="6" r="1.8"/><circle cx="18" cy="10" r="1.8"/><path d="M12 11c-3 0-5.500 3-5.500 5.500 0 2 1.500 2.500 3 2 1-.3 1.500-.5 2.500-.5s1.500.2 2.500.5c1.500.5 3-.0 3-2C17.500 14 15 11 12 11z"/>',
+  "Cadeaux & Artisanat": '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v9h14v-9M12 8v13M12 8c-1.500-4-6-4-5-1.500S11 8 12 8zM12 8c1.500-4 6-4 5-1.500S13 8 12 8z"/>',
   "Autre": '<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>'
 };
+const fixCat = o => { o.category = canonCat(o.category); return o; };
 export const catIcon = c => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${CAT_ICON[c] || CAT_ICON.Autre}</svg>`;
 
 /* ---------- Données ---------- */
@@ -51,14 +63,14 @@ export function load(onChange) {
     if (navigator.onLine === false) { loadError = "net"; fire(); }       // pas besoin d'attendre 10 s pour le savoir
     let live = false;
     // Affichage rapide : les 24 plus récents arrivent dans une petite requête, sans attendre le flux complet (150).
-    try { getDocs(query(collection(db, "items"), orderBy("createdAt", "desc"), limit(24))).then(snap => { if (live || snap.empty) return; snap.forEach(d => { if (!items.has(d.id)) items.set(d.id, { id: d.id, ...d.data() }); }); loadError = ""; fire(); }).catch(() => {}); } catch { /* le flux ci-dessous prend le relais */ }
+    try { getDocs(query(collection(db, "items"), orderBy("createdAt", "desc"), limit(24))).then(snap => { if (live || snap.empty) return; snap.forEach(d => { if (!items.has(d.id)) items.set(d.id, fixCat({ id: d.id, ...d.data() })); }); loadError = ""; fire(); }).catch(() => {}); } catch { /* le flux ci-dessous prend le relais */ }
     try {
       onSnapshot(query(collection(db, "items"), orderBy("createdAt", "desc"), limit(150)), snap => {
         if (!snap.metadata.fromCache) live = true;
         // Sans réseau, Firestore renvoie une liste vide « du cache » sans erreur : ce n'est pas « aucun article », c'est « pas de connexion ».
         if (snap.metadata.fromCache && snap.empty && !items.size) { loadError = "net"; fire(); return; }
         snap.docChanges().forEach(ch => {
-          const it = { id: ch.doc.id, ...ch.doc.data() };
+          const it = fixCat({ id: ch.doc.id, ...ch.doc.data() });
           if (ch.type === "removed") { items.delete(it.id); return; }
           const isNew = ch.type === "added" && !first && !ch.doc.metadata.hasPendingWrites;
           items.set(it.id, it); if (isNew) announce(it);
@@ -111,18 +123,18 @@ const SHOP_KW = { "Mama Zawadi Wax": "fashion", "Kivu Fresh": "grocery", "Goma T
 function demo(fire) {
   const n = Date.now(), h = 3600e3;
   [
-    ["Pagne wax 6 yards", "Mode", 18, "Mama Zawadi Wax", "Ndosho, Goma", "243990000001", .4, 1],
-    ["Café du Kivu moulu 500 g", "Alimentation", 9, "Kivu Fresh", "Himbi, Goma", "243810000002", 2],
-    ["Power bank 20 000 mAh", "Électronique", 22, "Goma Tech Corner", "Centre-ville, Goma", "243850000003", 5],
-    ["Panier tressé du Nord-Kivu", "Artisanat", 16, "Atelier Mapendo", "Katindo, Goma", "243970000004", 9],
-    ["Miel pur de Rutshuru 1 L", "Alimentation", 12, "Kivu Fresh", "Himbi, Goma", "243810000002", 26],
-    ["Écouteurs Bluetooth", "Électronique", 14, "Goma Tech Corner", "Centre-ville, Goma", "243850000003", 30],
-    ["Chemise en pagne homme", "Mode", 25, "Mama Zawadi Wax", "Ndosho, Goma", "243990000001", 34],
-    ["Matelas 2 places", "Maison", 85, "Maison Confort", "Birere, Goma", "243820000005", 40],
-    ["Savon naturel à l'huile de palme", "Beauté", 4, "Kivu Beauté", "Mikeno, Goma", "243830000006", 48],
-    ["Appartement 2 chambres à louer", "Immobilier", 150, "Goma Immo", "Les Volcans, Goma", "243840000007", 55],
-    ["Réparation de téléphones", "Services", 5, "Goma Tech Corner", "Centre-ville, Goma", "243850000003", 70],
-    ["Casserole en aluminium 5 L", "Maison", 11, "Maison Confort", "Birere, Goma", "243820000005", 80]
+    ["Pagne wax 6 yards", "Mode & Habillement", 18, "Mama Zawadi Wax", "Ndosho, Goma", "243990000001", .4, 1],
+    ["Café du Kivu moulu 500 g", "Alimentation & Boissons", 9, "Kivu Fresh", "Himbi, Goma", "243810000002", 2],
+    ["Power bank 20 000 mAh", "Téléphones & Accessoires", 22, "Goma Tech Corner", "Centre-ville, Goma", "243850000003", 5],
+    ["Panier tressé du Nord-Kivu", "Cadeaux & Artisanat", 16, "Atelier Mapendo", "Katindo, Goma", "243970000004", 9],
+    ["Miel pur de Rutshuru 1 L", "Alimentation & Boissons", 12, "Kivu Fresh", "Himbi, Goma", "243810000002", 26],
+    ["Écouteurs Bluetooth", "Téléphones & Accessoires", 14, "Goma Tech Corner", "Centre-ville, Goma", "243850000003", 30],
+    ["Chemise en pagne homme", "Mode & Habillement", 25, "Mama Zawadi Wax", "Ndosho, Goma", "243990000001", 34],
+    ["Matelas 2 places", "Meubles & Ameublement", 85, "Maison Confort", "Birere, Goma", "243820000005", 40],
+    ["Savon naturel à l'huile de palme", "Beauté & Soins personnels", 4, "Kivu Beauté", "Mikeno, Goma", "243830000006", 48],
+    ["Appartement 2 chambres à louer", "Bâtiment & Construction", 150, "Goma Immo", "Les Volcans, Goma", "243840000007", 55],
+    ["Réparation de téléphones", "Autre", 5, "Goma Tech Corner", "Centre-ville, Goma", "243850000003", 70],
+    ["Casserole en aluminium 5 L", "Cuisine & Ustensiles", 11, "Maison Confort", "Birere, Goma", "243820000005", 80]
   ].forEach(([title, category, price, shopName, address, phone, hrs, featured], i) => items.set("demo" + i, {
     id: "demo" + i, title, category, price, shopName, address, phone, ownerId: shopName,
     images: i < 4 ? [IMG(DEMO_IMG[i], 10 + i), IMG(DEMO_IMG_B[i], 30 + i)] : [IMG(DEMO_IMG[i], 10 + i)],
@@ -173,6 +185,14 @@ export function filter({ cat = "Tous", shop = "tous", q = "", fav = false, sort 
 export function shops() {
   const m = new Map(); items.forEach(i => { if (!cityOk(i)) return; const s = m.get(i.ownerId) || { id: i.ownerId, name: i.shopName, n: 0 }; s.n++; if (i.certified) s.cert = true; if (!s.img) { s.img = i.shopLogo || i.images?.[0] || ""; s.fb = i.shopFb || i.fb?.[0] || ""; } m.set(i.ownerId, s); });
   return [...m.values()].sort((a, b) => b.n - a.n);
+}
+/* Les 18 catégories, plus « Autre » seulement s'il contient des articles (anciens articles sans équivalent) */
+export const catList = () => { const c = counts(); return c["Autre"] ? [...SITE.categories, "Autre"] : [...SITE.categories]; };
+/* Meilleures ventes : les articles disponibles des boutiques qui ont déjà le plus vendu (aucune lecture en plus) */
+export function bestSellers(n = 10) {
+  const sold = new Map(); items.forEach(i => { if (i.status === "sold" && cityOk(i)) sold.set(i.ownerId, (sold.get(i.ownerId) || 0) + 1); });
+  return [...items.values()].filter(i => i.status !== "sold" && sold.has(i.ownerId) && cityOk(i))
+    .sort((a, b) => sold.get(b.ownerId) - sold.get(a.ownerId) || ms(b) - ms(a)).slice(0, n);
 }
 export const counts = () => { const c = {}; items.forEach(i => { if (cityOk(i)) c[i.category] = (c[i.category] || 0) + 1; }); return c; };
 

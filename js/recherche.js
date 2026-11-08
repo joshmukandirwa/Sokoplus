@@ -1,4 +1,4 @@
-import { load, items, filter, paint, bind, shops, counts, catIcon, notice, certMark, isPromo, ms } from "./market.js";
+import { load, items, filter, paint, bind, shops, counts, catIcon, catList, notice, certMark, isPromo, ms } from "./market.js";
 import { SITE, $, $$, esc, store, tileColor, thumb, waLink, prettyPhone, ago, shopInfoHtml, coverCss, configured } from "./common.js";
 import { db, doc, getDoc } from "./fb.js";
 
@@ -6,7 +6,7 @@ const p = new URLSearchParams(location.search);
 let q = p.get("q") || "", cat = p.get("c") || "Tous", shop = p.get("shop") || "tous", sort = "recent", avail = false, timer, saveT, kind = ["promo", "offre", "cert"].includes(p.get("t")) ? p.get("t") : "";
 const input = $("#q");
 input.value = q;
-$("#cat").innerHTML = ["Tous", ...SITE.categories].map(c => `<option value="${esc(c)}">${c === "Tous" ? "Toutes les catégories" : esc(c)}</option>`).join("");
+$("#cat").innerHTML = ["Tous", ...catList()].map(c => `<option value="${esc(c)}">${c === "Tous" ? "Toutes les catégories" : esc(c)}</option>`).join("");
 $("#cat").value = cat;
 $("#kind").value = kind;
 
@@ -19,7 +19,7 @@ function idle() {
   const r = recent(); $("#recentBox").hidden = !r.length;
   $("#recent").innerHTML = r.map(t => `<button class="chipc" data-q="${esc(t)}" type="button">${esc(t)}</button>`).join("");
   const c = counts();
-  $("#popular").innerHTML = SITE.categories.map(k => `<button class="chipc" data-c="${esc(k)}" type="button">${catIcon(k)}<span>${esc(k)}</span><small>${c[k] || 0}</small></button>`).join("");
+  $("#popular").innerHTML = catList().map(k => `<button class="chipc" data-c="${esc(k)}" type="button">${catIcon(k)}<span>${esc(k)}</span><small>${c[k] || 0}</small></button>`).join("");
 }
 function sync() {
   const u = new URLSearchParams(); if (q.trim()) u.set("q", q.trim()); if (cat !== "Tous") u.set("c", cat); if (shop !== "tous") u.set("shop", shop); if (kind) u.set("t", kind);

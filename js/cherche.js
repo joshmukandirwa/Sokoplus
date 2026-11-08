@@ -1,5 +1,5 @@
 import { auth, db, onAuthStateChanged, doc, getDoc, setDoc, updateDoc, addDoc, deleteDoc, collection, query, orderBy, limit, onSnapshot, serverTimestamp } from "./fb.js";
-import { SITE, $, $$, esc, toast, ago, money, waLink, normPhone, tileColor, thumb, store } from "./common.js";
+import { SITE, canonCat, $, $$, esc, toast, ago, money, waLink, normPhone, tileColor, thumb, store } from "./common.js";
 import { pingPush } from "./pushapi.js";
 import { COUNTRIES, DEFAULT_COUNTRY, citiesOf, currenciesOf } from "./pays.js";
 
@@ -14,7 +14,7 @@ const who = () => new Promise(res => { if (!auth) return res(null); const off = 
 const rank = w => { const c = store.get("city", ""), k = store.get("country", ""); return c && w.city === c ? 0 : k && (w.country || DEFAULT_COUNTRY) === k ? 1 : 2; };
 function visible() {
   const old = Date.now() - DAYS * 864e5;
-  return wants.filter(w => w.status !== "deleted" && (w.status === "open" || w.ownerId === user?.uid) && ms(w) > old && (!cat || w.category === cat)
+  return wants.filter(w => w.status !== "deleted" && (w.status === "open" || w.ownerId === user?.uid) && ms(w) > old && (!cat || canonCat(w.category) === cat)
     && (!q || norm(`${w.title} ${w.details || ""} ${w.city || ""} ${w.category}`).includes(norm(q))))
     .sort((a, b) => rank(a) - rank(b) || ms(b) - ms(a));   // d'abord ma ville, puis mon pays, puis le reste
 }
@@ -28,7 +28,7 @@ function card(w) {
       <div class="wn-top"><b>${esc(w.name)}</b><small>${esc(ago(ms(w)))}${place ? " · " + esc(place) : ""}</small></div>
       <h3>${esc(w.title)}</h3>
       ${w.details ? `<p>${esc(w.details)}</p>` : ""}
-      <div class="wn-tags">${rank(w) === 0 ? '<span class="near">Près de toi</span>' : ""}<span>${esc(w.category)}</span>${w.budget ? `<span class="bud">Budget : ${esc(money(w.budget, w.currency))}</span>` : ""}${found ? '<span class="ok">Trouvé</span>' : ""}</div>
+      <div class="wn-tags">${rank(w) === 0 ? '<span class="near">Près de toi</span>' : ""}<span>${esc(canonCat(w.category))}</span>${w.budget ? `<span class="bud">Budget : ${esc(money(w.budget, w.currency))}</span>` : ""}${found ? '<span class="ok">Trouvé</span>' : ""}</div>
       <div class="wn-acts">
         ${found ? (mine ? '<button class="btn small" data-react type="button">Réactiver ma demande</button>' : "") : mine ? '<button class="btn small" data-found type="button">Je l\'ai trouvé</button>' : `<a class="btn small wn-wa" target="_blank" rel="noopener" href="${esc(waLink(w.phone, msg))}">J'ai ça, je lui écris</a>`}
         ${mine ? '<button class="btn small ghost" data-mydel type="button">Supprimer</button>' : ""}

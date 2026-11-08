@@ -1,4 +1,4 @@
-import { load, items, filter, paint, bind, counts, catIcon, notice } from "./market.js";
+import { load, items, filter, paint, bind, counts, catIcon, catList, notice } from "./market.js";
 import { SITE, $, $$, esc } from "./common.js";
 
 const p = new URLSearchParams(location.search);
@@ -6,7 +6,7 @@ let cat = p.get("c") || "", sort = "recent", avail = false, built = false;
 
 function tiles() {
   const c = counts();
-  $("#tiles").innerHTML = ["Tous", ...SITE.categories].map((k, i) =>
+  $("#tiles").innerHTML = ["Tous", ...catList()].map((k, i) =>
     `<button class="tile" style="--i:${i}" data-cat="${esc(k)}" aria-pressed="${k === cat}">${catIcon(k)}<b>${k === "Tous" ? "Tous les articles" : esc(k)}</b><small>${k === "Tous" ? items.size : (c[k] || 0)} article${(k === "Tous" ? items.size : c[k]) > 1 ? "s" : ""}</small></button>`).join("");
 }
 function results() {

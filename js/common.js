@@ -1,6 +1,6 @@
 import { firebaseConfig, VAPID_KEY } from "./firebase-config.js";
 import { app, auth, db, doc, setDoc, deleteDoc, serverTimestamp, ready } from "./fb.js";
-import { store, configured, pushState } from "./util.js";
+import { store, configured, pushState, SITE } from "./util.js";
 export * from "./util.js";
 
 /* ---------- Notifications push (site fermé) ---------- */
@@ -43,3 +43,6 @@ export function configBanner() {
     : "Mode démo : Firebase n'est pas encore configuré (voir <b>js/firebase-config.js</b> et le README).";
   document.body.prepend(b);
 }
+
+/* Nom de catégorie actuel d'un article ou d'une demande (les anciens noms sont convertis) */
+export const canonCat = c => SITE.categories.includes(c) ? c : (SITE.legacyCats?.[c] || "Autre");

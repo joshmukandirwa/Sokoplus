@@ -33,5 +33,7 @@ export const SITE = {
   notifyUrl: "https://script.google.com/macros/s/AKfycbwDZK7m02OPP6PnNOObc8INMgCyhE0gskTzz4yAomSgcLJ3usUGAUBIVSMapGjyUqfJmg/exec",                 // adresse du script e-mail (voir apps-script/notify.gs), laisse vide pour désactiver
   subscriptionText: "5 $ par mois",
   cities: ["Kinshasa", "Lubumbashi", "Goma", "Bukavu", "Kisangani", "Mbuji-Mayi", "Kolwezi", "Likasi", "Matadi", "Butembo", "Uvira", "Kananga", "Tshikapa", "Bunia", "Mbandaka", "Beni", "Kalemie", "Autre ville"],
-  categories: ["Mode", "Alimentation", "Électronique", "Maison", "Beauté", "Artisanat", "Immobilier", "Services", "Autre"]
+  categories: ["Mode & Habillement", "Téléphones & Accessoires", "Informatique & Bureautique", "Maison & Décoration", "Beauté & Soins personnels", "Bijoux & Accessoires", "Chaussures & Sacs", "Sports & Loisirs", "Enfants & Jouets", "Automobile & Moto", "Électricité & Éclairage", "Meubles & Ameublement", "Alimentation & Boissons", "Cuisine & Ustensiles", "Agriculture & Jardinage", "Livres & Fournitures scolaires", "Bâtiment & Construction", "Animaux & Accessoires", "Cadeaux & Artisanat"],
+  // Anciens noms (articles déjà publiés) → nouvelle catégorie. Ce qui n'a pas d'équivalent (Services, Autre) tombe dans « Autre », visible seulement s'il contient des articles.
+  legacyCats: { "Alimentation": "Alimentation & Boissons", "Mode": "Mode & Habillement", "Électronique": "Téléphones & Accessoires", "Maison": "Maison & Décoration", "Beauté": "Beauté & Soins personnels", "Artisanat": "Cadeaux & Artisanat", "Immobilier": "Bâtiment & Construction" }
 };

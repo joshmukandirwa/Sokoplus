@@ -1,5 +1,5 @@
-import { load, items, filter, paint, bind, counts, shops, catIcon, openFromUrl, notice, suggest, hasTaste, isPromo, isDeal, certMark } from "./market.js";
-import { SITE, $, $$, esc, tileColor, thumb } from "./common.js";
+import { load, items, filter, paint, bind, counts, shops, catIcon, catList, bestSellers, cityOk, ms, placeLabel, openFromUrl, notice, suggest, hasTaste, isPromo, isDeal, certMark } from "./market.js";
+import { SITE, store, $, $$, esc, tileColor, thumb } from "./common.js";
 import { countUp, installEvt } from "./ui.js";
 import { initAnnonces } from "./annonces.js";
 
@@ -17,10 +17,15 @@ function render() {
   const pr = avail.filter(isPromo).slice(0, 10), dl = avail.filter(isDeal).slice(0, 10);
   $("#promoSec").hidden = !pr.length; if (pr.length) paint($("#promoRow"), pr);
   $("#dealSec").hidden = !dl.length; if (dl.length) paint($("#dealRow"), dl);
+  /* Rayons automatiques : meilleures ventes, produits près de chez toi (seulement si une ville est choisie) */
+  const best = bestSellers(10);
+  $("#bestSec").hidden = !best.length; if (best.length) paint($("#bestRow"), best);
+  const city = store.get("city", ""), near = city ? avail.filter(it => it.city === city || (!it.city && cityOk(it))).slice(0, 10) : [];
+  $("#nearSec").hidden = !near.length; if (near.length) { $("#nearT").textContent = "Produits près de chez vous · " + city; paint($("#nearRow"), near); }
   if (items.size !== shown) { countUp($("#todayCount"), items.size); shown = items.size; }
 
   const c = counts();
-  $("#cats").innerHTML = SITE.categories.map(k => `<a class="chipc" href="categories.html?c=${encodeURIComponent(k)}">${catIcon(k)}<span>${esc(k)}</span><small>${c[k] || 0}</small></a>`).join("");
+  $("#cats").innerHTML = catList().map(k => `<a class="chipc" href="categories.html?c=${encodeURIComponent(k)}">${catIcon(k)}<span>${esc(k)}</span><small>${c[k] || 0}</small></a>`).join("");
   /* Une seule ligne : les boutiques certifiées d'abord, chaque boutique une seule fois */
   const sh = shops().sort((a, b) => Number(!!b.cert) - Number(!!a.cert)).slice(0, 20);
   $("#shopsec").hidden = !sh.length;
@@ -30,7 +35,7 @@ function render() {
 }
 load(render);
 bind($("#grid"));
-bind($("#promoRow")); bind($("#dealRow"));
+bind($("#promoRow")); bind($("#dealRow")); bind($("#bestRow")); bind($("#nearRow"));
 $("#sort").addEventListener("change", e => { sort = e.target.value; render(); });
 document.addEventListener("cur", render);
 
